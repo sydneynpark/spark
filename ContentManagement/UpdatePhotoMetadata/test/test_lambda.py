@@ -18,7 +18,7 @@ class TestLambda(unittest.TestCase):
         self.mock_aws.get_s3_object = MagicMock(return_value=sample_events.TreeSwallowPhotoS3Object)
 
         result = lambda_function.lambda_handler(event, None)
-        assert result == 'image/jpeg'
+        assert 'Birds' in result
 
 if __name__ == '__main__':
     unittest.main()

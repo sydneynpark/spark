@@ -1,9 +1,11 @@
 import aws_util
+import img_util
 import urllib.parse
 
 
 print('Loading function')
 aws = aws_util.AWSUtil()
+img = img_util.ImageUtil()
 
 
 def lambda_handler(event, context):
@@ -17,9 +19,13 @@ def lambda_handler(event, context):
     try:
         print(f'There was an event for S3 object: {bucket}/{key}')
         print(f'The event type is: {event_type}')
-        response = aws.get_s3_object(bucket, key) #s3.get_object(Bucket=bucket, Key=key)
-        print("CONTENT TYPE: " + response['ContentType'])
-        return response['ContentType']
+        response = aws.get_s3_object(bucket, key)
+
+        photo = response['Body']
+        photo_keywords = img.get_lightroom_keywords(photo)
+        message = '\n - '.join(['The image has keywords:'] + photo_keywords)
+        print(message)
+        return photo_keywords
     
     except Exception as e:
         print(e)
