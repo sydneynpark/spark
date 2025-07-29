@@ -1,2 +1,2 @@
 boto3
-defusedxml
+defusedxml # Required for PIL's Image.getxmp() to have xmpmeta
