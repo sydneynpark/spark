@@ -12,7 +12,8 @@ Requirements:
 python -m venv .env
 .env\Scripts\Activate.ps1
 pip install -U pip wheel
-pip install -r src/requirements.txt src/requirements.local.txt
+pip install -r src/requirements.txt
+pip install -r src/requirements.local.txt
 pip install -r test/requirements.txt
 ```
 
