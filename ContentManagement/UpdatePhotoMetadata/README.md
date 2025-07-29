@@ -31,6 +31,7 @@ python -m unittest test\test_lambda.py
 mkdir .build/packages
 pip install --target .build/packages -r src/requirements.txt
 cp src/*.py .build/packages
+cp "src/Bird keywords.txt" .build/packages
 
 $compress = @{
   Path = ".build/packages/*"

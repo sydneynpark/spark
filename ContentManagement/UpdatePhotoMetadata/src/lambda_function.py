@@ -1,11 +1,15 @@
 import aws_util
 import img_util
+import taxonomy_util
 import urllib.parse
+import os
 
 
 print('Loading function')
 aws = aws_util.AWSUtil()
 img = img_util.ImageUtil()
+taxonomy_file_path = os.path.join(os.path.dirname(__file__), 'Bird keywords.txt')
+taxonomy = taxonomy_util.TaxonomyUtil(taxonomy_file_path)
 
 
 def lambda_handler(event, context):
@@ -15,22 +19,23 @@ def lambda_handler(event, context):
     event_type = event['Records'][0]['eventName']
     
     try:
-        print(f'There was an event for S3 object: {bucket}/{key}')
-        print(f'The event type is: {event_type}')
-        response = aws.get_s3_object(bucket, key)
+        print(f'There was a {event_type} event for S3 object: {bucket}/{key}')
 
+        response = aws.get_s3_object(bucket, key)
         photo = response['Body']
         photo_keywords = img.get_lightroom_keywords(photo)
-        message = '\n - '.join(['The image has keywords:'] + photo_keywords)
-        print(message)
+        print('The image has keywords: ' + ', '.join(photo_keywords))
+        
+        # Parse taxonomic classifications from keywords
+        taxonomies = taxonomy.parse_keywords_to_taxonomy(photo_keywords)
+        print(f'Found {len(taxonomies)} species labeled in the photo.')
         
         s3_uri = f's3://{bucket}/{key}'
-        aws.store_photo_metadata(s3_uri, photo_keywords)
-        print(f'Stored metadata for {s3_uri} in DynamoDB')
+        aws.store_photo_metadata(s3_uri, taxonomies)
+        print(f'Stored metadata in DynamoDB')
         
-        return photo_keywords
+        return taxonomies
     
     except Exception as e:
         print(e)
-        print(f'Error getting object {key} from bucket {bucket}. Make sure they exist and your bucket is in the same region as this function.')
         raise e
