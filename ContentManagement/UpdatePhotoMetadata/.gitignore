@@ -1,4 +1,5 @@
 package/
 *.zip
+.build/
 .env/
 __pycache__/
