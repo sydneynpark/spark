@@ -23,6 +23,11 @@ def lambda_handler(event, context):
         photo_keywords = img.get_lightroom_keywords(photo)
         message = '\n - '.join(['The image has keywords:'] + photo_keywords)
         print(message)
+        
+        s3_uri = f's3://{bucket}/{key}'
+        aws.store_photo_metadata(s3_uri, photo_keywords)
+        print(f'Stored metadata for {s3_uri} in DynamoDB')
+        
         return photo_keywords
     
     except Exception as e:
