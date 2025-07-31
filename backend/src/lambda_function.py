@@ -7,8 +7,8 @@ from handlers.posts import posts_bp
 app = Flask(__name__)
 
 # Register blueprints
-app.register_blueprint(photos_bp, url_prefix='/api')
-app.register_blueprint(posts_bp, url_prefix='/api')
+app.register_blueprint(photos_bp)
+app.register_blueprint(posts_bp)
 
 @app.route('/health')
 def health():
