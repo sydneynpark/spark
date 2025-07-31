@@ -24,7 +24,7 @@ $env:PYTHONPATH = ".\src"
 python -m unittest test\test_lambda.py
 ```
 
-## Zipping for upload to S3
+## Zipping for upload to Lambda
 
 
 ```

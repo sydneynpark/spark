@@ -1,6 +1,5 @@
-# Update Blog Post Metadata lambda
+# Backend
 
-This lambda reads the metadata of a blog post stored in S3, and writes that metadata to a DynamoDB table so that metadata is queryable. This lambda is intended to be subscribed to S3 update and delete events.
 
 
 ## Local development
@@ -29,6 +28,8 @@ python -m unittest test\test_markdown_util.py
 mkdir .build/packages
 pip install --target .build/packages -r src/requirements.txt
 cp src/*.py .build/packages
+cp src/handlers/* .build/packages/handlers
+cp src/utils/* .build/packages/utils
 
 $compress = @{
   Path = ".build/packages/*"
