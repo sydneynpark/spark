@@ -66,7 +66,6 @@ main {
 }
 
 #hero {
-  text-align: center;
   padding: 3rem 0;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -74,13 +73,40 @@ main {
   margin-bottom: 3rem;
 }
 
-#hero h2 {
+.hero-content {
+  display: flex;
+  align-items: center;
+  gap: 3rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.hero-text {
+  flex: 1;
+}
+
+.hero-text h2 {
   font-size: 2.5rem;
   margin-bottom: 1rem;
 }
 
-#hero p {
+.hero-text p {
   font-size: 1.2rem;
+  line-height: 1.6;
+}
+
+.hero-image {
+  flex: 0 0 250px;
+}
+
+.profile-photo {
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 /* Content cards */
@@ -206,8 +232,23 @@ footer {
     gap: 1rem;
   }
 
-  #hero h2 {
+  .hero-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 2rem;
+  }
+
+  .hero-text h2 {
     font-size: 2rem;
+  }
+
+  .hero-image {
+    flex: none;
+  }
+
+  .profile-photo {
+    width: 200px;
+    height: 200px;
   }
 
   main {

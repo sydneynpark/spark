@@ -6,7 +6,7 @@ const Header = () => {
     <header>
       <nav>
         <Link to="/" style={{textDecoration: 'none', color: 'inherit'}}>
-          <h1>Spark.Wiki</h1>
+          <h1>Sydney Nicole Park</h1>
         </Link>
         <ul>
           <li><Link to="/">Home</Link></li>
