@@ -11,7 +11,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
-  color: #333;
+  color: #2b313f;
+  background-color: #d5dff9;
 }
 
 .App {
@@ -22,7 +23,7 @@ body {
 
 /* Header */
 header {
-  background-color: #2c3e50;
+  background-color: #2b313f;
   color: white;
   padding: 1rem 0;
 }
@@ -54,7 +55,7 @@ nav a {
 }
 
 nav a:hover {
-  color: #3498db;
+  color: #9bad9d;
 }
 
 /* Main content */
@@ -67,7 +68,7 @@ main {
 
 #hero {
   padding: 3rem 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #5F6A60 0%, #9bad9d 100%);
   color: white;
   border-radius: 10px;
   margin-bottom: 3rem;
@@ -117,7 +118,7 @@ main {
 }
 
 .card {
-  background: white;
+  background: #EAF0FF;
   padding: 2rem;
   border-radius: 10px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -125,7 +126,7 @@ main {
 }
 
 .card h3 {
-  color: #2c3e50;
+  color: #5F6A60;
   margin-bottom: 1rem;
   font-size: 1.4rem;
 }
@@ -144,7 +145,7 @@ main {
 
 /* Footer */
 footer {
-  background-color: #34495e;
+  background-color: #2b313f;
   color: white;
   text-align: center;
   padding: 1.5rem;
@@ -158,7 +159,7 @@ footer {
 }
 
 .taxonomy-hierarchy {
-  background: white;
+  background: #EAF0FF;
   border-radius: 10px;
   padding: 2rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -179,44 +180,44 @@ footer {
 .level-0 {
   font-size: 1.2rem;
   font-weight: bold;
-  color: #2c3e50;
-  border-left-color: #3498db;
+  color: #2b313f;
+  border-left-color: #5F6A60;
   padding-left: 0;
 }
 
 .level-1 {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #34495e;
-  border-left-color: #27ae60;
+  color: #2b313f;
+  border-left-color: #9bad9d;
   padding-left: 1.5rem;
 }
 
 .level-2 {
   font-size: 1rem;
   font-weight: 500;
-  color: #7f8c8d;
-  border-left-color: #e67e22;
+  color: #5F6A60;
+  border-left-color: #9bad9d;
   padding-left: 3rem;
 }
 
 .level-3 {
   font-size: 0.95rem;
-  color: #95a5a6;
-  border-left-color: #e74c3c;
+  color: #5F6A60;
+  border-left-color: #5F6A60;
   padding-left: 4.5rem;
 }
 
 .count {
-  color: #3498db;
+  color: #9bad9d;
   font-weight: normal;
   font-size: 0.9em;
 }
 
 .error {
-  color: #e74c3c;
+  color: #5F6A60;
   padding: 1rem;
-  background-color: #fadbd8;
+  background-color: rgba(91, 37, 36, 0.1);
   border-radius: 5px;
   margin: 1rem 0;
 }
