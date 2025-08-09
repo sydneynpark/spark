@@ -19,7 +19,7 @@ pip install -r src/requirements.txt
 
 ```ps
 $env:PYTHONPATH = ".\src"
-python -m unittest test\test_markdown_util.py
+python -m unittest test\test_blog_post_parsing.py
 ```
 
 ## Zipping for upload to Lambda

@@ -27,9 +27,9 @@ class TestLambda(unittest.TestCase):
         
         # Verify it contains expected blog metadata
         metadata_str = result['metadata']
-        self.assertIn('Hello World', metadata_str)
-        self.assertIn('Sydney Park', metadata_str)
-        self.assertIn('2025-07-29', metadata_str)
+        self.assertIn('Hi everybody', metadata_str) # Leading content should be present in content preview
+        self.assertIn('blog', metadata_str) # Tags should be present
+        self.assertIn('I have never had a blog before.', metadata_str) # Summary should be present
 
 if __name__ == '__main__':
     unittest.main()
