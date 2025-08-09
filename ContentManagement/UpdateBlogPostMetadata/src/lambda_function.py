@@ -1,6 +1,6 @@
 import aws_util
 import urllib.parse
-from blog_metadata import BlogMetadata
+from blog_metadata import BlogPostContent
 
 print('Loading function')
 aws = aws_util.AWSUtil()
@@ -14,10 +14,8 @@ def lambda_handler(event, context):
         print(f'There was a {event_type} event for S3 object: {bucket}/{key}')
         
         # Get the markdown content from S3
-        response = aws.get_s3_object(bucket, key)
-        markdown_content = response['Body'].read().decode('utf-8')
-        blog_metadata = BlogMetadata(markdown_content)
-                
+        blog_metadata = BlogPostContent.from_s3_key(key)
+
         return {
             'statusCode': 200,
             'metadata': str(blog_metadata),

@@ -1,3 +1,4 @@
+import blog_metadata
 import unittest
 from unittest.mock import MagicMock
 import os
@@ -12,7 +13,7 @@ class TestLambda(unittest.TestCase):
     
     def setUp(self) -> None:
         self.mock_aws = aws_util.AWSUtil()
-        lambda_function.aws = self.mock_aws
+        blog_metadata.aws = self.mock_aws
 
     def test_lambda_for_blog_post_create_event(self):
         event = sample_events.UploadSamplePost
