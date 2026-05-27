@@ -82,3 +82,10 @@ class S3Util:
         
         response = self.s3.get_object(Bucket=bucket, Key=key)
         return response['Body'].read().decode('utf-8')
+
+    def get_image(self, bucket, key):
+        """Get image bytes and content type from S3"""
+        response = self.s3.get_object(Bucket=bucket, Key=key)
+        image_data = response['Body'].read()
+        content_type = response.get('ContentType', 'image/jpeg')
+        return image_data, content_type

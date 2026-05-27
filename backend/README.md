@@ -25,11 +25,12 @@ python -m unittest test\test_markdown_util.py
 
 
 ```
+rm -r .build
 mkdir .build/packages
 pip install --target .build/packages -r src/requirements.txt
 cp src/*.py .build/packages
-cp src/handlers/* .build/packages/handlers
-cp src/utils/* .build/packages/utils
+cp -r src/handlers/. .build/packages/handlers
+cp -r src/utils/. .build/packages/utils
 
 $compress = @{
   Path = ".build/packages/*"
