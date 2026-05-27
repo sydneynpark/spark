@@ -92,6 +92,7 @@ def get_photo_thumbnail(s3_uri_encoded):
             return create_cors_response({'error': 'Invalid S3 path'}, 400)
             
         bucket, key = s3_path.split('/', 1)
+        bucket = 'spark.wiki.thumbnails'
         print(f'Fetching from bucket: {bucket}, key: {key}')
         
         # Get image from S3
@@ -102,7 +103,8 @@ def get_photo_thumbnail(s3_uri_encoded):
             return create_cors_response({'error': 'Image not found'}, 404)
             
         print(f'Image data length: {len(image_data)}, content type: {content_type}')
-            
+        print(image_data)
+
         # Return image as binary response with explicit CORS headers
         response = Response(
             image_data,
@@ -117,6 +119,10 @@ def get_photo_thumbnail(s3_uri_encoded):
         response.headers['X-Image-Size'] = str(len(image_data))
         response.headers['X-Debug-Status'] = 'success'
         
+        print('The response wil be...')
+        print(response)
+        print(response.get_data())
+
         return response
         
     except Exception as e:

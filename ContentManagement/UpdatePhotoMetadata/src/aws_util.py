@@ -28,3 +28,6 @@ class AWSUtil:
                 item['scientific_name'] = taxonomy.get('scientific_name')
                 
             table.put_item(Item=item)
+
+    def put_s3_object(self, bucket, key, body, content_type='image/jpeg'):
+        self.s3.put_object(Bucket=bucket, Key=key, Body=body, ContentType=content_type)
