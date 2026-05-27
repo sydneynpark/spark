@@ -45,19 +45,13 @@ class BlogPost:
                 self.published = datetime.strptime(parts[0], DATE_FORMAT).date()
             except Exception:
                 print(f'Couldn\'t parse publication date from {s3_key}')
-                pass
         else:
-            print(f'Invalid S3 key format!! Using default title/published for blog post at {s3_key}')
+            print(f'Invalid S3 key format. Using default title/published for blog post at {s3_key}')
 
-    def to_dict(self):
-        return {
-            'blog_post_directory': self.blog_post_directory,
-            'title': self.title,
-            'published': self.published,
-            'updated': self.updated,
-            'content': self.content,
-            'media': self.media
-        }
+    def get_existing_blog_post(self):
+        # TODO (not yet) get existing blog post from DynamoDB, if it exists
+        # Add its content and media to the blog post object
+        pass
 
     def write(self, s3_key):
         # TODO check if there is already an entry in the blog_posts Dynamo table for this post
@@ -72,6 +66,16 @@ class BlogPost:
         #   "media": [ <an arbitrary number of BlogPostMedia objects> ]
         # }
         pass
+
+    def to_dict(self):
+        return {
+            'blog_post_directory': self.blog_post_directory,
+            'title': self.title,
+            'published': self.published,
+            'updated': self.updated,
+            'content': self.content,
+            'media': self.media
+        }
 
 
 class BlogPostContent(ABC):

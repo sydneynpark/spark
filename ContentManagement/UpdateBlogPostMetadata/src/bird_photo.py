@@ -1,0 +1,2 @@
+class BirdPhoto:
+    pass
