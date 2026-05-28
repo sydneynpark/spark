@@ -128,3 +128,34 @@ def get_photo_thumbnail(s3_uri_encoded):
     except Exception as e:
         print(f'Error serving thumbnail: {str(e)}')
         return handle_error(e)
+
+@photos_bp.route('/photos/url/<path:s3_uri_encoded>', methods=['GET', 'OPTIONS'])
+def get_photo_url(s3_uri_encoded):
+    """Return a presigned S3 URL for the full photo"""
+    if request.method == 'OPTIONS':
+        response = Response()
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+        return response
+    try:
+        try:
+            s3_uri = base64.b64decode(s3_uri_encoded.encode()).decode('utf-8')
+        except Exception:
+            return create_cors_response({'error': 'Invalid base64 encoding'}, 400)
+
+        if not s3_uri.startswith('s3://'):
+            return create_cors_response({'error': 'Invalid S3 URI format'}, 400)
+
+        s3_path = s3_uri[5:]
+        if '/' not in s3_path:
+            return create_cors_response({'error': 'Invalid S3 path'}, 400)
+
+        bucket, key = s3_path.split('/', 1)
+        url = s3_util.generate_presigned_url(bucket, key)
+        return create_cors_response({'url': url})
+
+    except Exception as e:
+        print(f'Error generating presigned URL: {str(e)}')
+        return handle_error(e)
+

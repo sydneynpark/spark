@@ -89,3 +89,11 @@ class S3Util:
         image_data = response['Body'].read()
         content_type = response.get('ContentType', 'image/jpeg')
         return image_data, content_type
+
+    def generate_presigned_url(self, bucket, key, expiration=3600):
+        """Generate a presigned URL for an S3 object"""
+        return self.s3.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket, 'Key': key},
+            ExpiresIn=expiration
+        )
