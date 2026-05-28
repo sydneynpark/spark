@@ -2,6 +2,7 @@ import aws_util
 import img_util
 import taxonomy_util
 import urllib.parse
+import io
 import os
 
 
@@ -22,8 +23,8 @@ def lambda_handler(event, context):
         print(f'There was a {event_type} event for S3 object: {bucket}/{key}')
 
         response = aws.get_s3_object(bucket, key)
-        photo = response['Body']
-        photo_keywords = img.get_lightroom_keywords(photo)
+        photo_bytes = response['Body'].read()
+        photo_keywords = img.get_lightroom_keywords(io.BytesIO(photo_bytes))
         print('The image has keywords: ' + ', '.join(photo_keywords))
         
         # Parse taxonomic classifications from keywords
@@ -33,7 +34,11 @@ def lambda_handler(event, context):
         s3_uri = f's3://{bucket}/{key}'
         aws.store_photo_metadata(s3_uri, taxonomies)
         print(f'Stored metadata in DynamoDB')
-        
+
+        thumbnail = img.create_thumbnail(io.BytesIO(photo_bytes))
+        aws.put_s3_object('spark.wiki.thumbnails', key, thumbnail)
+        print(f'Saved thumbnail to spark.wiki.thumbnails/{key}')
+
         return taxonomies
     
     except Exception as e:

@@ -4,20 +4,21 @@ const Content = () => {
   return (
     <section id="content">
       <div className="card">
-        <h3>About This Site</h3>
+        <h3>About Me</h3>
         <p>
-          This is a simple "hello world" React frontend for my bird photography blog. 
-          Soon it will display amazing bird photos and blog posts about birding adventures.
+          I'm a software engineer in southeast Wisconsin. 
+        </p>
+        <p>
+          Sometimes I play video games, bake sourdough bread, lift gigantic weights, or take photos of birds.
         </p>
       </div>
 
       <div className="card">
-        <h3>Coming Soon</h3>
+        <h3>What You'll Find Here</h3>
         <ul>
-          <li>📸 Bird photo gallery with taxonomic classifications</li>
-          <li>📝 Blog posts about birding experiences</li>
-          <li>🔍 Search and filter by species, family, and order</li>
-          <li>🗂️ Organized content management</li>
+          <li>Bird photo gallery with (attempted) species idenfitications</li>
+          <li>Some blog posts, maybe</li>
+          <li>I'm not sure what else</li>
         </ul>
       </div>
     </section>
