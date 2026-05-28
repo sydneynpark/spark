@@ -35,4 +35,8 @@ def health():
     return {'status': 'healthy', 'service': 'spark-wiki-api'}
 
 def lambda_handler(event, context):
-    return serverless_wsgi.handle_request(app, event, context)
+    response = serverless_wsgi.handle_request(app, event, context)
+    content_type = response.get('headers', {}).get('Content-Type', '')
+    if content_type.startswith('image/'):
+        response['isBase64Encoded'] = True
+    return response
