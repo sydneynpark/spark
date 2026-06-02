@@ -570,6 +570,24 @@ footer {
   margin: 0.5rem 0;
 }
 
+.blog-photo-embed {
+  display: block;
+  cursor: pointer;
+  margin: 1rem 0;
+  width: fit-content;
+}
+
+.blog-photo-embed img {
+  display: block;
+  max-width: 100%;
+  border-radius: 8px;
+  transition: opacity 0.2s;
+}
+
+.blog-photo-embed:hover img {
+  opacity: 0.85;
+}
+
 .post-content hr {
   border: none;
   border-top: 1px solid rgba(0, 0, 0, 0.1);

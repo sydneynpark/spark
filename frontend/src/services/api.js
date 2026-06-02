@@ -30,6 +30,10 @@ class ApiService {
     }
   }
 
+  getThumbnailUrl(s3Uri) {
+    return `${API_BASE_URL}/photos/thumbnail/${btoa(s3Uri)}`;
+  }
+
   getFullsizeUrl(s3Uri) {
     return `${API_BASE_URL}/photos/presigned/${btoa(s3Uri)}`;
   }

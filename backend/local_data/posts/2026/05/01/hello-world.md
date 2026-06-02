@@ -19,4 +19,6 @@ Here's what I'm planning to write about:
 
 Last week I spotted an American White Pelican gliding low over the reservoir at dawn. The light was perfect — golden and soft — and I managed a few frames before it banked away. Those birds are enormous up close, with wingspans over nine feet.
 
+`photo://2025/05/17/2025-05-17 074801 - American White Pelican.jpg`
+
 More soon.
