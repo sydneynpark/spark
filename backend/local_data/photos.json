@@ -1,0 +1,42 @@
+[
+  {
+    "s3_uri": "s3://spark.wiki.photos/2025/05/17/2025-05-17 074801 - American White Pelican.jpg",
+    "species": "American White Pelican",
+    "class": "Birds",
+    "family": "Pelicans",
+    "order": "PELECANIFORMES",
+    "scientific_name": "Pelecanus erythrorhynchos"
+  },
+  {
+    "s3_uri": "s3://spark.wiki.photos/2025/05/17/2025-05-17 092311 - Purple Martin.jpg",
+    "species": "Purple Martin",
+    "class": "Birds",
+    "family": "Swallows- Martins",
+    "order": "PASSERIFORMES",
+    "scientific_name": "Progne subis"
+  },
+  {
+    "s3_uri": "s3://spark.wiki.photos/2025/05/17/2025-05-17 100451 - Common Grackle.jpg",
+    "species": "Common Grackle",
+    "class": "Birds",
+    "family": "Oropendolas- Orioles and Blackbirds",
+    "order": "PASSERIFORMES",
+    "scientific_name": "Quiscalus quiscula"
+  },
+  {
+    "s3_uri": "s3://spark.wiki.photos/2025/05/17/2025-05-17 133102 - Eastern Wood Pewee.jpg",
+    "species": "Eastern Wood Pewee",
+    "class": "Birds",
+    "family": "Tyrant Flycatchers",
+    "order": "PASSERIFORMES",
+    "scientific_name": "Contopus virens"
+  },
+  {
+    "s3_uri": "s3://spark.wiki.photos/2025/05/17/2025-05-17 123115 - Yellow-headed Blackbird.jpg",
+    "species": "Yellow-headed Blackbird",
+    "class": "Birds",
+    "family": "Oropendolas- Orioles and Blackbirds",
+    "order": "PASSERIFORMES",
+    "scientific_name": "Xanthocephalus xanthocephalus"
+  }
+]

@@ -1,6 +1,11 @@
+import os
 from flask import Blueprint, jsonify, request, Response
-from utils.aws_util import DynamoUtil, S3Util
 from utils.response_util import handle_error, create_cors_response
+
+if os.getenv('LOCAL_MODE') == 'true':
+    from utils.local_util import LocalDynamoUtil as DynamoUtil, LocalS3Util as S3Util
+else:
+    from utils.aws_util import DynamoUtil, S3Util
 import base64
 import urllib.parse
 
