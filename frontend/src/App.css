@@ -402,6 +402,145 @@ footer {
   margin: 0;
 }
 
+/* Blog list page */
+.blog-page {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.blog-page h2 {
+  margin-bottom: 2rem;
+  color: var(--color-text-primary);
+}
+
+.post-list {
+  list-style: none;
+}
+
+.post-item {
+  margin-bottom: 1.25rem;
+}
+
+.post-item a {
+  display: block;
+  background: var(--color-card-background);
+  padding: 1.5rem 2rem;
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s;
+}
+
+.post-item a:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.post-item h3 {
+  color: var(--color-accent-dark);
+  margin-bottom: 0.4rem;
+}
+
+.post-item time {
+  font-size: 0.9rem;
+  color: var(--color-accent-medium);
+}
+
+/* Blog post page */
+.blog-post-page {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.blog-post {
+  background: var(--color-card-background);
+  border-radius: 10px;
+  padding: 2.5rem 3rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-top: 1rem;
+}
+
+.post-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.post-header h1 {
+  font-size: 2rem;
+  color: var(--color-text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.post-date {
+  font-size: 0.95rem;
+  color: var(--color-accent-medium);
+}
+
+.post-content {
+  line-height: 1.8;
+}
+
+.post-content h1,
+.post-content h2,
+.post-content h3 {
+  color: var(--color-accent-dark);
+  margin: 1.5rem 0 0.75rem;
+}
+
+.post-content p {
+  margin-bottom: 1rem;
+}
+
+.post-content ul,
+.post-content ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.post-content li {
+  margin-bottom: 0.5rem;
+}
+
+.post-content code {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+  font-size: 0.9em;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.post-content pre {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1rem 1.25rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.post-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.post-content blockquote {
+  border-left: 3px solid var(--color-accent-medium);
+  padding-left: 1rem;
+  margin-left: 0;
+  color: var(--color-accent-dark);
+  font-style: italic;
+  margin-bottom: 1rem;
+}
+
+.post-content a {
+  color: var(--color-accent-dark);
+}
+
+.post-content img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   nav {

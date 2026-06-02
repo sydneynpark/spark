@@ -69,18 +69,31 @@ class DynamoUtil:
             print(f'Error getting species list: {str(e)}')
             raise e
 
+BLOG_BUCKET = 'spark.wiki.blog'
+
 class S3Util:
     def __init__(self):
         self.s3 = boto3.client('s3')
-    
-    def get_post_content(self, s3_uri):
-        """Get blog post content from S3 (placeholder for later)"""
-        # Parse s3://bucket/key format
-        parts = s3_uri.replace('s3://', '').split('/', 1)
-        bucket = parts[0]
-        key = parts[1]
-        
-        response = self.s3.get_object(Bucket=bucket, Key=key)
+
+    def list_posts(self):
+        """List all markdown blog posts from S3"""
+        from utils.response_util import parse_post_metadata
+        response = self.s3.list_objects_v2(Bucket=BLOG_BUCKET)
+        posts = []
+        for obj in response.get('Contents', []):
+            key = obj['Key']
+            if not key.endswith('.md'):
+                continue
+            meta = parse_post_metadata(key)
+            meta['key'] = key
+            meta['last_modified'] = obj['LastModified'].isoformat()
+            posts.append(meta)
+        posts.sort(key=lambda p: (p['date'] or ''), reverse=True)
+        return posts
+
+    def get_post_content(self, key):
+        """Get blog post markdown content from S3"""
+        response = self.s3.get_object(Bucket=BLOG_BUCKET, Key=key)
         return response['Body'].read().decode('utf-8')
 
     def get_image(self, bucket, key):

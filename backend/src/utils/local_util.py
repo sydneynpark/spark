@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime
 
 LOCAL_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'local_data')
 
@@ -31,10 +32,26 @@ class LocalDynamoUtil:
 
 
 class LocalS3Util:
-    def get_post_content(self, s3_uri):
-        parts = s3_uri.replace('s3://', '').split('/', 1)
-        key = parts[1]
-        local_path = os.path.join(LOCAL_DATA_DIR, 'posts', key)
+    def list_posts(self):
+        from utils.response_util import parse_post_metadata
+        posts_dir = os.path.join(LOCAL_DATA_DIR, 'posts')
+        posts = []
+        if os.path.exists(posts_dir):
+            for dirpath, _, filenames in os.walk(posts_dir):
+                for filename in filenames:
+                    if not filename.endswith('.md'):
+                        continue
+                    filepath = os.path.join(dirpath, filename)
+                    key = os.path.relpath(filepath, posts_dir).replace(os.sep, '/')
+                    meta = parse_post_metadata(key)
+                    meta['key'] = key
+                    meta['last_modified'] = datetime.fromtimestamp(os.path.getmtime(filepath)).isoformat()
+                    posts.append(meta)
+        posts.sort(key=lambda p: (p['date'] or ''), reverse=True)
+        return posts
+
+    def get_post_content(self, key):
+        local_path = os.path.join(LOCAL_DATA_DIR, 'posts', *key.split('/'))
         with open(local_path) as f:
             return f.read()
 
