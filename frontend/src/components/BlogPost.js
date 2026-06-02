@@ -3,6 +3,18 @@ import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import ApiService from '../services/api';
 
+function formatDate(dateStr) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+}
+
+const markdownComponents = {
+  // Avoid clashing with the page's h1 title
+  h1: ({ children }) => <h2>{children}</h2>,
+};
+
 function BlogPost() {
   const { postId } = useParams();
   const [post, setPost] = useState(null);
@@ -26,10 +38,10 @@ function BlogPost() {
       <article className="blog-post">
         <header className="post-header">
           <h1>{post.title}</h1>
-          {post.date && <time className="post-date">{post.date}</time>}
+          {post.date && <time className="post-date">{formatDate(post.date)}</time>}
         </header>
         <div className="post-content">
-          <ReactMarkdown>{post.content}</ReactMarkdown>
+          <ReactMarkdown components={markdownComponents}>{post.content}</ReactMarkdown>
         </div>
       </article>
     </div>
