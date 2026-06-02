@@ -1,9 +1,11 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.spark.wiki';
 
 class ApiService {
-  async fetchPhotos() {
+  async fetchPhotos(filter = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/photos`);
+      const params = new URLSearchParams(filter);
+      const query = params.toString() ? `?${params}` : '';
+      const response = await fetch(`${API_BASE_URL}/photos${query}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
