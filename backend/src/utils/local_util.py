@@ -52,3 +52,7 @@ class LocalS3Util:
             '</svg>'
         )
         return svg.encode(), 'image/svg+xml'
+
+    def generate_presigned_url(self, bucket, key, expiration=3600):
+        # No real S3 in local mode; signal caller to fall back to thumbnail proxy
+        return None

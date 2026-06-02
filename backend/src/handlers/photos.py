@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, jsonify, request, Response
+from flask import Blueprint, jsonify, request, Response, redirect
 from utils.response_util import handle_error, create_cors_response
 
 if os.getenv('LOCAL_MODE') == 'true':
@@ -65,6 +65,36 @@ def list_species():
         
     except Exception as e:
         return handle_error(e)
+
+@photos_bp.route('/photos/presigned/<path:s3_uri_encoded>', methods=['GET'])
+def get_photo_presigned_url(s3_uri_encoded):
+    """Redirect to a pre-signed S3 URL for the full-size photo"""
+    try:
+        try:
+            s3_uri = base64.b64decode(s3_uri_encoded.encode()).decode('utf-8')
+        except Exception:
+            return create_cors_response({'error': 'Invalid base64 encoding'}, 400)
+
+        if not s3_uri.startswith('s3://'):
+            return create_cors_response({'error': 'Invalid S3 URI format'}, 400)
+
+        s3_path = s3_uri[5:]
+        if '/' not in s3_path:
+            return create_cors_response({'error': 'Invalid S3 path'}, 400)
+
+        bucket, key = s3_path.split('/', 1)
+        url = s3_util.generate_presigned_url(bucket, key)
+
+        if url is None:
+            # Local mode fallback: proxy through thumbnail endpoint
+            encoded = base64.b64encode(s3_uri.encode()).decode()
+            url = f"{request.url_root}photos/thumbnail/{encoded}"
+
+        return redirect(url)
+
+    except Exception as e:
+        return handle_error(e)
+
 
 @photos_bp.route('/photos/thumbnail/<path:s3_uri_encoded>', methods=['GET', 'OPTIONS'])
 def get_photo_thumbnail(s3_uri_encoded):

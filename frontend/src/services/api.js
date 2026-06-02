@@ -29,6 +29,10 @@ class ApiService {
       throw error;
     }
   }
+
+  getFullsizeUrl(s3Uri) {
+    return `${API_BASE_URL}/photos/presigned/${btoa(s3Uri)}`;
+  }
 }
 
 export default new ApiService();
