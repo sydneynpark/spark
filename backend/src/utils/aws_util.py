@@ -109,6 +109,10 @@ class S3Util:
         content_type = response.get('ContentType', 'image/jpeg')
         return image_data, content_type
 
+    def get_full_size_image(self, bucket, key):
+        """Get full-size image bytes from S3 (delegates to get_image for AWS)"""
+        return self.get_image(bucket, key)
+
     def generate_presigned_url(self, bucket, key, expiration=3600):
         """Generate a pre-signed URL for temporary full-size photo access"""
         return self.s3.generate_presigned_url(

@@ -72,6 +72,13 @@ class LocalS3Util:
         )
         return svg.encode(), 'image/svg+xml'
 
+    def get_full_size_image(self, bucket, key):
+        local_path = os.path.join(LOCAL_DATA_DIR, 'photos', key)
+        if os.path.exists(local_path):
+            with open(local_path, 'rb') as f:
+                return f.read(), 'image/jpeg'
+        return self.get_image(bucket, key)
+
     def generate_presigned_url(self, bucket, key, expiration=3600):
         # No real S3 in local mode; signal caller to fall back to thumbnail proxy
         return None

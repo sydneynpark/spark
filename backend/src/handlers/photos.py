@@ -86,9 +86,12 @@ def get_photo_presigned_url(s3_uri_encoded):
         url = s3_util.generate_presigned_url(bucket, key)
 
         if url is None:
-            # Local mode fallback: proxy through thumbnail endpoint
-            encoded = base64.b64encode(s3_uri.encode()).decode()
-            url = f"{request.url_root}photos/thumbnail/{encoded}"
+            # Local mode: serve full-size image directly from local_data/photos/
+            image_data, content_type = s3_util.get_full_size_image(bucket, key)
+            response = Response(image_data, mimetype=content_type or 'image/jpeg')
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Cache-Control'] = 'public, max-age=3600'
+            return response
 
         return redirect(url)
 
