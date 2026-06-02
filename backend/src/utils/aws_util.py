@@ -77,7 +77,7 @@ class S3Util:
 
     def list_posts(self):
         """List all markdown blog posts from S3"""
-        from utils.response_util import parse_post_metadata
+        from utils.response_util import parse_post_metadata, extract_preview
         response = self.s3.list_objects_v2(Bucket=BLOG_BUCKET)
         posts = []
         for obj in response.get('Contents', []):
@@ -87,6 +87,12 @@ class S3Util:
             meta = parse_post_metadata(key)
             meta['key'] = key
             meta['last_modified'] = obj['LastModified'].isoformat()
+            try:
+                preview_response = self.s3.get_object(Bucket=BLOG_BUCKET, Key=key, Range='bytes=0-599')
+                preview_text = preview_response['Body'].read().decode('utf-8', errors='ignore')
+                meta['preview'] = extract_preview(preview_text)
+            except Exception:
+                meta['preview'] = ''
             posts.append(meta)
         posts.sort(key=lambda p: (p['date'] or ''), reverse=True)
         return posts

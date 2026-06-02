@@ -33,7 +33,7 @@ class LocalDynamoUtil:
 
 class LocalS3Util:
     def list_posts(self):
-        from utils.response_util import parse_post_metadata
+        from utils.response_util import parse_post_metadata, extract_preview
         posts_dir = os.path.join(LOCAL_DATA_DIR, 'posts')
         posts = []
         if os.path.exists(posts_dir):
@@ -46,6 +46,8 @@ class LocalS3Util:
                     meta = parse_post_metadata(key)
                     meta['key'] = key
                     meta['last_modified'] = datetime.fromtimestamp(os.path.getmtime(filepath)).isoformat()
+                    with open(filepath, encoding='utf-8') as f:
+                        meta['preview'] = extract_preview(f.read(600))
                     posts.append(meta)
         posts.sort(key=lambda p: (p['date'] or ''), reverse=True)
         return posts
