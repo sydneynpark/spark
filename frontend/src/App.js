@@ -5,6 +5,7 @@ import Header from './components/Header';
 import Hero from './components/Hero';
 import Content from './components/Content';
 import Photos from './components/Photos';
+import Gallery from './components/Gallery';
 import Footer from './components/Footer';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
               </>
             } />
             <Route path="/photos" element={<Photos />} />
+            <Route path="/gallery" element={<Gallery />} />
             <Route path="/blog" element={
               <div style={{textAlign: 'center', padding: '2rem'}}>
                 <h2>Blog</h2>

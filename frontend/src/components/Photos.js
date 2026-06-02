@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import ApiService from '../services/api';
 
 const Photos = () => {
@@ -63,27 +64,27 @@ const Photos = () => {
   const renderHierarchy = () => {
     return Object.entries(hierarchy).map(([className, classData]) => (
       <div key={className} className="taxonomy-class">
-        <div className="taxonomy-item level-0">
+        <Link to={`/gallery?type=class&value=${encodeURIComponent(className)}`} className="taxonomy-item level-0">
           <strong>{className}</strong> <span className="count">({classData.count} photos)</span>
-        </div>
-        
+        </Link>
+
         {Object.entries(classData.orders).map(([order, orderData]) => (
           <div key={order} className="taxonomy-order">
-            <div className="taxonomy-item level-1">
+            <Link to={`/gallery?type=order&value=${encodeURIComponent(order)}`} className="taxonomy-item level-1">
               {order} <span className="count">({orderData.count} photos)</span>
-            </div>
-            
+            </Link>
+
             {Object.entries(orderData.families).map(([family, familyData]) => (
               <div key={family} className="taxonomy-family">
-                <div className="taxonomy-item level-2">
+                <Link to={`/gallery?type=family&value=${encodeURIComponent(family)}`} className="taxonomy-item level-2">
                   {family} <span className="count">({familyData.count} photos)</span>
-                </div>
-                
+                </Link>
+
                 {Object.entries(familyData.species).map(([species, speciesData]) => (
                   <div key={species} className="taxonomy-species">
-                    <div className="taxonomy-item level-3">
+                    <Link to={`/gallery?type=species&value=${encodeURIComponent(species)}`} className="taxonomy-item level-3">
                       <em>{species}</em> <span className="count">({speciesData.count} photos)</span>
-                    </div>
+                    </Link>
                   </div>
                 ))}
               </div>
