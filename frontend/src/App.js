@@ -6,6 +6,8 @@ import Hero from './components/Hero';
 import Content from './components/Content';
 import Photos from './components/Photos';
 import Gallery from './components/Gallery';
+import Blog from './components/Blog';
+import BlogPost from './components/BlogPost';
 import Footer from './components/Footer';
 
 function App() {
@@ -23,12 +25,8 @@ function App() {
             } />
             <Route path="/photos" element={<Photos />} />
             <Route path="/gallery" element={<Gallery />} />
-            <Route path="/blog" element={
-              <div style={{textAlign: 'center', padding: '2rem'}}>
-                <h2>Blog</h2>
-                <p>Blog posts coming soon!</p>
-              </div>
-            } />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:postId" element={<BlogPost />} />
           </Routes>
         </main>
         <Footer />
