@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import ApiService from '../services/api';
 import PhotoThumbnail from './PhotoThumbnail';
+import Lightbox from './Lightbox';
 
 const LABEL_BY_TYPE = { species: 'Species', family: 'Family', order: 'Order', class: 'Class' };
 
@@ -11,8 +12,6 @@ const Gallery = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
   const type = searchParams.get('type');
   const value = searchParams.get('value');
 
@@ -20,23 +19,8 @@ const Gallery = () => {
     loadPhotos();
   }, [type, value]);
 
-  const closeLightbox = useCallback(() => {
-    setSelectedPhoto(null);
-    setImageLoaded(false);
-    setImageError(false);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => { if (e.key === 'Escape') closeLightbox(); };
-    if (selectedPhoto) document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPhoto, closeLightbox]);
-
-  const openLightbox = (photo) => {
-    setSelectedPhoto(photo);
-    setImageLoaded(false);
-    setImageError(false);
-  };
+  const closeLightbox = useCallback(() => setSelectedPhoto(null), []);
+  const openLightbox = (photo) => setSelectedPhoto(photo);
 
   const loadPhotos = async () => {
     try {
@@ -113,28 +97,12 @@ const Gallery = () => {
         </div>
       )}
 
-      {selectedPhoto && (
-        <div className="lightbox-overlay" onClick={closeLightbox}>
-          <div className="lightbox-content" onClick={e => e.stopPropagation()}>
-            <button className="lightbox-close" onClick={closeLightbox}>✕</button>
-            {!imageLoaded && !imageError && <div className="lightbox-loading">Loading...</div>}
-            {imageError && <div className="lightbox-error">Failed to load image</div>}
-            <img
-              src={ApiService.getFullsizeUrl(selectedPhoto.s3_uri)}
-              alt={selectedPhoto.species || 'Bird photo'}
-              className="lightbox-image"
-              style={{ display: imageLoaded ? 'block' : 'none' }}
-              onLoad={() => setImageLoaded(true)}
-              onError={() => setImageError(true)}
-            />
-            <div className="lightbox-caption">
-              <h3>{selectedPhoto.species || 'Unknown Species'}</h3>
-              {selectedPhoto.family && <p>{selectedPhoto.family}</p>}
-              {selectedPhoto.order && <p>{selectedPhoto.order}</p>}
-            </div>
-          </div>
-        </div>
-      )}
+      <Lightbox
+        src={selectedPhoto ? ApiService.getFullsizeUrl(selectedPhoto.s3_uri) : null}
+        alt={selectedPhoto?.species || 'Bird photo'}
+        caption={selectedPhoto}
+        onClose={closeLightbox}
+      />
     </div>
   );
 };

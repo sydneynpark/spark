@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import ApiService from '../services/api';
 import PhotoThumbnail from './PhotoThumbnail';
+import Lightbox from './Lightbox';
 
 const PHOTO_BUCKET = 'spark.wiki.photos';
 
@@ -19,26 +20,9 @@ function BlogPost() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lightboxUri, setLightboxUri] = useState(null);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
 
-  const closeLightbox = useCallback(() => {
-    setLightboxUri(null);
-    setImageLoaded(false);
-    setImageError(false);
-  }, []);
-
-  const openLightbox = useCallback((s3Uri) => {
-    setLightboxUri(s3Uri);
-    setImageLoaded(false);
-    setImageError(false);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => { if (e.key === 'Escape') closeLightbox(); };
-    if (lightboxUri) document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [lightboxUri, closeLightbox]);
+  const closeLightbox = useCallback(() => setLightboxUri(null), []);
+  const openLightbox = useCallback((s3Uri) => setLightboxUri(s3Uri), []);
 
   useEffect(() => {
     ApiService.fetchPost(postId)
@@ -83,23 +67,11 @@ function BlogPost() {
         </div>
       </article>
 
-      {lightboxUri && (
-        <div className="lightbox-overlay" onClick={closeLightbox}>
-          <div className="lightbox-content" onClick={e => e.stopPropagation()}>
-            <button className="lightbox-close" onClick={closeLightbox}>✕</button>
-            {!imageLoaded && !imageError && <div className="lightbox-loading">Loading...</div>}
-            {imageError && <div className="lightbox-error">Failed to load image</div>}
-            <img
-              src={ApiService.getFullsizeUrl(lightboxUri)}
-              alt="Full size photo"
-              className="lightbox-image"
-              style={{ display: imageLoaded ? 'block' : 'none' }}
-              onLoad={() => setImageLoaded(true)}
-              onError={() => setImageError(true)}
-            />
-          </div>
-        </div>
-      )}
+      <Lightbox
+        src={lightboxUri ? ApiService.getFullsizeUrl(lightboxUri) : null}
+        alt="Full size photo"
+        onClose={closeLightbox}
+      />
     </div>
   );
 }
