@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import ApiService from '../services/api';
+import PostCard from './PostCard';
 
 function Blog() {
   const [posts, setPosts] = useState([]);
@@ -25,13 +25,7 @@ function Blog() {
       ) : (
         <ul className="post-list">
           {posts.map(post => (
-            <li key={post.id} className="post-item">
-              <Link to={`/blog/${post.id}`}>
-                <h3>{post.title}</h3>
-                {post.date && <time>{post.date}</time>}
-                {post.preview && <p className="post-preview">{post.preview}</p>}
-              </Link>
-            </li>
+            <PostCard key={post.id} post={post} />
           ))}
         </ul>
       )}
