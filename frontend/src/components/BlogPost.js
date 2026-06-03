@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import ApiService from '../services/api';
+import PhotoThumbnail from './PhotoThumbnail';
 
 const PHOTO_BUCKET = 'spark.wiki.photos';
 
@@ -48,15 +49,18 @@ function BlogPost() {
 
   const markdownComponents = {
     h1: ({ children }) => <h2>{children}</h2>,
+    p: ({ children }) => {
+      const arr = React.Children.toArray(children);
+      if (arr.length === 1 && arr[0]?.type === PhotoThumbnail) {
+        return <>{children}</>;
+      }
+      return <p>{children}</p>;
+    },
     code: ({ children, className }) => {
       const text = String(children).trim();
       if (!className && text.startsWith('photo://')) {
         const s3Uri = `s3://${PHOTO_BUCKET}/${text.slice('photo://'.length)}`;
-        return (
-          <span className="blog-photo-embed" onClick={() => openLightbox(s3Uri)}>
-            <img src={ApiService.getThumbnailUrl(s3Uri)} alt="Photo" />
-          </span>
-        );
+        return <PhotoThumbnail s3Uri={s3Uri} onClick={() => openLightbox(s3Uri)} />;
       }
       return <code className={className}>{children}</code>;
     },

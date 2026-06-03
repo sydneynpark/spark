@@ -38,18 +38,22 @@ def list_photos():
     except Exception as e:
         return handle_error(e)
 
-@photos_bp.route('/photos/<photo_id>', methods=['GET'])
+@photos_bp.route('/photos/<path:photo_id>', methods=['GET'])
 def get_photo(photo_id):
-    """Get specific photo details by S3 URI"""
+    """Get specific photo details by base64-encoded S3 URI"""
     try:
-        # photo_id will be the S3 URI (base64 encoded or similar)
-        photo = dynamo.get_photo_by_id(photo_id)
-        
+        try:
+            s3_uri = base64.b64decode(photo_id.encode()).decode('utf-8')
+        except Exception:
+            return jsonify({'error': 'Invalid base64 encoding'}), 400
+
+        photo = dynamo.get_photo_by_id(s3_uri)
+
         if not photo:
             return jsonify({'error': 'Photo not found'}), 404
-            
+
         return jsonify(photo)
-        
+
     except Exception as e:
         return handle_error(e)
 

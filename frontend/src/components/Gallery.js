@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import ApiService from '../services/api';
+import PhotoThumbnail from './PhotoThumbnail';
 
 const LABEL_BY_TYPE = { species: 'Species', family: 'Family', order: 'Order', class: 'Class' };
 
@@ -95,24 +96,14 @@ const Gallery = () => {
       {photos.length > 0 ? (
         <div className="photo-grid">
           {photos.map((photo, idx) => (
-            <div
-              className="photo-item"
+            <PhotoThumbnail
               key={`${photo.s3_uri}-${idx}`}
+              s3Uri={photo.s3_uri}
+              species={photo.species}
+              family={photo.family}
+              order={photo.order}
               onClick={() => openLightbox(photo)}
-            >
-              <div className="photo-thumbnail">
-                <img
-                  src={`https://api.spark.wiki/photos/thumbnail/${btoa(photo.s3_uri)}`}
-                  alt={photo.species || 'Bird photo'}
-                  onError={e => { e.target.src = '/images/placeholder.jpg'; }}
-                />
-              </div>
-              <div className="photo-info">
-                <h4>{photo.species || 'Unknown Species'}</h4>
-                {photo.family && <p className="taxonomy-info">{photo.family}</p>}
-                {photo.order && <p className="taxonomy-info">{photo.order}</p>}
-              </div>
-            </div>
+            />
           ))}
         </div>
       ) : (

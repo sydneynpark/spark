@@ -17,9 +17,9 @@ class ApiService {
     }
   }
 
-  async fetchPhoto(photoId) {
+  async fetchPhoto(s3Uri) {
     try {
-      const response = await fetch(`${API_BASE_URL}/photos/${encodeURIComponent(photoId)}`);
+      const response = await fetch(`${API_BASE_URL}/photos/${btoa(s3Uri)}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
