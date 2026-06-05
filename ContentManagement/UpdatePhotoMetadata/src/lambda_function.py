@@ -24,10 +24,14 @@ def lambda_handler(event, context):
 
         response = aws.get_s3_object(bucket, key)
         photo_bytes = response['Body'].read()
+
+        thumbnail = img.create_thumbnail(io.BytesIO(photo_bytes))
+        aws.put_s3_object('spark.wiki.thumbnails', key, thumbnail)
+        print(f'Saved thumbnail to spark.wiki.thumbnails/{key}')
+
+        # Parse taxonomic classifications from keywords
         photo_keywords = img.get_lightroom_keywords(io.BytesIO(photo_bytes))
         print('The image has keywords: ' + ', '.join(photo_keywords))
-        
-        # Parse taxonomic classifications from keywords
         taxonomies = taxonomy.parse_keywords_to_taxonomy(photo_keywords)
         print(f'Found {len(taxonomies)} species labeled in the photo.')
         
@@ -35,9 +39,6 @@ def lambda_handler(event, context):
         aws.store_photo_metadata(s3_uri, taxonomies)
         print(f'Stored metadata in DynamoDB')
 
-        thumbnail = img.create_thumbnail(io.BytesIO(photo_bytes))
-        aws.put_s3_object('spark.wiki.thumbnails', key, thumbnail)
-        print(f'Saved thumbnail to spark.wiki.thumbnails/{key}')
 
         return taxonomies
     
