@@ -147,6 +147,10 @@ def main():
             if key.endswith("/") and obj.get("Size", 0) == 0:
                 continue
 
+            # Skip the archive folder.
+            if key.startswith("archive/"):
+                continue
+
             total += 1
             try:
                 ok, err = invoke(lambda_client, build_event(obj))
