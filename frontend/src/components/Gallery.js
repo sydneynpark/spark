@@ -104,7 +104,7 @@ const Gallery = () => {
                 <img
                   src={`https://api.spark.wiki/photos/thumbnail/${btoa(photo.s3_uri)}`}
                   alt={photo.species || 'Bird photo'}
-                  onError={e => { e.target.src = '/images/placeholder.jpg'; }}
+                  onError={e => { e.target.src = '/images/placeholder-unknown.jpg'; }}
                 />
               </div>
               <div className="photo-info">
