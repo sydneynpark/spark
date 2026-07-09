@@ -1,4 +1,12 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.spark.wiki';
+const CDN_BASE_URL = process.env.REACT_APP_CDN_URL || 'https://photos.spark.wiki';
+
+// Strips the "s3://<bucket>/" prefix off an S3 URI and URL-encodes each path
+// segment, yielding the key path the CDN serves images under.
+function s3UriToPath(s3Uri) {
+  const key = s3Uri.replace(/^s3:\/\/[^/]+\//, '');
+  return key.split('/').map(encodeURIComponent).join('/');
+}
 
 class ApiService {
   async fetchPhotos(filter = {}) {
@@ -31,11 +39,11 @@ class ApiService {
   }
 
   getThumbnailUrl(s3Uri) {
-    return `${API_BASE_URL}/photos/thumbnail/${btoa(s3Uri)}`;
+    return `${CDN_BASE_URL}/thumbnail/${s3UriToPath(s3Uri)}`;
   }
 
   getFullsizeUrl(s3Uri) {
-    return `${API_BASE_URL}/photos/presigned/${btoa(s3Uri)}`;
+    return `${CDN_BASE_URL}/${s3UriToPath(s3Uri)}`;
   }
 
   async fetchPosts() {
