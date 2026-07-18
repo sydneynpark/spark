@@ -232,6 +232,7 @@ const Photos = () => {
       <h2>Bird Photo Gallery</h2>
 
       <div className="photos-tabs">
+        <span className="photos-tabs-label">Browse by...</span>
         <button
           type="button"
           className={`photos-tab${activeTab === 'taxonomy' ? ' active' : ''}`}
@@ -247,8 +248,6 @@ const Photos = () => {
           Date
         </button>
       </div>
-
-      <p>{activeTab === 'taxonomy' ? 'Browse by taxonomic classification' : 'Browse by date captured'}</p>
 
       <div className="taxonomy-hierarchy">
         {hasContent ? (
