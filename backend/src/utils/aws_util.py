@@ -102,21 +102,3 @@ class S3Util:
         response = self.s3.get_object(Bucket=BLOG_BUCKET, Key=key)
         return response['Body'].read().decode('utf-8')
 
-    def get_image(self, bucket, key):
-        """Get image bytes and content type from S3"""
-        response = self.s3.get_object(Bucket=bucket, Key=key)
-        image_data = response['Body'].read()
-        content_type = response.get('ContentType', 'image/jpeg')
-        return image_data, content_type
-
-    def get_full_size_image(self, bucket, key):
-        """Get full-size image bytes from S3 (delegates to get_image for AWS)"""
-        return self.get_image(bucket, key)
-
-    def generate_presigned_url(self, bucket, key, expiration=3600):
-        """Generate a pre-signed URL for temporary full-size photo access"""
-        return self.s3.generate_presigned_url(
-            'get_object',
-            Params={'Bucket': bucket, 'Key': key},
-            ExpiresIn=expiration
-        )
