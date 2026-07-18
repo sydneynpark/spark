@@ -73,7 +73,7 @@ const Photos = () => {
       }
 
       if (!hierarchy[className].orders[order].families[family].species[species]) {
-        hierarchy[className].orders[order].families[family].species[species] = { count: 0 };
+        hierarchy[className].orders[order].families[family].species[species] = { count: 0, photos: [] };
       }
 
       // Increment counts
@@ -81,6 +81,7 @@ const Photos = () => {
       hierarchy[className].orders[order].count++;
       hierarchy[className].orders[order].families[family].count++;
       hierarchy[className].orders[order].families[family].species[species].count++;
+      hierarchy[className].orders[order].families[family].species[species].photos.push(photo);
     });
 
     return hierarchy;
@@ -136,6 +137,17 @@ const Photos = () => {
     </Link>
   );
 
+  const renderSpeciesRow = (species, speciesData) => (
+    <Link
+      to={`/gallery?type=species&value=${encodeURIComponent(species)}`}
+      className="taxonomy-row rank-species"
+    >
+      <ThumbnailStack photos={speciesData.photos} />
+      <span className="taxonomy-name">{species}</span>
+      <span className="taxonomy-count">{speciesData.count}</span>
+    </Link>
+  );
+
   const renderHierarchy = () => {
     return Object.entries(hierarchy).map(([className, classData]) => (
       <div key={className} className="taxonomy-node">
@@ -154,7 +166,7 @@ const Photos = () => {
                     <div className="taxonomy-children">
                       {Object.entries(familyData.species).map(([species, speciesData]) => (
                         <div key={species} className="taxonomy-node">
-                          {renderRow('species', species, speciesData.count)}
+                          {renderSpeciesRow(species, speciesData)}
                         </div>
                       ))}
                     </div>

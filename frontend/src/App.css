@@ -292,7 +292,7 @@ footer {
 }
 
 .rank-species {
-  min-height: 2.3rem;
+  min-height: 3.4rem;
 }
 
 /* Date tree: year/month mirror class/order as sticky stacking headers; day
@@ -817,5 +817,33 @@ footer {
   .thumb-stack-img {
     width: 1.6rem;
     height: 1.6rem;
+  }
+
+  /* Let long names wrap onto multiple lines instead of being cut off with
+     an ellipsis. The sticky stacking headers rely on fixed row heights, so
+     dropping to static positioning here keeps wrapped rows from overlapping
+     the row below. */
+  .taxonomy-name {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: break-word;
+  }
+
+  .taxonomy-row {
+    align-items: flex-start;
+  }
+
+  .rank-class,
+  .rank-order,
+  .rank-family,
+  .rank-year,
+  .rank-month {
+    position: static;
+    height: auto;
+  }
+
+  .taxonomy-count {
+    padding-top: 0.35rem;
   }
 }
