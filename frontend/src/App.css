@@ -181,56 +181,121 @@ footer {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.taxonomy-item {
-  display: block;
+/* Taxonomy tree: nested rank rows (class > order > family > species) with
+   tree guide lines and stacking sticky headers for the first three ranks. */
+.taxonomy-tree {
+  --h-class: 3.1rem;
+  --h-order: 2.6rem;
+  --h-family: 2.6rem;
+  --tree-indent: 1.35rem;
+  --guide-color: rgba(43, 49, 63, 0.18);
+}
+
+.taxonomy-children {
+  margin-left: 0.55rem;
+  padding-left: var(--tree-indent);
+  border-left: 1.5px solid var(--guide-color);
+}
+
+.taxonomy-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 4px;
   text-decoration: none;
   color: inherit;
-  padding: 0.5rem 0;
-  border-left: 3px solid transparent;
+  background: var(--color-card-background);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.15s;
 }
 
-.taxonomy-item:hover {
-  background-color: #f8f9fa;
+.taxonomy-row:hover {
+  background-color: rgba(43, 49, 63, 0.06);
 }
 
-/* Indentation levels */
-.level-0 {
+/* Horizontal stub connecting a row back to its parent's vertical guide line. */
+.rank-order::before,
+.rank-family::before,
+.rank-species::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: calc(-1 * var(--tree-indent));
+  width: var(--tree-indent);
+  height: 1.5px;
+  background: var(--guide-color);
+}
+
+/* Stacking sticky headers: class/order/family pin to the top in order, so
+   ancestor headings stay visible above whichever row is currently in view. */
+.rank-class {
+  height: var(--h-class);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.rank-order {
+  height: var(--h-order);
+  position: sticky;
+  top: var(--h-class);
+  z-index: 20;
+}
+
+.rank-family {
+  height: var(--h-family);
+  position: sticky;
+  top: calc(var(--h-class) + var(--h-order));
+  z-index: 10;
+}
+
+.rank-species {
+  min-height: 2.3rem;
+}
+
+.taxonomy-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rank-class .taxonomy-name {
   font-size: 1.2rem;
-  font-weight: bold;
+  font-weight: 700;
   color: var(--color-text-primary);
-  border-left-color: var(--color-accent-dark);
-  padding-left: 0;
 }
 
-.level-1 {
-  font-size: 1.1rem;
+.rank-order .taxonomy-name {
+  font-size: 0.78rem;
   font-weight: 600;
-  color: var(--color-text-primary);
-  border-left-color: var(--color-accent-medium);
-  padding-left: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-accent-dark);
 }
 
-.level-2 {
+.rank-family .taxonomy-name {
   font-size: 1rem;
-  font-weight: 500;
-  color: var(--color-accent-dark);
-  border-left-color: var(--color-accent-medium);
-  padding-left: 3rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
 }
 
-.level-3 {
-  font-size: 0.95rem;
-  color: var(--color-accent-dark);
-  border-left-color: var(--color-accent-dark);
-  padding-left: 4.5rem;
+.rank-species .taxonomy-name {
+  font-size: 0.92rem;
+  font-style: italic;
+  color: var(--color-text-primary);
 }
 
-.count {
+.taxonomy-count {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding-left: 0.75rem;
+  font-size: 0.85rem;
   color: var(--color-count);
-  font-weight: normal;
-  font-size: 0.9em;
+  font-variant-numeric: tabular-nums;
 }
 
 .error {
@@ -628,7 +693,15 @@ footer {
     padding: 1rem;
   }
 
-  .level-1 { padding-left: 1rem; }
-  .level-2 { padding-left: 2rem; }
-  .level-3 { padding-left: 3rem; }
+  .taxonomy-hierarchy {
+    padding: 1.25rem;
+  }
+
+  .taxonomy-tree {
+    --tree-indent: 0.9rem;
+  }
+
+  .taxonomy-count {
+    padding-left: 0.4rem;
+  }
 }
