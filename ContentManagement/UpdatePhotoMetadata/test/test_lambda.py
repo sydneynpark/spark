@@ -20,5 +20,12 @@ class TestLambda(unittest.TestCase):
         result = lambda_function.lambda_handler(event, None)
         assert 'Birds' in result
 
+    def test_date_from_key(self):
+        key = '2025/05/17/2025-05-17 095156 - Tree Swallow.jpg'
+        assert lambda_function._date_from_key(key) == '2025-05-17'
+
+    def test_date_from_key_with_no_date_path(self):
+        assert lambda_function._date_from_key('uploads/tree-swallow.jpg') is None
+
 if __name__ == '__main__':
     unittest.main()

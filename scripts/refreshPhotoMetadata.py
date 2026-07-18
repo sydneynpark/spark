@@ -28,6 +28,9 @@ from botocore.exceptions import ClientError
 BUCKET_NAME = "spark.wiki.photos"
 BUCKET_ARN = "arn:aws:s3:::spark.wiki.photos"
 
+# Objects under this prefix are archived and shouldn't be (re)processed.
+ARCHIVE_PREFIX = "archive/"
+
 AWS_REGION = "us-east-1"
 
 # Lambda function name or full ARN
@@ -145,6 +148,10 @@ def main():
 
             # Skip "folder" placeholder keys if any exist.
             if key.endswith("/") and obj.get("Size", 0) == 0:
+                continue
+
+            # Skip archived photos.
+            if key.startswith(ARCHIVE_PREFIX):
                 continue
 
             total += 1

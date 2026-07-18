@@ -174,6 +174,35 @@ footer {
   margin: 0 auto;
 }
 
+/* Photos page tabs (Taxonomy / Date) */
+.photos-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0 1.25rem;
+  border-bottom: 1px solid rgba(43, 49, 63, 0.15);
+}
+
+.photos-tab {
+  font: inherit;
+  padding: 0.6rem 1.1rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-accent-dark);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.photos-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.photos-tab.active {
+  color: var(--color-text-primary);
+  border-bottom-color: var(--color-accent-dark);
+  font-weight: 600;
+}
+
 .taxonomy-hierarchy {
   background: var(--color-card-background);
   border-radius: 10px;
@@ -181,12 +210,15 @@ footer {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-/* Taxonomy tree: nested rank rows (class > order > family > species) with
-   tree guide lines and stacking sticky headers for the first three ranks. */
+/* Taxonomy tree: nested rank rows (class > order > family > species, or
+   year > month > day on the Date tab) with tree guide lines and stacking
+   sticky headers for the top two/three ranks. */
 .taxonomy-tree {
   --h-class: 3.1rem;
   --h-order: 2.6rem;
   --h-family: 2.6rem;
+  --h-year: 3.1rem;
+  --h-month: 2.6rem;
   --tree-indent: 1.35rem;
   --guide-color: rgba(43, 49, 63, 0.18);
 }
@@ -218,7 +250,9 @@ footer {
 /* Horizontal stub connecting a row back to its parent's vertical guide line. */
 .rank-order::before,
 .rank-family::before,
-.rank-species::before {
+.rank-species::before,
+.rank-month::before,
+.rank-day::before {
   content: '';
   position: absolute;
   top: 50%;
@@ -255,6 +289,26 @@ footer {
   min-height: 2.3rem;
 }
 
+/* Date tree: year/month mirror class/order as sticky stacking headers; day
+   is the leaf row and carries a thumbnail stack instead of plain text. */
+.rank-year {
+  height: var(--h-year);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.rank-month {
+  height: var(--h-month);
+  position: sticky;
+  top: var(--h-year);
+  z-index: 20;
+}
+
+.rank-day {
+  min-height: 3.4rem;
+}
+
 .taxonomy-name {
   flex: 1 1 auto;
   min-width: 0;
@@ -288,6 +342,50 @@ footer {
   font-style: italic;
   color: var(--color-text-primary);
 }
+
+.rank-year .taxonomy-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.rank-month .taxonomy-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-accent-dark);
+}
+
+.rank-day .taxonomy-name {
+  font-size: 0.92rem;
+  color: var(--color-text-primary);
+}
+
+/* Small overlapping stack of thumbnails shown on each day row. */
+.thumb-stack {
+  position: relative;
+  flex: 0 0 auto;
+  width: 2.6rem;
+  height: 2.6rem;
+  margin-right: 0.3rem;
+}
+
+.thumb-stack-img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2rem;
+  height: 2rem;
+  object-fit: cover;
+  border-radius: 3px;
+  border: 2px solid var(--color-white);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.thumb-stack-img:nth-child(1) { transform: translate(-50%, -50%) rotate(0deg); z-index: 3; }
+.thumb-stack-img:nth-child(2) { transform: translate(-65%, -42%) rotate(-10deg); z-index: 2; }
+.thumb-stack-img:nth-child(3) { transform: translate(-38%, -58%) rotate(9deg); z-index: 1; }
 
 .taxonomy-count {
   flex: 0 0 auto;
@@ -703,5 +801,15 @@ footer {
 
   .taxonomy-count {
     padding-left: 0.4rem;
+  }
+
+  .thumb-stack {
+    width: 2.1rem;
+    height: 2.1rem;
+  }
+
+  .thumb-stack-img {
+    width: 1.6rem;
+    height: 1.6rem;
   }
 }

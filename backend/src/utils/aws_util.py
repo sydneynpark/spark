@@ -6,9 +6,13 @@ class DynamoUtil:
         self.dynamodb = boto3.resource('dynamodb')
         self.photos_table = self.dynamodb.Table('spark.wiki.photos')
     
-    def get_photos(self, species=None, family=None, order=None, limit=50):
-        """Get photos with optional filtering by taxonomy"""
+    def get_photos(self, species=None, family=None, order=None, year=None, month=None, day=None, limit=50):
+        """Get photos with optional filtering by taxonomy or date captured"""
         try:
+            # date is stored as 'YYYY-MM-DD'; day/month/year are all just
+            # increasingly specific prefixes of that same string.
+            date_prefix = day or month or year
+
             if species:
                 # Scan with species filter
                 response = self.photos_table.scan(
@@ -27,10 +31,16 @@ class DynamoUtil:
                     FilterExpression=Attr('order').eq(order),
                     Limit=limit
                 )
+            elif date_prefix:
+                # Scan with date filter
+                response = self.photos_table.scan(
+                    FilterExpression=Attr('date').begins_with(date_prefix),
+                    Limit=limit
+                )
             else:
                 # Get all photos
                 response = self.photos_table.scan(Limit=limit)
-            
+
             return response.get('Items', [])
             
         except Exception as e:

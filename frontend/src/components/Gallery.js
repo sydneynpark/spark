@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import ApiService from '../services/api';
+import { DATE_FILTER_TYPES, formatDateFilterLabel } from '../utils/photoDate';
 
-const LABEL_BY_TYPE = { species: 'Species', family: 'Family', order: 'Order', class: 'Class' };
+const LABEL_BY_TYPE = {
+  species: 'Species', family: 'Family', order: 'Order', class: 'Class',
+  year: 'Year', month: 'Month', day: 'Day',
+};
 
 const Gallery = () => {
   const [searchParams] = useSearchParams();
@@ -56,7 +60,8 @@ const Gallery = () => {
 
   const filterLabel = () => {
     if (!type || !value) return 'All Photos';
-    return `${LABEL_BY_TYPE[type] || type}: ${value}`;
+    const displayValue = DATE_FILTER_TYPES.includes(type) ? formatDateFilterLabel(type, value) : value;
+    return `${LABEL_BY_TYPE[type] || type}: ${displayValue}`;
   };
 
   const header = (

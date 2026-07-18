@@ -1,5 +1,8 @@
 from PIL import Image, ExifTags
+from datetime import datetime
 import io
+
+EXIF_DATE_FORMAT = '%Y:%m:%d %H:%M:%S'
 
 class ImageUtil:
 
@@ -11,6 +14,20 @@ class ImageUtil:
             img_xmp = img.getxmp()
             keyword_list = img_xmp['xmpmeta']['RDF']['Description']['subject']['Bag']['li']
             return keyword_list
+
+    def get_date_captured(self, jpg_stream):
+        # DateTimeOriginal is the capture date; the top-level DateTime tag is the
+        # file's last-modified/export date instead, so it's never used as a fallback.
+        with Image.open(jpg_stream) as img:
+            exif_ifd = img.getexif().get_ifd(ExifTags.IFD.Exif)
+            for tag in (ExifTags.Base.DateTimeOriginal, ExifTags.Base.DateTimeDigitized):
+                raw = exif_ifd.get(tag)
+                if raw:
+                    try:
+                        return datetime.strptime(raw, EXIF_DATE_FORMAT).strftime('%Y-%m-%d')
+                    except (ValueError, TypeError):
+                        pass
+        return None
 
     def create_thumbnail(self, jpg_stream, min_dimension=300):
         with Image.open(jpg_stream) as img:
