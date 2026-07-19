@@ -48,8 +48,9 @@ def lambda_handler(event, context):
         print(f'Stored metadata in DynamoDB')
 
         thumbnail = img.create_thumbnail(io.BytesIO(photo_bytes))
-        aws.put_s3_object('spark.wiki.thumbnails', key, thumbnail)
-        print(f'Saved thumbnail to spark.wiki.thumbnails/{key}')
+        thumbnail_key = f'thumbnail/{key}'
+        aws.put_s3_object('spark.wiki.thumbnails', thumbnail_key, thumbnail)
+        print(f'Saved thumbnail to spark.wiki.thumbnails/{thumbnail_key}')
 
         return taxonomies
     
