@@ -5,7 +5,14 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-const WEEKDAY_FORMATTER = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
+const WEEKDAY_FORMATTER = new Intl.DateTimeFormat('en-US', { weekday: 'long' });
+
+function ordinal(day) {
+  if (day % 10 === 1 && day % 100 !== 11) return `${day}st`;
+  if (day % 10 === 2 && day % 100 !== 12) return `${day}nd`;
+  if (day % 10 === 3 && day % 100 !== 13) return `${day}rd`;
+  return `${day}th`;
+}
 
 export const DATE_FILTER_TYPES = ['year', 'month', 'day'];
 
@@ -29,7 +36,7 @@ export function dayValue({ year, month, day }) {
 
 export function formatDayLabel({ year, month, day }) {
   const date = new Date(Number(year), Number(month) - 1, Number(day));
-  return `${parseInt(day, 10)} · ${WEEKDAY_FORMATTER.format(date)}`;
+  return `${WEEKDAY_FORMATTER.format(date)} ${monthName(month)} ${ordinal(parseInt(day, 10))}`;
 }
 
 // Renders the /gallery filter chip label for a year/month/day value, e.g.
