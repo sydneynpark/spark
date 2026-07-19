@@ -11,14 +11,17 @@ class LocalDynamoUtil:
         with open(data_file) as f:
             self._photos = json.load(f)
 
-    def get_photos(self, species=None, family=None, order=None, limit=50):
+    def get_photos(self, species=None, family=None, order=None, year=None, month=None, day=None, limit=50):
         photos = self._photos
+        date_prefix = day or month or year
         if species:
             photos = [p for p in photos if p.get('species') == species]
         elif family:
             photos = [p for p in photos if p.get('family') == family]
         elif order:
             photos = [p for p in photos if p.get('order') == order]
+        elif date_prefix:
+            photos = [p for p in photos if p.get('date', '').startswith(date_prefix)]
         return photos[:limit]
 
     def get_photo_by_id(self, photo_id):

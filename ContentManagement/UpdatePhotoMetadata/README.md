@@ -28,6 +28,7 @@ python -m unittest test\test_lambda.py
 
 
 ```
+rm -r .build
 mkdir .build/packages
 pip install --target .build/packages -r src/requirements.txt
 cp src/*.py .build/packages

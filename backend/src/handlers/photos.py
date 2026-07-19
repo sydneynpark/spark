@@ -19,12 +19,18 @@ def list_photos():
         species = request.args.get('species')
         family = request.args.get('family')
         order = request.args.get('order')
+        year = request.args.get('year')
+        month = request.args.get('month')
+        day = request.args.get('day')
         limit = int(request.args.get('limit', 50))
-        
+
         photos = dynamo.get_photos(
             species=species,
-            family=family, 
+            family=family,
             order=order,
+            year=year,
+            month=month,
+            day=day,
             limit=limit
         )
         
