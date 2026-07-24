@@ -14,9 +14,16 @@ const CATEGORICAL_COLORS = [
   '#e34948', // red
 ];
 
-const SIZE = 240;
+const MAX_RATING = 10;
+const RING_STEPS = [2, 4, 6, 8, 10];
+
+const OUTER_RADIUS = 92;
+const LABEL_GAP = 16;
+const LABEL_DOT_RADIUS = 3;
+const CORNER_RADIUS = 5;
+const CHART_PADDING = 130;
+const SIZE = (OUTER_RADIUS + CHART_PADDING) * 2;
 const CENTER = SIZE / 2;
-const MAX_RADIUS = 100;
 
 function polarToCartesian(angleDeg, radius) {
   const angleRad = ((angleDeg - 90) * Math.PI) / 180;
@@ -26,23 +33,59 @@ function polarToCartesian(angleDeg, radius) {
   };
 }
 
-// Angle = share of total weight (how important this element is to the
-// book); radius = rating out of 10 (how well the book delivers on it),
-// colored outward from the center.
+// A pie-shaped wedge (apex at the center) with its two outer corners
+// rounded, so each sector reads as a soft radial bar rather than a slice.
+// The corner is approximated with a quadratic bezier using the sharp
+// corner itself as the control point — a common, cheap fillet that looks
+// right without solving for a true tangent circle.
 function wedgePath(startAngle, endAngle, radius) {
-  const start = polarToCartesian(startAngle, radius);
-  const end = polarToCartesian(endAngle, radius);
-  const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+  if (radius <= 0) return '';
+  const span = endAngle - startAngle;
+  if (span >= 360) {
+    // Full circle: draw as two arcs, no corners to round.
+    const top = polarToCartesian(startAngle, radius);
+    const bottom = polarToCartesian(startAngle + 180, radius);
+    return [
+      `M ${top.x} ${top.y}`,
+      `A ${radius} ${radius} 0 1 1 ${bottom.x} ${bottom.y}`,
+      `A ${radius} ${radius} 0 1 1 ${top.x} ${top.y}`,
+      'Z',
+    ].join(' ');
+  }
+
+  const r = Math.min(CORNER_RADIUS, radius / 2);
+  const cornerAngle = Math.min((r / radius) * (180 / Math.PI), span / 2);
+  const a0 = startAngle + cornerAngle;
+  const a1 = endAngle - cornerAngle;
+
+  const startCorner = polarToCartesian(startAngle, radius);
+  const startPullback = polarToCartesian(startAngle, radius - r);
+  const startFillet = polarToCartesian(a0, radius);
+  const endFillet = polarToCartesian(a1, radius);
+  const endCorner = polarToCartesian(endAngle, radius);
+  const endPullback = polarToCartesian(endAngle, radius - r);
+  const largeArcFlag = a1 - a0 > 180 ? 1 : 0;
+
   return [
     `M ${CENTER} ${CENTER}`,
-    `L ${start.x} ${start.y}`,
-    `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${end.x} ${end.y}`,
+    `L ${startPullback.x} ${startPullback.y}`,
+    `Q ${startCorner.x} ${startCorner.y} ${startFillet.x} ${startFillet.y}`,
+    `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endFillet.x} ${endFillet.y}`,
+    `Q ${endCorner.x} ${endCorner.y} ${endPullback.x} ${endPullback.y}`,
     'Z',
   ].join(' ');
 }
 
 function formatNumber(value) {
   return Number.isInteger(value) ? value : value.toFixed(1);
+}
+
+// Radial labels stay flat (no rotation) so they're always legible; only
+// which side of the dot the text sits on changes, so it extends away from
+// the circle instead of back over it.
+function labelTransform(midAngle) {
+  const flip = midAngle > 180 && midAngle < 360;
+  return { anchor: flip ? 'end' : 'start' };
 }
 
 function RatingChart({ ratingElements }) {
@@ -57,25 +100,51 @@ function RatingChart({ ratingElements }) {
     const startAngle = cumulativeAngle;
     const endAngle = cumulativeAngle + angleSpan;
     cumulativeAngle = endAngle;
+    const midAngle = (startAngle + endAngle) / 2;
     return {
       ...el,
       index,
       startAngle,
       endAngle,
-      radius: MAX_RADIUS * (el.rating / 10),
+      midAngle,
+      radius: OUTER_RADIUS * (el.rating / MAX_RATING),
       color: CATEGORICAL_COLORS[index % CATEGORICAL_COLORS.length],
     };
   });
 
+  const hasElaborations = wedges.some((w) => w.elaboration);
   const activate = (index) => () => setActiveIndex(index);
   const deactivate = () => setActiveIndex(null);
 
   return (
     <div className="rating-chart">
-      <svg className="rating-chart-svg" viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label="Book rating chart">
-        <circle className="rating-chart-outline" cx={CENTER} cy={CENTER} r={MAX_RADIUS} />
+      <svg
+        className="rating-chart-svg"
+        viewBox={`0 0 ${SIZE} ${SIZE}`}
+        role="img"
+        aria-label="Book rating chart"
+      >
+        {RING_STEPS.map((step) => (
+          <circle
+            key={step}
+            className="rating-chart-ring"
+            cx={CENTER}
+            cy={CENTER}
+            r={OUTER_RADIUS * (step / MAX_RATING)}
+          />
+        ))}
+
+        {wedges.map((wedge) => (
+          <path
+            key={`track-${wedge.index}`}
+            className="rating-chart-track"
+            style={{ '--wedge-color': wedge.color }}
+            d={wedgePath(wedge.startAngle, wedge.endAngle, OUTER_RADIUS)}
+          />
+        ))}
+
         {wedges.map((wedge) => {
-          const label = `${wedge.name}: weight ${formatNumber(wedge.weight)}, rating ${formatNumber(wedge.rating)} out of 10`;
+          const label = `${wedge.name}: weight ${formatNumber(wedge.weight)}, rating ${formatNumber(wedge.rating)} out of ${MAX_RATING}`;
           const className = `rating-chart-wedge${activeIndex === wedge.index ? ' active' : ''}`;
           const commonProps = {
             fill: wedge.color,
@@ -88,40 +157,54 @@ function RatingChart({ ratingElements }) {
             onFocus: activate(wedge.index),
             onBlur: deactivate,
           };
-          // A single rating element spans the full 360°, which degenerates
-          // an SVG arc path (start and end points coincide); draw it as a
-          // plain circle instead.
-          return wedges.length === 1 ? (
-            <circle key={wedge.index} cx={CENTER} cy={CENTER} r={wedge.radius} {...commonProps}>
-              <title>{label}</title>
-            </circle>
-          ) : (
+          if (wedge.radius <= 0) return null;
+          return (
             <path key={wedge.index} d={wedgePath(wedge.startAngle, wedge.endAngle, wedge.radius)} {...commonProps}>
               <title>{label}</title>
             </path>
           );
         })}
+
+        {wedges.map((wedge) => {
+          const anchorPoint = polarToCartesian(wedge.midAngle, OUTER_RADIUS + LABEL_GAP);
+          const { anchor } = labelTransform(wedge.midAngle);
+          const textStart = anchorPoint.x + (anchor === 'end' ? -1 : 1) * (LABEL_DOT_RADIUS + 6);
+          return (
+            <g
+              key={`label-${wedge.index}`}
+              className={`rating-chart-label${activeIndex === wedge.index ? ' active' : ''}`}
+              aria-hidden="true"
+            >
+              <circle cx={anchorPoint.x} cy={anchorPoint.y} r={LABEL_DOT_RADIUS} fill={wedge.color} />
+              <text x={textStart} y={anchorPoint.y} textAnchor={anchor} className="rating-chart-label-name">
+                {wedge.name}
+              </text>
+              <text x={textStart} y={anchorPoint.y} dy="1.15em" textAnchor={anchor} className="rating-chart-label-rating">
+                {formatNumber(wedge.rating)}/{MAX_RATING}
+              </text>
+            </g>
+          );
+        })}
       </svg>
 
-      <ul className="rating-chart-legend">
-        {wedges.map((wedge) => (
-          <li
-            key={wedge.index}
-            className={`rating-chart-legend-item${activeIndex === wedge.index ? ' active' : ''}`}
-            onMouseEnter={activate(wedge.index)}
-            onMouseLeave={deactivate}
-          >
-            <span className="rating-chart-swatch" style={{ backgroundColor: wedge.color }} />
-            <div className="rating-chart-legend-text">
-              <span className="rating-chart-legend-name">{wedge.name}</span>
-              <span className="rating-chart-legend-stats">
-                Weight: {formatNumber(wedge.weight)} · Rating: {formatNumber(wedge.rating)}/10
-              </span>
-              {wedge.elaboration && <p className="rating-chart-legend-elaboration">{wedge.elaboration}</p>}
-            </div>
-          </li>
-        ))}
-      </ul>
+      {hasElaborations && (
+        <ul className="rating-chart-notes">
+          {wedges.filter((w) => w.elaboration).map((wedge) => (
+            <li
+              key={wedge.index}
+              className={`rating-chart-note${activeIndex === wedge.index ? ' active' : ''}`}
+              onMouseEnter={activate(wedge.index)}
+              onMouseLeave={deactivate}
+            >
+              <span className="rating-chart-swatch" style={{ backgroundColor: wedge.color }} />
+              <div className="rating-chart-note-text">
+                <span className="rating-chart-note-name">{wedge.name}</span>
+                <p className="rating-chart-note-elaboration">{wedge.elaboration}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

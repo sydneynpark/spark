@@ -977,28 +977,38 @@ footer {
 }
 
 /* Rating chart: angle = weight (importance), radius = rating (how well the
-   book delivers), colored outward from the center. */
+   book delivers). Each category is a two-tone radial bar swept around a
+   circle — a pale track to the max rating, a colored fill to the actual
+   one — with its name and score direct-labeled on a spoke outside the
+   ring, so color is never the only way to tell categories apart. */
 .rating-chart {
   display: flex;
-  flex-wrap: wrap;
-  gap: 2rem;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
 }
 
 .rating-chart-svg {
-  flex: 0 0 240px;
-  width: 240px;
-  height: 240px;
+  width: 100%;
+  max-width: 460px;
+  height: auto;
 }
 
-.rating-chart-outline {
+.rating-chart-ring {
   fill: none;
-  stroke: rgba(43, 49, 63, 0.25);
+  stroke: rgba(43, 49, 63, 0.12);
   stroke-width: 1;
 }
 
+.rating-chart-track {
+  fill: color-mix(in oklab, var(--wedge-color) 15%, white);
+  stroke: white;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
 .rating-chart-wedge {
-  stroke: var(--color-card-background);
+  stroke: white;
   stroke-width: 2;
   stroke-linejoin: round;
   cursor: pointer;
@@ -1015,16 +1025,37 @@ footer {
   outline-offset: 2px;
 }
 
-.rating-chart-legend {
-  list-style: none;
-  flex: 1 1 260px;
-  min-width: 220px;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.rating-chart-label-name {
+  font-size: 15px;
+  font-weight: 600;
+  fill: var(--color-text-primary);
+  transition: opacity 0.15s;
 }
 
-.rating-chart-legend-item {
+.rating-chart-label-rating {
+  font-size: 12px;
+  fill: var(--color-accent-dark);
+}
+
+.rating-chart-label {
+  opacity: 0.82;
+  transition: opacity 0.15s;
+}
+
+.rating-chart-label.active {
+  opacity: 1;
+}
+
+.rating-chart-notes {
+  list-style: none;
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rating-chart-note {
   display: flex;
   gap: 0.75rem;
   align-items: flex-start;
@@ -1033,7 +1064,7 @@ footer {
   transition: background-color 0.15s;
 }
 
-.rating-chart-legend-item.active {
+.rating-chart-note.active {
   background-color: rgba(43, 49, 63, 0.06);
 }
 
@@ -1045,25 +1076,18 @@ footer {
   margin-top: 0.25rem;
 }
 
-.rating-chart-legend-text {
+.rating-chart-note-text {
   flex: 1;
 }
 
-.rating-chart-legend-name {
+.rating-chart-note-name {
   display: block;
   font-weight: 600;
   color: var(--color-text-primary);
 }
 
-.rating-chart-legend-stats {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--color-accent-dark);
-  margin-top: 0.1rem;
-}
-
-.rating-chart-legend-elaboration {
-  margin-top: 0.4rem;
+.rating-chart-note-elaboration {
+  margin-top: 0.2rem;
   font-size: 0.9rem;
   color: var(--color-text-primary);
   opacity: 0.85;
