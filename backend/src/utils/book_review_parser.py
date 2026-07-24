@@ -47,10 +47,13 @@ def parse_book_review(markdown_content, s3_uri=None):
         rating_elements.append(item)
 
     return {
-        'title': metadata.get('title', ''),
+        # `or ''` covers both a missing key and a key present but empty
+        # (e.g. `author:` with nothing after it, which YAML parses as None
+        # rather than a missing key).
+        'title': metadata.get('title', '') or '',
         'date': date_number,
         'date_reviewed': date_reviewed,
-        'author': metadata.get('author', ''),
+        'author': metadata.get('author', '') or '',
         's3_uri': s3_uri,
         'rating_elements': rating_elements,
         'commentary': _parse_commentary(post.content),

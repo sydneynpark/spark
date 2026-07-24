@@ -26,6 +26,17 @@ def lambda_handler(event, context):
     try:
         print(f'There was a {event_type} event for S3 object: {bucket}/{key}')
 
+        # Review files are the only thing this lambda processes. This
+        # notably excludes the cover images it writes into covers/ within
+        # this same bucket, which would otherwise re-trigger it (and fail,
+        # since a JPEG isn't valid UTF-8 markdown).
+        if not key.endswith('.md'):
+            print(f'Ignoring non-review S3 object: {bucket}/{key}')
+            return {
+                'statusCode': 200,
+                'ignored': key,
+            }
+
         if event_type.startswith('ObjectRemoved'):
             title = _title_from_key(key)
             aws.delete_book_review(title)

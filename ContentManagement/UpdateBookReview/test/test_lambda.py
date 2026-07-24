@@ -66,6 +66,23 @@ class TestLambda(unittest.TestCase):
         _, book_review = args
         self.assertIsNone(book_review.cover_key)
 
+    def test_lambda_ignores_cover_image_it_wrote_into_the_same_bucket(self):
+        # The cover upload lands in the same spark.wiki.books bucket this
+        # lambda is triggered from, so it must not try to process its own
+        # cover images as review files (they aren't valid UTF-8 markdown).
+        event = sample_events.UploadCoverImage
+
+        self.mock_aws.get_s3_object = MagicMock()
+        self.mock_aws.store_book_review = MagicMock()
+
+        result = lambda_function.lambda_handler(event, None)
+
+        self.assertEqual(result['statusCode'], 200)
+        self.assertEqual(result['ignored'], 'covers/Project Hail Mary.jpg')
+        self.mock_aws.get_s3_object.assert_not_called()
+        self.mock_aws.store_book_review.assert_not_called()
+        self.mock_open_library.find_cover_id.assert_not_called()
+
     def test_lambda_for_book_review_delete_event(self):
         event = sample_events.DeleteSampleBookReview
 

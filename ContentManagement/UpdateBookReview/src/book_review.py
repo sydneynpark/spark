@@ -8,10 +8,15 @@ COMMENTARY_POINT_PATTERN = re.compile(r'^(\d+(?:\.\d+)?)\s*%$')
 class BookReview:
     def __init__(self, post):
         metadata_dict = post.metadata
-        self.title = metadata_dict.get('title', '')
-        self.author = metadata_dict.get('author', '')
-        # YAML parses an unquoted YYYY-MM-DD as a date object rather than a
-        # string, since date_reviewed is written unquoted in review files.
+        # `or ''` covers both a missing key and a key present but empty (e.g.
+        # `author:` with nothing after it, which YAML parses as None rather
+        # than a missing key -- .get()'s default alone only catches the
+        # former).
+        self.title = metadata_dict.get('title', '') or ''
+        self.author = metadata_dict.get('author', '') or ''
+        # str(...) handles YAML parsing an unquoted YYYY-MM-DD as a date
+        # object rather than a string, since date_reviewed is written
+        # unquoted in review files.
         self.date_reviewed = str(metadata_dict.get('date_reviewed', '') or '')
         self.rating_elements = metadata_dict.get('rating_elements', [])
         self.commentary = self._parse_commentary(post.content)
