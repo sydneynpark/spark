@@ -1143,6 +1143,11 @@ footer {
   line-height: 1.7;
 }
 
+.commentary-timeline-text p,
+.commentary-overall p {
+  margin-bottom: 1.25rem;
+}
+
 .commentary-timeline-text p:last-child,
 .commentary-overall p:last-child {
   margin-bottom: 0;
