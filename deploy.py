@@ -6,7 +6,7 @@ backend, and the ContentManagement lambdas.
 Usage:
     python deploy.py frontend backend
     python deploy.py UpdatePhotoMetadata
-    python deploy.py frontend backend UpdatePhotoMetadata UpdateBlogPostMetadata
+    python deploy.py frontend backend UpdatePhotoMetadata UpdateBlogPostMetadata UpdateBookReview
 
 Credentials:
     The AWS access key and secret access key are read from
@@ -42,6 +42,7 @@ FRONTEND_DISTRIBUTION_ID = "E2JO5BSJ5WRP9P"
 CONTENT_API_FUNCTION = "ContentAPI"
 UPDATE_PHOTO_METADATA_FUNCTION = "UpdatePhotoMetadata"
 UPDATE_BLOG_POST_METADATA_FUNCTION = "UpdateBlogPostMetadata"
+UPDATE_BOOK_REVIEW_FUNCTION = "UpdateBookReview"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CREDENTIALS / AWS SESSION
@@ -242,11 +243,26 @@ def deploy_update_blog_post_metadata(session):
     # further to run after this lambda's code is updated.
 
 
+def deploy_update_book_review(session):
+    project_dir = ROOT / "ContentManagement" / "UpdateBookReview"
+
+    def copy_into_package(packages_dir):
+        for py_file in (project_dir / "src").glob("*.py"):
+            shutil.copy(py_file, packages_dir)
+
+    print("Building UpdateBookReview Lambda package ...")
+    zip_path = build_lambda_zip(project_dir, copy_into_package)
+    update_lambda_code(session, UPDATE_BOOK_REVIEW_FUNCTION, zip_path)
+    # No scripts/refreshBookReviews.py exists yet, so there's nothing further
+    # to run after this lambda's code is updated.
+
+
 TARGETS = {
     "frontend": deploy_frontend,
     "backend": deploy_backend,
     "UpdatePhotoMetadata": deploy_update_photo_metadata,
     "UpdateBlogPostMetadata": deploy_update_blog_post_metadata,
+    "UpdateBookReview": deploy_update_book_review,
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
