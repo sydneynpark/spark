@@ -1,3 +1,4 @@
 boto3
 flask
 serverless-wsgi
+python-frontmatter

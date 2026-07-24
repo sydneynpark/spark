@@ -5,6 +5,7 @@ class DynamoUtil:
     def __init__(self):
         self.dynamodb = boto3.resource('dynamodb')
         self.photos_table = self.dynamodb.Table('spark.wiki.photos')
+        self.books_table = self.dynamodb.Table('spark.wiki.books')
     
     def get_photos(self, species=None, family=None, order=None, year=None, month=None, day=None, limit=50):
         """Get photos with optional filtering by taxonomy or date captured"""
@@ -74,9 +75,37 @@ class DynamoUtil:
                     species_set.add(item['species'])
             
             return sorted(list(species_set))
-            
+
         except Exception as e:
             print(f'Error getting species list: {str(e)}')
+            raise e
+
+    def get_books(self, limit=50):
+        """List all book reviews, most recently reviewed first"""
+        try:
+            response = self.books_table.scan(Limit=limit)
+            books = response.get('Items', [])
+            books.sort(key=lambda b: b.get('date', 0), reverse=True)
+            return books
+
+        except Exception as e:
+            print(f'Error getting books: {str(e)}')
+            raise e
+
+    def get_book_by_title(self, title):
+        """Get a single book review by title (partition key). If a title has
+        been reviewed more than once, the most recent review wins."""
+        try:
+            response = self.books_table.query(
+                KeyConditionExpression=Key('title').eq(title),
+                ScanIndexForward=False,
+                Limit=1,
+            )
+            items = response.get('Items', [])
+            return items[0] if items else None
+
+        except Exception as e:
+            print(f'Error getting book {title}: {str(e)}')
             raise e
 
 BLOG_BUCKET = 'spark.wiki.blog'

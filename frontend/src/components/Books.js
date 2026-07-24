@@ -1,0 +1,49 @@
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import ApiService from '../services/api';
+
+function formatDate(dateStr) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+}
+
+function Books() {
+  const [books, setBooks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    ApiService.fetchBooks()
+      .then(setBooks)
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="books-page"><p>Loading book reviews...</p></div>;
+  if (error) return <div className="books-page"><p className="error">Error loading book reviews: {error}</p></div>;
+
+  return (
+    <div className="books-page">
+      <h2>Book Reviews</h2>
+      {books.length === 0 ? (
+        <p>No book reviews yet.</p>
+      ) : (
+        <ul className="book-list">
+          {books.map(book => (
+            <li key={book.title} className="book-item">
+              <Link to={`/books/${encodeURIComponent(book.title)}`}>
+                <h3>{book.title}</h3>
+                {book.author && <p className="book-author">by {book.author}</p>}
+                {book.date_reviewed && <time>{formatDate(book.date_reviewed)}</time>}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export default Books;

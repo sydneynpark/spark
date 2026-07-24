@@ -1,7 +1,19 @@
 from flask import jsonify
+from decimal import Decimal
 import traceback
 import re
 import base64
+
+def convert_decimals(value):
+    """Recursively convert DynamoDB Decimals into plain int/float so the
+    result can be passed to jsonify."""
+    if isinstance(value, Decimal):
+        return int(value) if value % 1 == 0 else float(value)
+    if isinstance(value, list):
+        return [convert_decimals(v) for v in value]
+    if isinstance(value, dict):
+        return {k: convert_decimals(v) for k, v in value.items()}
+    return value
 
 def extract_preview(markdown_text, max_chars=160):
     """Return plain-text preview from markdown, skipping headings and markup."""

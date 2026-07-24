@@ -68,6 +68,29 @@ class ApiService {
       throw error;
     }
   }
+
+  async fetchBooks() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/books`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      return data.books || [];
+    } catch (error) {
+      console.error('Error fetching books:', error);
+      throw error;
+    }
+  }
+
+  async fetchBook(title) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/books/${encodeURIComponent(title)}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching book:', error);
+      throw error;
+    }
+  }
 }
 
 export default new ApiService();

@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 
 LOCAL_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'local_data')
+REPO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..')
 
 
 class LocalDynamoUtil:
@@ -32,6 +33,30 @@ class LocalDynamoUtil:
 
     def get_all_species(self):
         return sorted(set(p['species'] for p in self._photos if 'species' in p))
+
+    def get_books(self, limit=50):
+        from utils.book_review_parser import parse_book_review
+        # Reads straight from sample-data/books at the repo root -- the same
+        # files you'd upload to the spark.wiki.books S3 bucket -- rather than
+        # a separate local copy, so local dev never drifts from what you're
+        # actually about to publish.
+        books_dir = os.path.join(REPO_ROOT, 'sample-data', 'books')
+        books = []
+        if os.path.exists(books_dir):
+            for filename in os.listdir(books_dir):
+                if not filename.endswith('.md'):
+                    continue
+                filepath = os.path.join(books_dir, filename)
+                with open(filepath, encoding='utf-8') as f:
+                    books.append(parse_book_review(f.read(), s3_uri=f's3://spark.wiki.books/{filename}'))
+        books.sort(key=lambda b: b.get('date', 0), reverse=True)
+        return books[:limit]
+
+    def get_book_by_title(self, title):
+        for book in self.get_books(limit=10000):
+            if book.get('title') == title:
+                return book
+        return None
 
 
 class LocalS3Util:

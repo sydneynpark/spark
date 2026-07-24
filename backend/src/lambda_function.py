@@ -2,6 +2,7 @@ from flask import Flask
 import serverless_wsgi
 from handlers.photos import photos_bp
 from handlers.posts import posts_bp
+from handlers.books import books_bp
 
 # Create Flask app
 app = Flask(__name__)
@@ -29,6 +30,7 @@ def before_request():
 # Register blueprints
 app.register_blueprint(photos_bp)
 app.register_blueprint(posts_bp)
+app.register_blueprint(books_bp)
 
 @app.route('/health')
 def health():
