@@ -56,6 +56,18 @@ class TestBookReviewUtil(unittest.TestCase):
         self.assertEqual(item['commentary'][0]['point'], Decimal('15'))
         self.assertNotIn('point', item['commentary'][2])
 
+        # cover_key is only set by the lambda after successfully storing a
+        # downloaded Open Library cover, not by parsing the review file itself.
+        self.assertNotIn('cover_key', item)
+
+    def test_to_item_includes_cover_key_when_set(self):
+        self.book_review.cover_key = 'covers/Project Hail Mary.jpg'
+        item = self.book_review.to_item('s3://spark.wiki.books/Project Hail Mary.md')
+        self.assertEqual(item['cover_key'], 'covers/Project Hail Mary.jpg')
+
+    def test_cover_s3_key(self):
+        self.assertEqual(self.book_review.cover_s3_key(), 'covers/Project Hail Mary.jpg')
+
     def test_date_as_number(self):
         self.assertEqual(self.book_review.date_as_number(), 20260720)
 

@@ -10,6 +10,12 @@ class AWSUtil:
     def get_s3_object(self, bucket, key):
         return self.s3.get_object(Bucket=bucket, Key=key)
 
+    def put_s3_object(self, bucket, key, body, content_type='image/jpeg'):
+        self.s3.put_object(Bucket=bucket, Key=key, Body=body, ContentType=content_type)
+
+    def delete_s3_object(self, bucket, key):
+        self.s3.delete_object(Bucket=bucket, Key=key)
+
     def store_book_review(self, s3_uri, book_review):
         table = self.dynamodb.Table('spark.wiki.books')
         table.put_item(Item=book_review.to_item(s3_uri))

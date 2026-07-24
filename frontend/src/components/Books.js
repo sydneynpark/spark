@@ -34,9 +34,20 @@ function Books() {
           {books.map(book => (
             <li key={book.title} className="book-item">
               <Link to={`/books/${encodeURIComponent(book.title)}`}>
-                <h3>{book.title}</h3>
-                {book.author && <p className="book-author">by {book.author}</p>}
-                {book.date_reviewed && <time>{formatDate(book.date_reviewed)}</time>}
+                {book.cover_key && (
+                  <img
+                    className="book-cover-thumb"
+                    src={ApiService.getBookCoverUrl(book.cover_key)}
+                    alt={`Cover of ${book.title}`}
+                    loading="lazy"
+                    onError={e => { e.target.style.display = 'none'; }}
+                  />
+                )}
+                <div className="book-item-text">
+                  <h3>{book.title}</h3>
+                  {book.author && <p className="book-author">by {book.author}</p>}
+                  {book.date_reviewed && <time>{formatDate(book.date_reviewed)}</time>}
+                </div>
               </Link>
             </li>
           ))}

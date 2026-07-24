@@ -3,3 +3,6 @@ package/
 .build/
 .env/
 __pycache__/
+# Covers are fetched from Open Library on demand and cached to disk for
+# local dev -- not authored fixture content like the rest of local_data.
+local_data/covers/

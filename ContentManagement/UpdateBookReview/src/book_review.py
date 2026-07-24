@@ -15,6 +15,15 @@ class BookReview:
         self.date_reviewed = str(metadata_dict.get('date_reviewed', '') or '')
         self.rating_elements = metadata_dict.get('rating_elements', [])
         self.commentary = self._parse_commentary(post.content)
+        # Set by the lambda after successfully downloading and storing an
+        # Open Library cover image -- not something the review file itself
+        # specifies.
+        self.cover_key = None
+
+    def cover_s3_key(self):
+        """Where this book's cover image belongs in the spark.wiki.books
+        bucket, regardless of whether we've fetched one yet."""
+        return f'covers/{self.title}.jpg'
 
     def _parse_commentary(self, body):
         # Commentary items live under `### <percentage>%` headings for a point
@@ -59,7 +68,7 @@ class BookReview:
                 item['point'] = Decimal(entry['point'])
             commentary.append(item)
 
-        return {
+        item = {
             'title': self.title,
             'date': self.date_as_number(),
             'date_reviewed': self.date_reviewed,
@@ -68,6 +77,9 @@ class BookReview:
             'rating_elements': rating_elements,
             'commentary': commentary,
         }
+        if self.cover_key is not None:
+            item['cover_key'] = self.cover_key
+        return item
 
     def __str__(self):
         return f"BookReview(title='{self.title}', author='{self.author}', date_reviewed='{self.date_reviewed}')"

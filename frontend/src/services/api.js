@@ -1,5 +1,9 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.spark.wiki';
 const CDN_BASE_URL = process.env.REACT_APP_CDN_URL || 'https://photos.spark.wiki';
+// CloudFront distribution in front of spark.wiki.books, origin = bucket root
+// (no origin path override), so this mirrors S3 keys 1:1 the same way
+// CDN_BASE_URL does for the photos bucket.
+const COVERS_CDN_BASE_URL = process.env.REACT_APP_COVERS_CDN_URL || 'https://books.spark.wiki';
 
 // Strips the "s3://<bucket>/" prefix off an S3 URI and URL-encodes each path
 // segment, yielding the key path the CDN serves images under.
@@ -90,6 +94,14 @@ class ApiService {
       console.error('Error fetching book:', error);
       throw error;
     }
+  }
+
+  // coverKey is the S3 key under spark.wiki.books, e.g. "covers/Dune.jpg" --
+  // our own stored copy of the Open Library cover, not a hotlink to it.
+  getBookCoverUrl(coverKey) {
+    if (!coverKey) return null;
+    const path = coverKey.split('/').map(encodeURIComponent).join('/');
+    return `${COVERS_CDN_BASE_URL}/${path}`;
   }
 }
 

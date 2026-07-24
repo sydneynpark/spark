@@ -6,6 +6,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 import test.sample_events as sample_events
 import lambda_function
 import aws_util
+import open_library_util
 
 
 class TestLambda(unittest.TestCase):
@@ -14,10 +15,16 @@ class TestLambda(unittest.TestCase):
         self.mock_aws = aws_util.AWSUtil()
         lambda_function.aws = self.mock_aws
 
+        self.mock_open_library = open_library_util.OpenLibraryUtil()
+        self.mock_open_library.find_cover_id = MagicMock(return_value=12345)
+        self.mock_open_library.fetch_cover_image = MagicMock(return_value=b'fake-jpeg-bytes')
+        lambda_function.open_library = self.mock_open_library
+
     def test_lambda_for_book_review_create_event(self):
         event = sample_events.UploadSampleBookReview
 
         self.mock_aws.get_s3_object = MagicMock(return_value=sample_events.SampleBookReviewS3Object)
+        self.mock_aws.put_s3_object = MagicMock()
         self.mock_aws.store_book_review = MagicMock()
 
         result = lambda_function.lambda_handler(event, None)
@@ -30,16 +37,40 @@ class TestLambda(unittest.TestCase):
         self.assertIn('Andy Weir', metadata_str)
         self.assertIn('2026-07-20', metadata_str)
 
+        self.mock_open_library.find_cover_id.assert_called_once_with('Project Hail Mary', 'Andy Weir')
+        self.mock_open_library.fetch_cover_image.assert_called_once_with(12345)
+
+        self.mock_aws.put_s3_object.assert_called_once_with(
+            'spark.wiki.books', 'covers/Project Hail Mary.jpg', b'fake-jpeg-bytes')
+
         self.mock_aws.store_book_review.assert_called_once()
         args, _ = self.mock_aws.store_book_review.call_args
         s3_uri, book_review = args
         self.assertEqual(s3_uri, 's3://spark.wiki.books/Project Hail Mary.md')
         self.assertEqual(book_review.title, 'Project Hail Mary')
+        self.assertEqual(book_review.cover_key, 'covers/Project Hail Mary.jpg')
+
+    def test_lambda_skips_cover_upload_when_no_cover_found(self):
+        event = sample_events.UploadSampleBookReview
+
+        self.mock_aws.get_s3_object = MagicMock(return_value=sample_events.SampleBookReviewS3Object)
+        self.mock_aws.put_s3_object = MagicMock()
+        self.mock_aws.store_book_review = MagicMock()
+        self.mock_open_library.find_cover_id = MagicMock(return_value=None)
+
+        lambda_function.lambda_handler(event, None)
+
+        self.mock_open_library.fetch_cover_image.assert_not_called()
+        self.mock_aws.put_s3_object.assert_not_called()
+        args, _ = self.mock_aws.store_book_review.call_args
+        _, book_review = args
+        self.assertIsNone(book_review.cover_key)
 
     def test_lambda_for_book_review_delete_event(self):
         event = sample_events.DeleteSampleBookReview
 
         self.mock_aws.delete_book_review = MagicMock()
+        self.mock_aws.delete_s3_object = MagicMock()
 
         result = lambda_function.lambda_handler(event, None)
 
@@ -47,6 +78,8 @@ class TestLambda(unittest.TestCase):
         # The delete event's S3 key is "Project+Hail+Mary.md"; the title used
         # as the DynamoDB partition key is recovered from that filename.
         self.mock_aws.delete_book_review.assert_called_once_with('Project Hail Mary')
+        self.mock_aws.delete_s3_object.assert_called_once_with(
+            'spark.wiki.books', 'covers/Project Hail Mary.jpg')
 
 if __name__ == '__main__':
     unittest.main()

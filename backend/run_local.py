@@ -19,6 +19,12 @@ def local_thumbnail(key):
 def local_photo(key):
     return send_from_directory(os.path.join(LOCAL_DATA_DIR, 'photos'), key)
 
+# Stand-in for the covers CDN in front of spark.wiki.books/covers, against
+# the disk-cached covers LocalDynamoUtil fetches from Open Library.
+@app.route('/cdn/books/covers/<path:filename>')
+def local_book_cover(filename):
+    return send_from_directory(os.path.join(LOCAL_DATA_DIR, 'covers'), filename)
+
 if __name__ == '__main__':
     print('Starting local API server at http://localhost:5000')
     app.run(debug=True, port=5000, host='0.0.0.0')

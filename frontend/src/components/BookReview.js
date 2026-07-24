@@ -33,9 +33,21 @@ function BookReview() {
       <Link to="/books" className="back-link">← Back to Book Reviews</Link>
       <article className="book-review">
         <header className="book-review-header">
-          <h1>{book.title}</h1>
-          {book.author && <p className="book-review-author">by {book.author}</p>}
-          {book.date_reviewed && <time className="book-review-date">{formatDate(book.date_reviewed)}</time>}
+          <div className="book-review-header-content">
+            {book.cover_key && (
+              <img
+                className="book-review-cover"
+                src={ApiService.getBookCoverUrl(book.cover_key)}
+                alt={`Cover of ${book.title}`}
+                onError={e => { e.target.style.display = 'none'; }}
+              />
+            )}
+            <div className="book-review-header-text">
+              <h1>{book.title}</h1>
+              {book.author && <p className="book-review-author">by {book.author}</p>}
+              {book.date_reviewed && <time className="book-review-date">{formatDate(book.date_reviewed)}</time>}
+            </div>
+          </div>
         </header>
 
         <div className="book-review-body">

@@ -1,11 +1,13 @@
 import aws_util
 import book_review_util
+import open_library_util
 import os
 import urllib.parse
 
 print('Loading function')
 aws = aws_util.AWSUtil()
 reviews = book_review_util.BookReviewUtil()
+open_library = open_library_util.OpenLibraryUtil()
 
 
 def _title_from_key(key):
@@ -27,7 +29,8 @@ def lambda_handler(event, context):
         if event_type.startswith('ObjectRemoved'):
             title = _title_from_key(key)
             aws.delete_book_review(title)
-            print(f'Deleted book review "{title}" from DynamoDB')
+            aws.delete_s3_object(bucket, f'covers/{title}.jpg')
+            print(f'Deleted book review "{title}" and its cover from DynamoDB/S3')
             return {
                 'statusCode': 200,
                 'deleted': title,
@@ -36,6 +39,19 @@ def lambda_handler(event, context):
         response = aws.get_s3_object(bucket, key)
         markdown_content = response['Body'].read().decode('utf-8')
         book_review = reviews.parse(markdown_content)
+
+        cover_id = open_library.find_cover_id(book_review.title, book_review.author)
+        if cover_id:
+            cover_bytes = open_library.fetch_cover_image(cover_id)
+            if cover_bytes:
+                cover_s3_key = book_review.cover_s3_key()
+                aws.put_s3_object(bucket, cover_s3_key, cover_bytes)
+                book_review.cover_key = cover_s3_key
+                print(f'Stored cover for "{book_review.title}" at {bucket}/{cover_s3_key}')
+            else:
+                print(f'Could not download Open Library cover image for "{book_review.title}"')
+        else:
+            print(f'No Open Library cover found for "{book_review.title}"')
 
         aws.store_book_review(s3_uri, book_review)
         print(f'Stored book review metadata in DynamoDB for {s3_uri}')
