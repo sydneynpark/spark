@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import ApiService from '../services/api';
 import { DATE_FILTER_TYPES, formatDateFilterLabel } from '../utils/photoDate';
@@ -13,32 +13,82 @@ const Gallery = () => {
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [selectedIndex, setSelectedIndex] = useState(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const touchStartRef = useRef(null);
   const type = searchParams.get('type');
   const value = searchParams.get('value');
+  const selectedPhoto = selectedIndex !== null ? photos[selectedIndex] : null;
 
   useEffect(() => {
     loadPhotos();
   }, [type, value]);
 
-  const closeLightbox = useCallback(() => {
-    setSelectedPhoto(null);
+  // Reset image load state whenever the lightbox opens or navigates to a
+  // different photo.
+  useEffect(() => {
     setImageLoaded(false);
     setImageError(false);
+  }, [selectedIndex]);
+
+  // Closing goes through history.back() so that the back entry pushed by
+  // openLightbox is consumed here too, rather than by the underlying page.
+  const closeLightbox = useCallback(() => {
+    window.history.back();
   }, []);
 
+  const showPrev = useCallback(() => {
+    setSelectedIndex(i => (i === null || i <= 0) ? i : i - 1);
+  }, []);
+
+  const showNext = useCallback(() => {
+    setSelectedIndex(i => (i === null || i >= photos.length - 1) ? i : i + 1);
+  }, [photos.length]);
+
   useEffect(() => {
-    const handleKeyDown = (e) => { if (e.key === 'Escape') closeLightbox(); };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') closeLightbox();
+      else if (e.key === 'ArrowLeft') showPrev();
+      else if (e.key === 'ArrowRight') showNext();
+    };
     if (selectedPhoto) document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPhoto, closeLightbox]);
+  }, [selectedPhoto, closeLightbox, showPrev, showNext]);
 
-  const openLightbox = (photo) => {
-    setSelectedPhoto(photo);
-    setImageLoaded(false);
-    setImageError(false);
+  // A back gesture/button press while the lightbox is open should close the
+  // lightbox instead of navigating to the previous page.
+  useEffect(() => {
+    const handlePopState = () => {
+      setSelectedIndex(null);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const openLightbox = (idx) => {
+    window.history.pushState({ lightbox: true }, '');
+    setSelectedIndex(idx);
+  };
+
+  const SWIPE_THRESHOLD = 50;
+
+  const handleTouchStart = (e) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (e) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) showNext();
+      else showPrev();
+    }
   };
 
   const loadPhotos = async () => {
@@ -103,7 +153,7 @@ const Gallery = () => {
             <div
               className="photo-item"
               key={`${photo.s3_uri}-${idx}`}
-              onClick={() => openLightbox(photo)}
+              onClick={() => openLightbox(idx)}
             >
               <div className="photo-thumbnail">
                 <img
@@ -129,7 +179,21 @@ const Gallery = () => {
 
       {selectedPhoto && (
         <div className="lightbox-overlay" onClick={closeLightbox}>
-          <div className="lightbox-content" onClick={e => e.stopPropagation()}>
+          {selectedIndex > 0 && (
+            <button
+              className="lightbox-nav lightbox-prev"
+              onClick={e => { e.stopPropagation(); showPrev(); }}
+              aria-label="Previous photo"
+            >
+              ‹
+            </button>
+          )}
+          <div
+            className="lightbox-content"
+            onClick={e => e.stopPropagation()}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
             <button className="lightbox-close" onClick={closeLightbox}>✕</button>
             {!imageLoaded && !imageError && <div className="lightbox-loading">Loading...</div>}
             {imageError && <div className="lightbox-error">Failed to load image</div>}
@@ -142,11 +206,34 @@ const Gallery = () => {
               onError={() => setImageError(true)}
             />
             <div className="lightbox-caption">
-              <h3>{selectedPhoto.species || 'Unknown Species'}</h3>
-              {selectedPhoto.family && <p>{selectedPhoto.family}</p>}
-              {selectedPhoto.order && <p>{selectedPhoto.order}</p>}
+              <div className="lightbox-caption-info">
+                <h3>{selectedPhoto.species || 'Unknown Species'}</h3>
+                {selectedPhoto.family && <p>{selectedPhoto.family}</p>}
+                {selectedPhoto.order && <p>{selectedPhoto.order}</p>}
+              </div>
+              <a
+                className="lightbox-open-new-tab"
+                href={ApiService.getFullsizeUrl(selectedPhoto.s3_uri)}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open full-res photo in new tab"
+                title="Open in new tab"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
+                </svg>
+              </a>
             </div>
           </div>
+          {selectedIndex < photos.length - 1 && (
+            <button
+              className="lightbox-nav lightbox-next"
+              onClick={e => { e.stopPropagation(); showNext(); }}
+              aria-label="Next photo"
+            >
+              ›
+            </button>
+          )}
         </div>
       )}
     </div>
