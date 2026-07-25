@@ -1,6 +1,7 @@
 import os
 from flask import Blueprint, jsonify, request
 from utils.response_util import handle_error, convert_decimals
+from utils.rating_util import add_star_rating
 
 if os.getenv('LOCAL_MODE') == 'true':
     from utils.local_util import LocalDynamoUtil as DynamoUtil
@@ -15,9 +16,9 @@ def list_books():
     """List all book reviews, most recently reviewed first"""
     try:
         limit = int(request.args.get('limit', 50))
-        books = dynamo.get_books(limit=limit)
+        books = [add_star_rating(book) for book in convert_decimals(dynamo.get_books(limit=limit))]
         return jsonify({
-            'books': convert_decimals(books),
+            'books': books,
             'count': len(books)
         })
 
@@ -33,7 +34,7 @@ def get_book(title):
         if not book:
             return jsonify({'error': 'Book review not found'}), 404
 
-        return jsonify(convert_decimals(book))
+        return jsonify(add_star_rating(convert_decimals(book)))
 
     except Exception as e:
         return handle_error(e)
