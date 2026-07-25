@@ -910,6 +910,65 @@ footer {
   color: var(--color-accent-medium);
 }
 
+.book-item .star-rating {
+  display: flex;
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+}
+
+/* Star rating: two stacked copies of the same star path per star -- a
+   muted "empty" one underneath, and a colored one clipped via a
+   percentage-width wrapper so quarter/half-star fills (see
+   backend/src/utils/rating_util.py) render smoothly instead of snapping to
+   whole stars. --star-color-filled/--star-color-empty let callers adapt it
+   to light or dark backgrounds (see .book-review-header .star-rating). */
+.star-rating {
+  --star-color-filled: var(--color-accent-dark);
+  --star-color-empty: rgba(43, 49, 63, 0.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.star-rating-stars {
+  display: inline-flex;
+  gap: 0.05em;
+}
+
+.star-rating-star {
+  position: relative;
+  width: 1em;
+  height: 1em;
+}
+
+.star-rating-star svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.star-rating-star-bg path {
+  fill: var(--star-color-empty);
+}
+
+.star-rating-star-fill {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.star-rating-star-fill path {
+  fill: var(--star-color-filled);
+}
+
+.star-rating-value {
+  font-size: 0.85em;
+  color: var(--star-color-filled);
+  opacity: 0.85;
+}
+
 /* Book review detail page */
 .book-review-page {
   max-width: 800px;
@@ -975,6 +1034,14 @@ footer {
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.8);
   letter-spacing: 0.02em;
+}
+
+.book-review-header .star-rating {
+  --star-color-filled: white;
+  --star-color-empty: rgba(255, 255, 255, 0.35);
+  display: flex;
+  margin-bottom: 0.4rem;
+  font-size: 1.05rem;
 }
 
 .book-review-body {

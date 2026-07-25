@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ApiService from '../services/api';
 import RatingChart from './RatingChart';
+import StarRating from './StarRating';
 import CommentaryTimeline from './CommentaryTimeline';
 
 function formatDate(dateStr) {
@@ -43,6 +44,7 @@ function BookReview() {
             <div className="book-review-header-text">
               <h1>{book.title}</h1>
               {book.author && <p className="book-review-author">by {book.author}</p>}
+              <StarRating rating={book.star_rating} />
               {book.date_reviewed && <time className="book-review-date">{formatDate(book.date_reviewed)}</time>}
             </div>
           </div>

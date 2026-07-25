@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ApiService from '../services/api';
+import StarRating from './StarRating';
 
 function formatDate(dateStr) {
   const [year, month, day] = dateStr.split('-').map(Number);
@@ -45,6 +46,7 @@ function Books() {
                   <h3>{book.title}</h3>
                   {book.author && <p className="book-author">by {book.author}</p>}
                   {book.date_reviewed && <time>{formatDate(book.date_reviewed)}</time>}
+                  <StarRating rating={book.star_rating} />
                 </div>
               </Link>
             </li>
