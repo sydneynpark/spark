@@ -1007,22 +1007,33 @@ footer {
   stroke-linejoin: round;
 }
 
+/* The track is the actual interactive element (see RatingChart.js) — the
+   colored fill on top of it is decorative only and lets clicks pass
+   through. No native :hover here: WebKit treats the first tap on an
+   element with :hover styling as "just hovering" and needs a second tap to
+   register as a click, so the "active" highlight below is driven entirely
+   from React state instead, and applies identically to hover, tap, and
+   keyboard focus. No focus outline either, by request — the brightness
+   highlight already shows which slice is focused. */
+.rating-chart-track {
+  outline: none;
+}
+
+@media (hover: hover) {
+  .rating-chart-track {
+    cursor: pointer;
+  }
+}
+
 .rating-chart-wedge {
   stroke: white;
   stroke-width: 2;
   stroke-linejoin: round;
-  cursor: pointer;
   transition: filter 0.15s;
 }
 
-.rating-chart-wedge:hover,
 .rating-chart-wedge.active {
   filter: brightness(1.12);
-}
-
-.rating-chart-wedge:focus-visible {
-  outline: 2px solid var(--color-text-primary);
-  outline-offset: 2px;
 }
 
 .rating-chart-label-name {
@@ -1044,6 +1055,42 @@ footer {
 
 .rating-chart-label.active {
   opacity: 1;
+}
+
+/* Compact layout (see COMPACT_BREAKPOINT in RatingChart.js): the ring's
+   radial labels are dropped in favor of this single caption line, which
+   shows whichever slice was last tapped. Ordinary HTML text, so it isn't
+   subject to the SVG viewBox scaling that made the radial labels shrink
+   to unreadable sizes on narrow screens. */
+.rating-chart-caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 1.5rem;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.rating-chart-caption-swatch {
+  flex: 0 0 0.75rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 3px;
+}
+
+.rating-chart-caption-name {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.rating-chart-caption-rating {
+  color: var(--color-accent-dark);
+}
+
+.rating-chart-caption-hint {
+  color: var(--color-text-primary);
+  opacity: 0.6;
 }
 
 .rating-chart-notes {
@@ -1202,6 +1249,10 @@ footer {
 
   main {
     padding: 1rem;
+  }
+
+  .book-review-body {
+    padding: 1.75rem 1.25rem;
   }
 
   .taxonomy-hierarchy {

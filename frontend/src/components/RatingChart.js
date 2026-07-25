@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Fixed-order categorical palette (validated for CVD-safe adjacency; see the
 // dataviz skill). Slots are assigned by each rating element's position in
@@ -17,19 +17,41 @@ const CATEGORICAL_COLORS = [
 const MAX_RATING = 10;
 const RING_STEPS = [2, 4, 6, 8, 10];
 
-const OUTER_RADIUS = 92;
 const LABEL_GAP = 16;
 const LABEL_DOT_RADIUS = 3;
 const CORNER_RADIUS = 5;
-const CHART_PADDING = 130;
-const SIZE = (OUTER_RADIUS + CHART_PADDING) * 2;
-const CENTER = SIZE / 2;
 
-function polarToCartesian(angleDeg, radius) {
+// Below this viewport width, the always-on radial labels (sized for the
+// longest label text) are dropped in favor of a single tap-to-reveal
+// caption, so the ring can claim nearly the whole box instead of most of
+// it being reserved margin the labels would otherwise get clipped into.
+const COMPACT_BREAKPOINT = 600;
+const GEOMETRY = {
+  full: { outerRadius: 92, chartPadding: 130 },
+  compact: { outerRadius: 130, chartPadding: 24 },
+};
+
+function useCompactLayout() {
+  const [compact, setCompact] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth <= COMPACT_BREAKPOINT
+  );
+
+  useEffect(() => {
+    const query = window.matchMedia(`(max-width: ${COMPACT_BREAKPOINT}px)`);
+    const update = (e) => setCompact(e.matches);
+    update(query);
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+
+  return compact;
+}
+
+function polarToCartesian(angleDeg, radius, center) {
   const angleRad = ((angleDeg - 90) * Math.PI) / 180;
   return {
-    x: CENTER + radius * Math.cos(angleRad),
-    y: CENTER + radius * Math.sin(angleRad),
+    x: center + radius * Math.cos(angleRad),
+    y: center + radius * Math.sin(angleRad),
   };
 }
 
@@ -38,13 +60,13 @@ function polarToCartesian(angleDeg, radius) {
 // The corner is approximated with a quadratic bezier using the sharp
 // corner itself as the control point — a common, cheap fillet that looks
 // right without solving for a true tangent circle.
-function wedgePath(startAngle, endAngle, radius) {
+function wedgePath(startAngle, endAngle, radius, center) {
   if (radius <= 0) return '';
   const span = endAngle - startAngle;
   if (span >= 360) {
     // Full circle: draw as two arcs, no corners to round.
-    const top = polarToCartesian(startAngle, radius);
-    const bottom = polarToCartesian(startAngle + 180, radius);
+    const top = polarToCartesian(startAngle, radius, center);
+    const bottom = polarToCartesian(startAngle + 180, radius, center);
     return [
       `M ${top.x} ${top.y}`,
       `A ${radius} ${radius} 0 1 1 ${bottom.x} ${bottom.y}`,
@@ -58,16 +80,16 @@ function wedgePath(startAngle, endAngle, radius) {
   const a0 = startAngle + cornerAngle;
   const a1 = endAngle - cornerAngle;
 
-  const startCorner = polarToCartesian(startAngle, radius);
-  const startPullback = polarToCartesian(startAngle, radius - r);
-  const startFillet = polarToCartesian(a0, radius);
-  const endFillet = polarToCartesian(a1, radius);
-  const endCorner = polarToCartesian(endAngle, radius);
-  const endPullback = polarToCartesian(endAngle, radius - r);
+  const startCorner = polarToCartesian(startAngle, radius, center);
+  const startPullback = polarToCartesian(startAngle, radius - r, center);
+  const startFillet = polarToCartesian(a0, radius, center);
+  const endFillet = polarToCartesian(a1, radius, center);
+  const endCorner = polarToCartesian(endAngle, radius, center);
+  const endPullback = polarToCartesian(endAngle, radius - r, center);
   const largeArcFlag = a1 - a0 > 180 ? 1 : 0;
 
   return [
-    `M ${CENTER} ${CENTER}`,
+    `M ${center} ${center}`,
     `L ${startPullback.x} ${startPullback.y}`,
     `Q ${startCorner.x} ${startCorner.y} ${startFillet.x} ${startFillet.y}`,
     `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endFillet.x} ${endFillet.y}`,
@@ -90,6 +112,10 @@ function labelTransform(midAngle) {
 
 function RatingChart({ ratingElements }) {
   const [activeIndex, setActiveIndex] = useState(null);
+  const compact = useCompactLayout();
+  const { outerRadius: OUTER_RADIUS, chartPadding: CHART_PADDING } = compact ? GEOMETRY.compact : GEOMETRY.full;
+  const SIZE = (OUTER_RADIUS + CHART_PADDING) * 2;
+  const CENTER = SIZE / 2;
 
   const totalWeight = ratingElements.reduce((sum, el) => sum + el.weight, 0);
   if (!ratingElements.length || totalWeight <= 0) return null;
@@ -113,6 +139,7 @@ function RatingChart({ ratingElements }) {
   });
 
   const hasElaborations = wedges.some((w) => w.elaboration);
+  const activeWedge = wedges.find((w) => w.index === activeIndex) ?? null;
   const activate = (index) => () => setActiveIndex(index);
   const deactivate = () => setActiveIndex(null);
 
@@ -134,39 +161,51 @@ function RatingChart({ ratingElements }) {
           />
         ))}
 
-        {wedges.map((wedge) => (
-          <path
-            key={`track-${wedge.index}`}
-            className="rating-chart-track"
-            style={{ '--wedge-color': wedge.color }}
-            d={wedgePath(wedge.startAngle, wedge.endAngle, OUTER_RADIUS)}
-          />
-        ))}
-
+        {/* The track carries the interaction: it's always opaque and always spans the
+            full (untrimmed) sector, so it's a reliable hit target everywhere in the
+            slice — unlike the rating-scaled colored fill above it, which for a low
+            rating can be a sliver too small to tap accurately, especially on a phone. */}
         {wedges.map((wedge) => {
           const label = `${wedge.name}: weight ${formatNumber(wedge.weight)}, rating ${formatNumber(wedge.rating)} out of ${MAX_RATING}`;
-          const className = `rating-chart-wedge${activeIndex === wedge.index ? ' active' : ''}`;
-          const commonProps = {
-            fill: wedge.color,
-            className,
-            tabIndex: 0,
-            role: 'img',
-            'aria-label': label,
-            onMouseEnter: activate(wedge.index),
-            onMouseLeave: deactivate,
-            onFocus: activate(wedge.index),
-            onBlur: deactivate,
-          };
-          if (wedge.radius <= 0) return null;
           return (
-            <path key={wedge.index} d={wedgePath(wedge.startAngle, wedge.endAngle, wedge.radius)} {...commonProps}>
+            <path
+              key={`track-${wedge.index}`}
+              className="rating-chart-track"
+              style={{ '--wedge-color': wedge.color }}
+              d={wedgePath(wedge.startAngle, wedge.endAngle, OUTER_RADIUS, CENTER)}
+              tabIndex={0}
+              role="img"
+              aria-label={label}
+              onMouseEnter={activate(wedge.index)}
+              onMouseLeave={deactivate}
+              onFocus={activate(wedge.index)}
+              onBlur={deactivate}
+              onClick={activate(wedge.index)}
+            >
               <title>{label}</title>
             </path>
           );
         })}
 
+        {/* Purely decorative overlay — pointer-events: none lets taps pass through to
+            the track underneath instead of being swallowed here. */}
         {wedges.map((wedge) => {
-          const anchorPoint = polarToCartesian(wedge.midAngle, OUTER_RADIUS + LABEL_GAP);
+          if (wedge.radius <= 0) return null;
+          const className = `rating-chart-wedge${activeIndex === wedge.index ? ' active' : ''}`;
+          return (
+            <path
+              key={wedge.index}
+              aria-hidden="true"
+              fill={wedge.color}
+              className={className}
+              style={{ pointerEvents: 'none' }}
+              d={wedgePath(wedge.startAngle, wedge.endAngle, wedge.radius, CENTER)}
+            />
+          );
+        })}
+
+        {!compact && wedges.map((wedge) => {
+          const anchorPoint = polarToCartesian(wedge.midAngle, OUTER_RADIUS + LABEL_GAP, CENTER);
           const { anchor } = labelTransform(wedge.midAngle);
           const textStart = anchorPoint.x + (anchor === 'end' ? -1 : 1) * (LABEL_DOT_RADIUS + 6);
           return (
@@ -186,6 +225,26 @@ function RatingChart({ ratingElements }) {
           );
         })}
       </svg>
+
+      {compact && (
+        <p className="rating-chart-caption" aria-live="polite">
+          {activeWedge ? (
+            <>
+              <span
+                className="rating-chart-caption-swatch"
+                style={{ backgroundColor: activeWedge.color }}
+                aria-hidden="true"
+              />
+              <span className="rating-chart-caption-name">{activeWedge.name}</span>
+              <span className="rating-chart-caption-rating">
+                {formatNumber(activeWedge.rating)}/{MAX_RATING}
+              </span>
+            </>
+          ) : (
+            <span className="rating-chart-caption-hint">Tap a slice for details</span>
+          )}
+        </p>
+      )}
 
       {hasElaborations && (
         <ul className="rating-chart-notes">
