@@ -34,14 +34,12 @@ function BookReview() {
       <article className="book-review">
         <header className="book-review-header">
           <div className="book-review-header-content">
-            {book.cover_key && (
-              <img
-                className="book-review-cover"
-                src={ApiService.getBookCoverUrl(book.cover_key)}
-                alt={`Cover of ${book.title}`}
-                onError={e => { e.target.style.display = 'none'; }}
-              />
-            )}
+            <img
+              className={`book-review-cover${book.cover_key ? '' : ' book-review-cover--placeholder'}`}
+              src={book.cover_key ? ApiService.getBookCoverUrl(book.cover_key) : '/images/placeholder-book.jpg'}
+              alt={`Cover of ${book.title}`}
+              onError={e => { e.target.src = '/images/placeholder-book.jpg'; e.target.classList.add('book-review-cover--placeholder'); }}
+            />
             <div className="book-review-header-text">
               <h1>{book.title}</h1>
               {book.author && <p className="book-review-author">by {book.author}</p>}

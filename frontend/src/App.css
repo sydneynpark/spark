@@ -77,6 +77,7 @@ nav a:hover {
 /* Main content */
 main {
   flex: 1;
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
@@ -450,10 +451,16 @@ footer {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
+.photo-thumbnail {
+  background: var(--color-background);
+  padding: 8px;
+  box-sizing: border-box;
+}
+
 .photo-thumbnail img {
   width: 100%;
   aspect-ratio: 1;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 
@@ -875,6 +882,12 @@ footer {
   background: var(--color-accent-medium);
 }
 
+.book-cover-thumb--placeholder {
+  object-fit: contain;
+  box-sizing: border-box;
+  padding: 6px;
+}
+
 .book-item-text {
   flex: 1;
   min-width: 0;
@@ -931,6 +944,12 @@ footer {
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   background: rgba(255, 255, 255, 0.15);
+}
+
+.book-review-cover--placeholder {
+  object-fit: contain;
+  box-sizing: border-box;
+  padding: 16px;
 }
 
 .book-review-header-text {
