@@ -8,6 +8,8 @@ import Photos from './components/Photos';
 import Gallery from './components/Gallery';
 import Blog from './components/Blog';
 import BlogPost from './components/BlogPost';
+import Books from './components/Books';
+import BookReview from './components/BookReview';
 import Footer from './components/Footer';
 
 function App() {
@@ -27,6 +29,8 @@ function App() {
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:postId" element={<BlogPost />} />
+            <Route path="/books" element={<Books />} />
+            <Route path="/books/:title" element={<BookReview />} />
           </Routes>
         </main>
         <Footer />

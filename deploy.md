@@ -58,3 +58,7 @@ After this, we'll need to run the script in `scripts/refreshPhotoMetadata.py` to
 ## ContentManagement/UpdateBlogPostMetadata
 
 This is also a lambda. We'll update UpdateBlogPostMetadata with its new info. There's no `scripts/refreshBlogPostMetadata.py` but if there were, we'd need to run it.
+
+## ContentManagement/UpdateBookReview
+
+This is also a lambda. We'll update UpdateBookReview with its new info. There's no `scripts/refreshBookReviews.py` but if there were, we'd need to run it.
