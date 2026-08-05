@@ -253,8 +253,9 @@ def deploy_update_book_review(session):
     print("Building UpdateBookReview Lambda package ...")
     zip_path = build_lambda_zip(project_dir, copy_into_package)
     update_lambda_code(session, UPDATE_BOOK_REVIEW_FUNCTION, zip_path)
-    # No scripts/refreshBookReviews.py exists yet, so there's nothing further
-    # to run after this lambda's code is updated.
+
+    print("Refreshing book reviews for every review in the bucket ...")
+    run([sys.executable, "refreshBookReviews.py"], cwd=ROOT / "scripts")
 
 
 TARGETS = {

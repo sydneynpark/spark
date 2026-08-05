@@ -1,13 +1,13 @@
 import aws_util
 import book_review_util
-import open_library_util
+import google_books_util
 import os
 import urllib.parse
 
 print('Loading function')
 aws = aws_util.AWSUtil()
 reviews = book_review_util.BookReviewUtil()
-open_library = open_library_util.OpenLibraryUtil()
+google_books = google_books_util.GoogleBooksUtil()
 
 
 def _title_from_key(key):
@@ -51,18 +51,18 @@ def lambda_handler(event, context):
         markdown_content = response['Body'].read().decode('utf-8')
         book_review = reviews.parse(markdown_content)
 
-        cover_id = open_library.find_cover_id(book_review.title, book_review.author)
-        if cover_id:
-            cover_bytes = open_library.fetch_cover_image(cover_id)
+        cover_url = google_books.find_cover_url(book_review.title, book_review.author)
+        if cover_url:
+            cover_bytes = google_books.fetch_cover_image(cover_url)
             if cover_bytes:
                 cover_s3_key = book_review.cover_s3_key()
                 aws.put_s3_object(bucket, cover_s3_key, cover_bytes)
                 book_review.cover_key = cover_s3_key
                 print(f'Stored cover for "{book_review.title}" at {bucket}/{cover_s3_key}')
             else:
-                print(f'Could not download Open Library cover image for "{book_review.title}"')
+                print(f'Could not download Google Books cover image for "{book_review.title}"')
         else:
-            print(f'No Open Library cover found for "{book_review.title}"')
+            print(f'No Google Books cover found for "{book_review.title}"')
 
         aws.store_book_review(s3_uri, book_review)
         print(f'Stored book review metadata in DynamoDB for {s3_uri}')
