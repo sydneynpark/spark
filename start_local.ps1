@@ -11,7 +11,7 @@ if (-not $lanIp) {
 }
 
 Write-Host "Starting backend API on http://${lanIp}:5000 ..."
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root\backend'; python run_local.py"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root\backend'; uv run run_local.py"
 
 Write-Host "Starting frontend on http://${lanIp}:3000 ..."
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$root\frontend'; `$env:REACT_APP_API_URL='http://${lanIp}:5000'; `$env:REACT_APP_CDN_URL='http://${lanIp}:5000/cdn'; `$env:REACT_APP_COVERS_CDN_URL='http://${lanIp}:5000/cdn/books'; npm start"

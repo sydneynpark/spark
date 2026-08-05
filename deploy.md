@@ -34,7 +34,8 @@ From the `backend` directory, run the following commands to build and zip the so
 ```sh
 rm -r .build
 mkdir .build/packages
-pip install --target .build/packages -r src/requirements.txt
+uv export --no-dev --no-hashes -o .build/requirements.txt
+uv pip install --target .build/packages -r .build/requirements.txt
 cp src/*.py .build/packages
 cp -r src/handlers/. .build/packages/handlers
 cp -r src/utils/. .build/packages/utils

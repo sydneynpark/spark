@@ -1,0 +1,15 @@
+[project]
+name = "update-photo-metadata"
+version = "0.1.0"
+description = "UpdatePhotoMetadata Lambda: syncs photo S3 objects into DynamoDB"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3",
+    "defusedxml", # Required for PIL's Image.getxmp() to have xmpmeta
+]
+
+[dependency-groups]
+dev = [
+    "Pillow", # Provided by a Lambda layer in prod; installed locally to run and test
+    "botocore", # Builds fake StreamingBody objects in tests
+]

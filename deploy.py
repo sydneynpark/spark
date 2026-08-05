@@ -1,22 +1,31 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["boto3"]
+# ///
 """
 Single entry point for deploying spark.wiki's separate projects: frontend,
 backend, and the ContentManagement lambdas.
 
 Usage:
-    python deploy.py frontend backend
-    python deploy.py UpdatePhotoMetadata
-    python deploy.py frontend backend UpdatePhotoMetadata UpdateBlogPostMetadata UpdateBookReview
+    uv run deploy.py frontend backend
+    uv run deploy.py UpdatePhotoMetadata
+    uv run deploy.py frontend backend UpdatePhotoMetadata UpdateBlogPostMetadata UpdateBookReview
 
 Credentials:
     The AWS access key and secret access key are read from
     scripts/.accesskey and scripts/.secretaccesskey (the same files used by
     scripts/refreshPhotoMetadata.py) and used for all S3, CloudFront, and
     Lambda calls.
+
+Building each Lambda's zip requires `uv` on PATH: each project directory
+(backend, ContentManagement/*) is its own uv project, and its deployable
+dependencies are exported from its pyproject.toml/uv.lock via `uv export`.
 """
 
 import argparse
 import mimetypes
+import os
 import shutil
 import subprocess
 import sys
@@ -75,16 +84,22 @@ def make_session():
 def run(cmd, cwd):
     """Run a command in cwd, streaming output, raising on failure.
 
-    shell=True so Windows resolves .cmd shims (e.g. npm) the same way a
-    user's own shell would.
+    shell=True on Windows so it resolves .cmd shims (e.g. npm) the same way a
+    user's own shell would. Everywhere else, shell=True combined with a list
+    of args would silently drop every argument after cmd[0], so run directly.
     """
     print(f"  $ {' '.join(str(c) for c in cmd)}")
-    subprocess.run(cmd, cwd=cwd, shell=True, check=True)
+    subprocess.run(cmd, cwd=cwd, shell=(os.name == "nt"), check=True)
 
 
 def build_lambda_zip(project_dir, copy_into_package):
-    """Install requirements and copy source into project_dir/.build/packages,
+    """Install dependencies and copy source into project_dir/.build/packages,
     then zip its contents into project_dir/.build/lambda.zip.
+
+    Dependencies come from project_dir's own pyproject.toml/uv.lock, exported
+    to a plain requirements.txt (excluding its dev dependency group, e.g.
+    UpdatePhotoMetadata's local-only Pillow) and installed into packages_dir
+    the same way `pip install --target` would.
 
     copy_into_package(packages_dir) copies this project's own source files
     into the freshly created packages directory; each project's file list
@@ -97,16 +112,31 @@ def build_lambda_zip(project_dir, copy_into_package):
         shutil.rmtree(build_dir)
     packages_dir.mkdir(parents=True)
 
+    requirements_path = build_dir / "requirements.txt"
     run(
         [
-            sys.executable,
-            "-m",
+            "uv",
+            "export",
+            "--no-dev",
+            "--no-hashes",
+            "--frozen",
+            "-o",
+            str(requirements_path),
+        ],
+        cwd=project_dir,
+    )
+
+    run(
+        [
+            "uv",
             "pip",
             "install",
+            "--python",
+            "3.12",
             "--target",
             str(packages_dir),
             "-r",
-            str(project_dir / "src" / "requirements.txt"),
+            str(requirements_path),
         ],
         cwd=project_dir,
     )
@@ -226,7 +256,7 @@ def deploy_update_photo_metadata(session):
     update_lambda_code(session, UPDATE_PHOTO_METADATA_FUNCTION, zip_path)
 
     print("Refreshing photo metadata for every photo in the bucket ...")
-    run([sys.executable, "refreshPhotoMetadata.py"], cwd=ROOT / "scripts")
+    run(["uv", "run", "refreshPhotoMetadata.py"], cwd=ROOT / "scripts")
 
 
 def deploy_update_blog_post_metadata(session):
@@ -255,7 +285,7 @@ def deploy_update_book_review(session):
     update_lambda_code(session, UPDATE_BOOK_REVIEW_FUNCTION, zip_path)
 
     print("Refreshing book reviews for every review in the bucket ...")
-    run([sys.executable, "refreshBookReviews.py"], cwd=ROOT / "scripts")
+    run(["uv", "run", "refreshBookReviews.py"], cwd=ROOT / "scripts")
 
 
 TARGETS = {

@@ -10,27 +10,27 @@ The `spark.wiki.books` DynamoDB table is keyed by `s3_uri` (partition key), matc
 ## Local development
 
 Requirements:
-* Python version 3.12
+* [uv](https://docs.astral.sh/uv/), which manages both the Python 3.12 interpreter (pinned in `.python-version`) and dependencies (declared in `pyproject.toml`, locked in `uv.lock`).
 
 ```ps
-python -m venv .env
-.env\Scripts\Activate.ps1
-pip install -U pip wheel
-pip install -r src/requirements.txt
+uv sync
 ```
+
+This creates `.venv` and installs the dependencies declared in `pyproject.toml` into it.
 
 ## Running Tests
 
 ```ps
 $env:PYTHONPATH = ".\src"
-python -m unittest discover test
+uv run python -m unittest discover test
 ```
 
 ## Zipping for upload to Lambda
 
 ```
 mkdir .build/packages
-pip install --target .build/packages -r src/requirements.txt
+uv export --no-dev --no-hashes -o .build/requirements.txt
+uv pip install --target .build/packages -r .build/requirements.txt
 cp src/*.py .build/packages
 
 $compress = @{
@@ -41,4 +41,4 @@ $compress = @{
 Compress-Archive @compress -Force
 ```
 
-Upload the resulting `lambda.zip` file to Lambda.
+Upload the resulting `lambda.zip` file to Lambda. (`deploy.py`/`deploy.ps1` does all of this for you — see the root [deploy.md](../../deploy.md).)

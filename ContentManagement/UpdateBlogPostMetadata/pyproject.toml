@@ -1,0 +1,9 @@
+[project]
+name = "update-blog-post-metadata"
+version = "0.1.0"
+description = "UpdateBlogPostMetadata Lambda: syncs blog post S3 objects into DynamoDB"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3",
+    "python-frontmatter",
+]

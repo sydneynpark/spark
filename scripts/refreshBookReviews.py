@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["boto3"]
+# ///
 """
 Iterate over every object in an S3 bucket and invoke a (private) Lambda for
 each one, passing an S3-event-shaped payload where the object key is swapped in

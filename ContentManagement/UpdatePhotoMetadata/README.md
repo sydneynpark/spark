@@ -5,23 +5,20 @@ This lambda reads the metadata of a photo stored in S3, and writes that metadata
 
 ## Local development
 
-Requirements: 
-* Python version 3.12 (this version is required for the Pillow Lambda layer and the Lambda runtime)
+Requirements:
+* [uv](https://docs.astral.sh/uv/), which manages both the Python 3.12 interpreter (pinned in `.python-version` — this version is required for the Pillow Lambda layer and the Lambda runtime) and dependencies.
 
 ```ps
-python -m venv .env
-.env\Scripts\Activate.ps1
-pip install -U pip wheel
-pip install -r src/requirements.txt
-pip install -r src/requirements.local.txt
-pip install -r test/requirements.txt
+uv sync
 ```
+
+`pyproject.toml` splits dependencies the same way `src/requirements.txt`, `src/requirements.local.txt`, and `test/requirements.txt` used to: `dependencies` (boto3, defusedxml) are what actually ship in the Lambda zip, while the `dev` group (Pillow, botocore) is only needed locally — Pillow because prod gets it from a Lambda layer instead, and botocore to build fake `StreamingBody` objects in tests. `uv sync` installs both by default.
 
 ## Running Tests
 
 ```ps
 $env:PYTHONPATH = ".\src"
-python -m unittest test\test_lambda.py
+uv run python -m unittest test\test_lambda.py
 ```
 
 ## Zipping for upload to Lambda
@@ -30,7 +27,8 @@ python -m unittest test\test_lambda.py
 ```
 rm -r .build
 mkdir .build/packages
-pip install --target .build/packages -r src/requirements.txt
+uv export --no-dev --no-hashes -o .build/requirements.txt
+uv pip install --target .build/packages -r .build/requirements.txt
 cp src/*.py .build/packages
 cp "src/Bird keywords.txt" .build/packages
 
@@ -42,7 +40,7 @@ $compress = @{
 Compress-Archive @compress -Force
 ```
 
-Upload the resulting `lambda.zip` file to Lambda.
+Upload the resulting `lambda.zip` file to Lambda. (`deploy.py`/`deploy.ps1` does all of this for you — see the root [deploy.md](../../deploy.md).)
 
 This Lambda relies on [the Klayers lambda layer](https://github.com/keithrozario/Klayers) for Pillow. 
 

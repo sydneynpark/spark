@@ -12,4 +12,4 @@ param(
     [string[]]$Targets
 )
 
-python "$PSScriptRoot\deploy.py" @Targets
+uv run "$PSScriptRoot\deploy.py" @Targets

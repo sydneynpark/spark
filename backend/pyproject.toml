@@ -1,0 +1,11 @@
+[project]
+name = "spark-wiki-backend"
+version = "0.1.0"
+description = "ContentAPI Lambda backing spark.wiki's frontend"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3",
+    "flask",
+    "serverless-wsgi",
+    "python-frontmatter",
+]
