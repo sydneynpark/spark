@@ -65,17 +65,17 @@ class LocalDynamoUtil:
         # lambda, so it does the same thing on first read instead, and
         # persists the result (success or failure) to disk in
         # local_data/covers so restarting the dev server never re-hits
-        # Open Library for a book it's already resolved.
+        # Google Books for a book it's already resolved.
         manifest = self._load_cover_manifest()
         if title in manifest:
             return manifest[title]
 
         cover_key = None
-        from utils.open_library_util import OpenLibraryUtil
-        open_library = OpenLibraryUtil()
-        cover_id = open_library.find_cover_id(title, author)
-        if cover_id:
-            image_bytes = open_library.fetch_cover_image(cover_id)
+        from utils.google_books_util import GoogleBooksUtil
+        google_books = GoogleBooksUtil()
+        cover_url = google_books.find_cover_url(title, author)
+        if cover_url:
+            image_bytes = google_books.fetch_cover_image(cover_url)
             if image_bytes:
                 os.makedirs(COVERS_DIR, exist_ok=True)
                 filename = f'{title}.jpg'

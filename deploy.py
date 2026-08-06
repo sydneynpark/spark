@@ -35,6 +35,7 @@ AWS_REGION = "us-east-1"
 
 ACCESS_KEY_FILE = ROOT / "scripts" / ".accesskey"
 SECRET_KEY_FILE = ROOT / "scripts" / ".secretaccesskey"
+GOOGLE_BOOKS_API_KEY_FILE = ROOT / "scripts" / ".googlebooksapikey"
 
 FRONTEND_BUCKET = "spark.wiki.frontend"
 FRONTEND_DISTRIBUTION_ID = "E2JO5BSJ5WRP9P"
@@ -131,6 +132,22 @@ def update_lambda_code(session, function_name, zip_path):
     )
     lambda_client.get_waiter("function_updated").wait(FunctionName=function_name)
     print(f"  {function_name} updated.")
+
+
+def update_lambda_env_vars(session, function_name, env_vars):
+    """Merge env_vars into the function's existing environment variables
+    (rather than replacing the whole set) so this doesn't clobber anything
+    configured outside of deploy.py.
+    """
+    print(f"  Setting environment variables on {function_name} ...")
+    lambda_client = session.client("lambda")
+    current = lambda_client.get_function_configuration(FunctionName=function_name)
+    existing_vars = current.get("Environment", {}).get("Variables", {})
+    lambda_client.update_function_configuration(
+        FunctionName=function_name,
+        Environment={"Variables": {**existing_vars, **env_vars}},
+    )
+    lambda_client.get_waiter("function_updated").wait(FunctionName=function_name)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -253,6 +270,9 @@ def deploy_update_book_review(session):
     print("Building UpdateBookReview Lambda package ...")
     zip_path = build_lambda_zip(project_dir, copy_into_package)
     update_lambda_code(session, UPDATE_BOOK_REVIEW_FUNCTION, zip_path)
+    update_lambda_env_vars(session, UPDATE_BOOK_REVIEW_FUNCTION, {
+        "GOOGLE_BOOKS_API_KEY": read_secret(GOOGLE_BOOKS_API_KEY_FILE),
+    })
 
     print("Refreshing book review metadata for every review in the bucket ...")
     run([sys.executable, "refreshBookReviews.py"], cwd=ROOT / "scripts")

@@ -63,4 +63,6 @@ This is also a lambda. We'll update UpdateBlogPostMetadata with its new info. Th
 
 This is also a lambda. We'll update UpdateBookReview with its new info.
 
+It calls the Google Books API to fetch cover images, which requires an API key (keyless requests get a shared anonymous quota of zero). Read the key from `scripts/.googlebooksapikey` (same local-file convention as the AWS credentials) and set it as the `GOOGLE_BOOKS_API_KEY` environment variable on the UpdateBookReview lambda, merging with whatever environment variables are already configured rather than replacing them.
+
 After this, we'll need to run the script in `scripts/refreshBookReviews.py` to reprocess all book reviews and update them with whatever new metadata the update stores.

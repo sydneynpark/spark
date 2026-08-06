@@ -57,7 +57,7 @@ class TestBookReviewUtil(unittest.TestCase):
         self.assertNotIn('point', item['commentary'][2])
 
         # cover_key is only set by the lambda after successfully storing a
-        # downloaded Open Library cover, not by parsing the review file itself.
+        # downloaded Google Books cover, not by parsing the review file itself.
         self.assertNotIn('cover_key', item)
 
     def test_to_item_includes_cover_key_when_set(self):

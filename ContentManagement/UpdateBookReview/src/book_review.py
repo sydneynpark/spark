@@ -20,8 +20,8 @@ class BookReview:
         self.date_reviewed = str(metadata_dict.get('date_reviewed', '') or '')
         self.rating_elements = metadata_dict.get('rating_elements', [])
         self.commentary = self._parse_commentary(post.content)
-        # Set by the lambda after successfully downloading and storing an
-        # Open Library cover image -- not something the review file itself
+        # Set by the lambda after successfully downloading and storing a
+        # Google Books cover image -- not something the review file itself
         # specifies.
         self.cover_key = None
 
