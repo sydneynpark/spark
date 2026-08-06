@@ -16,7 +16,11 @@ class TestLambda(unittest.TestCase):
         lambda_function.aws = self.mock_aws
 
         self.mock_google_books = google_books_util.GoogleBooksUtil()
-        self.mock_google_books.find_cover_url = MagicMock(return_value='https://books.google.com/thumb.jpg')
+        self.mock_google_books.find_book_metadata = MagicMock(return_value={
+            'cover_url': 'https://books.google.com/thumb.jpg',
+            'description': 'A stranded astronaut must save humanity.',
+            'genres': ['Fiction', 'Science Fiction'],
+        })
         self.mock_google_books.fetch_cover_image = MagicMock(return_value=b'fake-jpeg-bytes')
         lambda_function.google_books = self.mock_google_books
 
@@ -37,7 +41,7 @@ class TestLambda(unittest.TestCase):
         self.assertIn('Andy Weir', metadata_str)
         self.assertIn('2026-07-20', metadata_str)
 
-        self.mock_google_books.find_cover_url.assert_called_once_with('Project Hail Mary', 'Andy Weir')
+        self.mock_google_books.find_book_metadata.assert_called_once_with('Project Hail Mary', 'Andy Weir')
         self.mock_google_books.fetch_cover_image.assert_called_once_with('https://books.google.com/thumb.jpg')
 
         self.mock_aws.put_s3_object.assert_called_once_with(
@@ -49,6 +53,8 @@ class TestLambda(unittest.TestCase):
         self.assertEqual(s3_uri, 's3://spark.wiki.books/Project Hail Mary.md')
         self.assertEqual(book_review.title, 'Project Hail Mary')
         self.assertEqual(book_review.cover_key, 'covers/Project Hail Mary.jpg')
+        self.assertEqual(book_review.description, 'A stranded astronaut must save humanity.')
+        self.assertEqual(book_review.genres, ['Fiction', 'Science Fiction'])
 
     def test_lambda_skips_cover_upload_when_no_cover_found(self):
         event = sample_events.UploadSampleBookReview
@@ -56,7 +62,11 @@ class TestLambda(unittest.TestCase):
         self.mock_aws.get_s3_object = MagicMock(return_value=sample_events.SampleBookReviewS3Object)
         self.mock_aws.put_s3_object = MagicMock()
         self.mock_aws.store_book_review = MagicMock()
-        self.mock_google_books.find_cover_url = MagicMock(return_value=None)
+        self.mock_google_books.find_book_metadata = MagicMock(return_value={
+            'cover_url': None,
+            'description': None,
+            'genres': [],
+        })
 
         lambda_function.lambda_handler(event, None)
 
@@ -81,7 +91,7 @@ class TestLambda(unittest.TestCase):
         self.assertEqual(result['ignored'], 'covers/Project Hail Mary.jpg')
         self.mock_aws.get_s3_object.assert_not_called()
         self.mock_aws.store_book_review.assert_not_called()
-        self.mock_google_books.find_cover_url.assert_not_called()
+        self.mock_google_books.find_book_metadata.assert_not_called()
 
     def test_lambda_for_book_review_delete_event(self):
         event = sample_events.DeleteSampleBookReview

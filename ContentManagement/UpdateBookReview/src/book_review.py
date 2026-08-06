@@ -20,10 +20,11 @@ class BookReview:
         self.date_reviewed = str(metadata_dict.get('date_reviewed', '') or '')
         self.rating_elements = metadata_dict.get('rating_elements', [])
         self.commentary = self._parse_commentary(post.content)
-        # Set by the lambda after successfully downloading and storing an
-        # Open Library cover image -- not something the review file itself
-        # specifies.
+        # Set by the lambda after searching Google Books -- not something
+        # the review file itself specifies.
         self.cover_key = None
+        self.description = None
+        self.genres = []
 
     def cover_s3_key(self):
         """Where this book's cover image belongs in the spark.wiki.books
@@ -84,6 +85,10 @@ class BookReview:
         }
         if self.cover_key is not None:
             item['cover_key'] = self.cover_key
+        if self.description:
+            item['description'] = self.description
+        if self.genres:
+            item['genres'] = self.genres
         return item
 
     def __str__(self):
@@ -99,3 +104,4 @@ class BookReview:
         print(f'Date Reviewed: {self.date_reviewed or "No date"}')
         print(f'Rating Elements: {self.rating_elements}')
         print(f'Commentary Items: {len(self.commentary)}')
+        print(f'Genres: {self.genres}')

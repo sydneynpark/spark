@@ -54,28 +54,32 @@ class LocalDynamoUtil:
                 filepath = os.path.join(books_dir, filename)
                 with open(filepath, encoding='utf-8') as f:
                     book = parse_book_review(f.read(), s3_uri=f's3://spark.wiki.books/{filename}')
-                book['cover_key'] = self._get_cover_key(book['title'], book['author'])
+                metadata = self._get_google_books_metadata(book['title'], book['author'])
+                book['cover_key'] = metadata['cover_key']
+                book['description'] = metadata['description']
+                book['genres'] = metadata['genres']
                 books.append(book)
         books.sort(key=lambda b: b.get('date', 0), reverse=True)
         return books[:limit]
 
-    def _get_cover_key(self, title, author):
-        # The UpdateBookReview lambda does this same lookup + download once
-        # at upload time and stores the image in S3; local dev has no
-        # lambda, so it does the same thing on first read instead, and
-        # persists the result (success or failure) to disk in
-        # local_data/covers so restarting the dev server never re-hits
-        # Google Books for a book it's already resolved.
+    def _get_google_books_metadata(self, title, author):
+        # The UpdateBookReview lambda does this same lookup once at upload
+        # time and stores the cover image in S3 plus the description/genres
+        # in DynamoDB; local dev has no lambda, so it does the same thing on
+        # first read instead, and persists the result (success or failure)
+        # to disk in local_data/covers so restarting the dev server never
+        # re-hits Google Books for a book it's already resolved.
         manifest = self._load_cover_manifest()
         if title in manifest:
             return manifest[title]
 
-        cover_key = None
         from utils.google_books_util import GoogleBooksUtil
         google_books = GoogleBooksUtil()
-        cover_url = google_books.find_cover_url(title, author)
-        if cover_url:
-            image_bytes = google_books.fetch_cover_image(cover_url)
+        result = google_books.find_book_metadata(title, author)
+
+        cover_key = None
+        if result['cover_url']:
+            image_bytes = google_books.fetch_cover_image(result['cover_url'])
             if image_bytes:
                 os.makedirs(COVERS_DIR, exist_ok=True)
                 filename = f'{title}.jpg'
@@ -83,9 +87,10 @@ class LocalDynamoUtil:
                     f.write(image_bytes)
                 cover_key = f'covers/{filename}'
 
-        manifest[title] = cover_key
+        metadata = {'cover_key': cover_key, 'description': result['description'], 'genres': result['genres']}
+        manifest[title] = metadata
         self._save_cover_manifest(manifest)
-        return cover_key
+        return metadata
 
     def _load_cover_manifest(self):
         if self._cover_manifest is None:

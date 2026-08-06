@@ -51,7 +51,11 @@ def lambda_handler(event, context):
         markdown_content = response['Body'].read().decode('utf-8')
         book_review = reviews.parse(markdown_content)
 
-        cover_url = google_books.find_cover_url(book_review.title, book_review.author)
+        metadata = google_books.find_book_metadata(book_review.title, book_review.author)
+        book_review.description = metadata['description']
+        book_review.genres = metadata['genres']
+
+        cover_url = metadata['cover_url']
         if cover_url:
             cover_bytes = google_books.fetch_cover_image(cover_url)
             if cover_bytes:

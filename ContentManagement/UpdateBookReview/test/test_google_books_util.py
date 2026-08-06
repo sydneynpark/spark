@@ -20,20 +20,26 @@ class TestGoogleBooksUtil(unittest.TestCase):
         self.util = GoogleBooksUtil()
 
     @patch('google_books_util.urllib.request.urlopen')
-    def test_returns_cover_url_of_first_result(self, mock_urlopen):
+    def test_returns_metadata_of_first_result(self, mock_urlopen):
         mock_urlopen.return_value = _response_with({
             'items': [
-                {'volumeInfo': {'imageLinks': {
-                    'smallThumbnail': 'http://books.google.com/small.jpg',
-                    'thumbnail': 'http://books.google.com/thumb.jpg',
-                }}},
+                {'volumeInfo': {
+                    'imageLinks': {
+                        'smallThumbnail': 'http://books.google.com/small.jpg',
+                        'thumbnail': 'http://books.google.com/thumb.jpg',
+                    },
+                    'description': 'A stranded astronaut must save humanity.',
+                    'categories': ['Fiction / Science Fiction / General'],
+                }},
                 {'volumeInfo': {'imageLinks': {'thumbnail': 'http://books.google.com/other.jpg'}}},
             ]
         })
 
-        cover_url = self.util.find_cover_url('Project Hail Mary', 'Andy Weir')
+        metadata = self.util.find_book_metadata('Project Hail Mary', 'Andy Weir')
 
-        self.assertEqual(cover_url, 'https://books.google.com/thumb.jpg')
+        self.assertEqual(metadata['cover_url'], 'https://books.google.com/thumb.jpg')
+        self.assertEqual(metadata['description'], 'A stranded astronaut must save humanity.')
+        self.assertEqual(metadata['genres'], ['Fiction', 'Science Fiction', 'General'])
 
     @patch('google_books_util.urllib.request.urlopen')
     def test_falls_back_to_small_thumbnail(self, mock_urlopen):
@@ -43,33 +49,63 @@ class TestGoogleBooksUtil(unittest.TestCase):
             }}}]
         })
 
-        cover_url = self.util.find_cover_url('Project Hail Mary', 'Andy Weir')
+        metadata = self.util.find_book_metadata('Project Hail Mary', 'Andy Weir')
 
-        self.assertEqual(cover_url, 'https://books.google.com/small.jpg')
+        self.assertEqual(metadata['cover_url'], 'https://books.google.com/small.jpg')
 
     @patch('google_books_util.urllib.request.urlopen')
-    def test_no_results_returns_none(self, mock_urlopen):
+    def test_dedupes_genres_across_multiple_categories(self, mock_urlopen):
+        mock_urlopen.return_value = _response_with({
+            'items': [{'volumeInfo': {
+                'categories': ['Fiction / Thrillers / Suspense', 'Fiction / Mystery'],
+            }}]
+        })
+
+        metadata = self.util.find_book_metadata('Vicious', 'V. E. Schwab')
+
+        self.assertEqual(metadata['genres'], ['Fiction', 'Thrillers', 'Suspense', 'Mystery'])
+
+    @patch('google_books_util.urllib.request.urlopen')
+    def test_strips_html_from_description(self, mock_urlopen):
+        mock_urlopen.return_value = _response_with({
+            'items': [{'volumeInfo': {
+                'description': '<p>A <b>gripping</b> tale.</p><p>Book two.</p>',
+            }}]
+        })
+
+        metadata = self.util.find_book_metadata('Vicious', 'V. E. Schwab')
+
+        self.assertEqual(metadata['description'], 'A gripping tale.\n\nBook two.')
+
+    @patch('google_books_util.urllib.request.urlopen')
+    def test_no_results_returns_empty_metadata(self, mock_urlopen):
         mock_urlopen.return_value = _response_with({'items': []})
 
-        cover_url = self.util.find_cover_url('Some Unpublished Book', 'Nobody')
+        metadata = self.util.find_book_metadata('Some Unpublished Book', 'Nobody')
 
-        self.assertIsNone(cover_url)
+        self.assertIsNone(metadata['cover_url'])
+        self.assertIsNone(metadata['description'])
+        self.assertEqual(metadata['genres'], [])
 
     @patch('google_books_util.urllib.request.urlopen')
-    def test_result_with_no_cover_returns_none(self, mock_urlopen):
+    def test_result_with_no_fields_returns_empty_metadata(self, mock_urlopen):
         mock_urlopen.return_value = _response_with({'items': [{'volumeInfo': {}}]})
 
-        cover_url = self.util.find_cover_url('No Cover Book', 'Someone')
+        metadata = self.util.find_book_metadata('No Cover Book', 'Someone')
 
-        self.assertIsNone(cover_url)
+        self.assertIsNone(metadata['cover_url'])
+        self.assertIsNone(metadata['description'])
+        self.assertEqual(metadata['genres'], [])
 
     @patch('google_books_util.urllib.request.urlopen')
-    def test_request_failure_returns_none(self, mock_urlopen):
+    def test_request_failure_returns_empty_metadata(self, mock_urlopen):
         mock_urlopen.side_effect = Exception('network error')
 
-        cover_url = self.util.find_cover_url('Project Hail Mary', 'Andy Weir')
+        metadata = self.util.find_book_metadata('Project Hail Mary', 'Andy Weir')
 
-        self.assertIsNone(cover_url)
+        self.assertIsNone(metadata['cover_url'])
+        self.assertIsNone(metadata['description'])
+        self.assertEqual(metadata['genres'], [])
 
     @patch('google_books_util.urllib.request.urlopen')
     def test_fetch_cover_image_returns_bytes(self, mock_urlopen):
