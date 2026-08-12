@@ -128,15 +128,17 @@ UploadCoverImage = {
   ]
 }
 
-SampleBookReview = file_to_streamingbody('sample-book-review')
-
-SampleBookReviewS3Object = {
-  'Body': SampleBookReview,
-  'DeleteMarker': False,
-  'AcceptRanges': 'string',
-  'Expiration': 'string',
-  'Restore': 'string',
-  'LastModified': datetime(2026, 7, 20),
-  'ETag': 'd41d8cd98f00b204e9800998ecf8427e',
-  'ContentType': 'text/markdown'
-}
+def SampleBookReviewS3Object():
+  # A function rather than a static dict: StreamingBody wraps a single-use
+  # file handle (like a real S3 get_object response), so a shared instance
+  # would come back empty for every test after the first one that reads it.
+  return {
+    'Body': file_to_streamingbody('sample-book-review'),
+    'DeleteMarker': False,
+    'AcceptRanges': 'string',
+    'Expiration': 'string',
+    'Restore': 'string',
+    'LastModified': datetime(2026, 7, 20),
+    'ETag': 'd41d8cd98f00b204e9800998ecf8427e',
+    'ContentType': 'text/markdown'
+  }

@@ -6,6 +6,22 @@ class AWSUtil:
     def __init__(self):
         self.s3 = boto3.client('s3')
         self.dynamodb = boto3.resource('dynamodb')
+        # Unlike s3/dynamodb, boto3.client('ssm') resolves its region
+        # eagerly and raises NoRegionError immediately if none is
+        # configured -- construct it lazily so AWSUtil() stays safe to
+        # build in any environment (e.g. local dev, tests) that never
+        # calls get_parameter().
+        self._ssm = None
+
+    @property
+    def ssm(self):
+        if self._ssm is None:
+            self._ssm = boto3.client('ssm')
+        return self._ssm
+
+    def get_parameter(self, name):
+        response = self.ssm.get_parameter(Name=name, WithDecryption=True)
+        return response['Parameter']['Value']
 
     def get_s3_object(self, bucket, key):
         return self.s3.get_object(Bucket=bucket, Key=key)

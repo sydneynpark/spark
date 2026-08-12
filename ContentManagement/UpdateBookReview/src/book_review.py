@@ -24,6 +24,11 @@ class BookReview:
         # Open Library cover image -- not something the review file itself
         # specifies.
         self.cover_key = None
+        # Set by the lambda after looking the book up on Google Books and
+        # (for synopsis) paraphrasing the result with Gemini -- neither is
+        # something the review file itself specifies.
+        self.genres = []
+        self.synopsis = None
 
     def cover_s3_key(self):
         """Where this book's cover image belongs in the spark.wiki.books
@@ -84,6 +89,10 @@ class BookReview:
         }
         if self.cover_key is not None:
             item['cover_key'] = self.cover_key
+        if self.genres:
+            item['genres'] = self.genres
+        if self.synopsis is not None:
+            item['synopsis'] = self.synopsis
         return item
 
     def __str__(self):
