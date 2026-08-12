@@ -1092,6 +1092,27 @@ footer {
   padding: 2.5rem 3rem;
 }
 
+.book-review-genres {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.book-review-genre-tag {
+  background: var(--color-card-background);
+  border: 1px solid var(--color-accent-medium);
+  border-radius: 999px;
+  padding: 0.3rem 0.9rem;
+  font-size: 0.85rem;
+  color: var(--color-accent-dark);
+}
+
+.book-review-synopsis {
+  line-height: 1.7;
+}
+
 .book-review-section {
   margin-bottom: 2.5rem;
 }

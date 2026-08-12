@@ -51,6 +51,21 @@ function BookReview() {
         </header>
 
         <div className="book-review-body">
+          {book.genres && book.genres.length > 0 && (
+            <ul className="book-review-genres">
+              {book.genres.map(genre => (
+                <li key={genre} className="book-review-genre-tag">{genre}</li>
+              ))}
+            </ul>
+          )}
+
+          {book.synopsis && (
+            <section className="book-review-section">
+              <h2>Synopsis</h2>
+              <p className="book-review-synopsis">{book.synopsis}</p>
+            </section>
+          )}
+
           {book.rating_elements.length > 0 && (
             <section className="book-review-section">
               <h2>Rating</h2>
