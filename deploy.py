@@ -17,6 +17,7 @@ Credentials:
 
 import argparse
 import mimetypes
+import os
 import shutil
 import subprocess
 import sys
@@ -75,11 +76,13 @@ def make_session():
 def run(cmd, cwd):
     """Run a command in cwd, streaming output, raising on failure.
 
-    shell=True so Windows resolves .cmd shims (e.g. npm) the same way a
-    user's own shell would.
+    shell=True on Windows so it resolves .cmd shims (e.g. npm) the same way
+    a user's own shell would. Elsewhere shell=False, since POSIX shell=True
+    with a list of args only passes cmd[0] to the shell and treats the rest
+    as arguments to the shell itself rather than to the command.
     """
     print(f"  $ {' '.join(str(c) for c in cmd)}")
-    subprocess.run(cmd, cwd=cwd, shell=True, check=True)
+    subprocess.run(cmd, cwd=cwd, shell=(os.name == "nt"), check=True)
 
 
 def build_lambda_zip(project_dir, copy_into_package):
