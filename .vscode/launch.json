@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Backend (Flask)",
+            "type": "debugpy",
+            "request": "launch",
+            "python": "${workspaceFolder}/backend/.venv/bin/python",
+            "program": "${workspaceFolder}/backend/run_local.py",
+            "cwd": "${workspaceFolder}/backend",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Frontend (React)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["start"],
+            "cwd": "${workspaceFolder}/frontend",
+            "envFile": "${workspaceFolder}/.vscode/.env.local",
+            "preLaunchTask": "Write Frontend Env",
+            "console": "integratedTerminal"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Start Local (Frontend + Backend)",
+            "configurations": ["Backend (Flask)", "Frontend (React)"],
+            "stopAll": true
+        }
+    ]
+}
