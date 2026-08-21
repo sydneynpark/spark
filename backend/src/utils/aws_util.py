@@ -15,21 +15,24 @@ class DynamoUtil:
             date_prefix = day or month or year
 
             if species:
-                # Scan with species filter
-                response = self.photos_table.scan(
-                    FilterExpression=Attr('species').eq(species),
+                # Query the taxonomy-species GSI
+                response = self.photos_table.query(
+                    IndexName='taxonomy-species',
+                    KeyConditionExpression=Key('species').eq(species),
                     Limit=limit
                 )
             elif family:
-                # Scan with family filter
-                response = self.photos_table.scan(
-                    FilterExpression=Attr('family').eq(family),
+                # Query the taxonomy-family GSI
+                response = self.photos_table.query(
+                    IndexName='taxonomy-family',
+                    KeyConditionExpression=Key('family').eq(family),
                     Limit=limit
                 )
             elif order:
-                # Scan with order filter
-                response = self.photos_table.scan(
-                    FilterExpression=Attr('order').eq(order),
+                # Query the taxonomy-order GSI
+                response = self.photos_table.query(
+                    IndexName='taxonomy-order',
+                    KeyConditionExpression=Key('order').eq(order),
                     Limit=limit
                 )
             elif date_prefix:
