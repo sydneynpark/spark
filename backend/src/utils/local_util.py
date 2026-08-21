@@ -39,6 +39,28 @@ class LocalDynamoUtil:
     def get_all_species(self):
         return sorted(set(p['species'] for p in self._photos if 'species' in p))
 
+    def get_taxonomy(self):
+        tree = {}
+        for photo in self._photos:
+            class_name = photo.get('class') or 'Unknown Class'
+            order = photo.get('order') or 'Unknown Order'
+            family = photo.get('family') or 'Unknown Family'
+            species = photo.get('species') or 'Unknown Species'
+
+            class_node = tree.setdefault(class_name, {'count': 0, 'orders': {}})
+            order_node = class_node['orders'].setdefault(order, {'count': 0, 'families': {}})
+            family_node = order_node['families'].setdefault(family, {'count': 0, 'species': {}})
+            species_node = family_node['species'].setdefault(species, {'count': 0, 'thumbnails': []})
+
+            class_node['count'] += 1
+            order_node['count'] += 1
+            family_node['count'] += 1
+            species_node['count'] += 1
+            if len(species_node['thumbnails']) < 3:
+                species_node['thumbnails'].append(photo['s3_uri'])
+
+        return tree
+
     def get_books(self, limit=50):
         from utils.book_review_parser import parse_book_review
         # Reads straight from sample-data/books at the repo root -- the same

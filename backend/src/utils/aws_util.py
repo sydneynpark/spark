@@ -83,6 +83,38 @@ class DynamoUtil:
             print(f'Error getting photo {photo_id}: {str(e)}')
             raise e
 
+    def get_taxonomy(self):
+        """Build a class > order > family > species hierarchy with counts
+        and up to 3 sample thumbnail URIs per species, so the frontend
+        doesn't need to fetch every photo just to render the browse tree."""
+        try:
+            items = self._paginate(self.photos_table.scan)
+            tree = {}
+
+            for item in items:
+                class_name = item.get('class') or 'Unknown Class'
+                order = item.get('order') or 'Unknown Order'
+                family = item.get('family') or 'Unknown Family'
+                species = item.get('species') or 'Unknown Species'
+
+                class_node = tree.setdefault(class_name, {'count': 0, 'orders': {}})
+                order_node = class_node['orders'].setdefault(order, {'count': 0, 'families': {}})
+                family_node = order_node['families'].setdefault(family, {'count': 0, 'species': {}})
+                species_node = family_node['species'].setdefault(species, {'count': 0, 'thumbnails': []})
+
+                class_node['count'] += 1
+                order_node['count'] += 1
+                family_node['count'] += 1
+                species_node['count'] += 1
+                if len(species_node['thumbnails']) < 3:
+                    species_node['thumbnails'].append(item['s3_uri'])
+
+            return tree
+
+        except Exception as e:
+            print(f'Error getting taxonomy: {str(e)}')
+            raise e
+
     def get_all_species(self):
         """Get list of all unique species"""
         try:

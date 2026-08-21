@@ -40,51 +40,17 @@ const Photos = () => {
   const loadPhotos = async () => {
     try {
       setLoading(true);
-      const photoData = await ApiService.fetchPhotos();
-      setHierarchy(buildHierarchy(photoData));
+      const [photoData, taxonomyData] = await Promise.all([
+        ApiService.fetchPhotos(),
+        ApiService.fetchTaxonomy(),
+      ]);
+      setHierarchy(taxonomyData);
       setDateHierarchy(buildDateHierarchy(photoData));
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const buildHierarchy = (photoData) => {
-    const hierarchy = {};
-
-    photoData.forEach(photo => {
-      const className = photo.class || 'Unknown Class';
-      const order = photo.order || 'Unknown Order';
-      const family = photo.family || 'Unknown Family';
-      const species = photo.species || 'Unknown Species';
-
-      // Build nested structure
-      if (!hierarchy[className]) {
-        hierarchy[className] = { count: 0, orders: {} };
-      }
-
-      if (!hierarchy[className].orders[order]) {
-        hierarchy[className].orders[order] = { count: 0, families: {} };
-      }
-
-      if (!hierarchy[className].orders[order].families[family]) {
-        hierarchy[className].orders[order].families[family] = { count: 0, species: {} };
-      }
-
-      if (!hierarchy[className].orders[order].families[family].species[species]) {
-        hierarchy[className].orders[order].families[family].species[species] = { count: 0, photos: [] };
-      }
-
-      // Increment counts
-      hierarchy[className].count++;
-      hierarchy[className].orders[order].count++;
-      hierarchy[className].orders[order].families[family].count++;
-      hierarchy[className].orders[order].families[family].species[species].count++;
-      hierarchy[className].orders[order].families[family].species[species].photos.push(photo);
-    });
-
-    return hierarchy;
   };
 
   const buildDateHierarchy = (photoData) => {
@@ -142,7 +108,7 @@ const Photos = () => {
       to={`/gallery?type=species&value=${encodeURIComponent(species)}`}
       className="taxonomy-row rank-species"
     >
-      <ThumbnailStack photos={speciesData.photos} />
+      <ThumbnailStack photos={speciesData.thumbnails.map(uri => ({ s3_uri: uri }))} />
       <span className="taxonomy-name">{species}</span>
       <span className="taxonomy-count">{speciesData.count}</span>
     </Link>

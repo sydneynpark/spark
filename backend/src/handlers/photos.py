@@ -58,6 +58,17 @@ def get_photo(photo_id):
     except Exception as e:
         return handle_error(e)
 
+@photos_bp.route('/photos/taxonomy', methods=['GET'])
+def get_taxonomy():
+    """Get the class > order > family > species browse tree, with counts
+    and sample thumbnails per species"""
+    try:
+        taxonomy = dynamo.get_taxonomy()
+        return jsonify({'taxonomy': taxonomy})
+
+    except Exception as e:
+        return handle_error(e)
+
 @photos_bp.route('/photos/species', methods=['GET'])
 def list_species():
     """Get list of all species found in photos"""
