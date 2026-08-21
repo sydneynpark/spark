@@ -7,6 +7,23 @@ class DynamoUtil:
         self.photos_table = self.dynamodb.Table('spark.wiki.photos')
         self.books_table = self.dynamodb.Table('spark.wiki.books')
     
+    def _paginate(self, table_method, limit=None, **kwargs):
+        """Call a boto3 scan/query method repeatedly, following
+        LastEvaluatedKey, until either the table/index is exhausted or
+        `limit` total items have been collected."""
+        items = []
+        while True:
+            response = table_method(**kwargs)
+            items.extend(response.get('Items', []))
+
+            last_key = response.get('LastEvaluatedKey')
+            if not last_key or (limit is not None and len(items) >= limit):
+                break
+
+            kwargs['ExclusiveStartKey'] = last_key
+
+        return items[:limit] if limit is not None else items
+
     def get_photos(self, species=None, family=None, order=None, year=None, month=None, day=None, limit=50):
         """Get photos with optional filtering by taxonomy or date captured"""
         try:
@@ -16,41 +33,43 @@ class DynamoUtil:
 
             if species:
                 # Query the taxonomy-species GSI
-                response = self.photos_table.query(
+                return self._paginate(
+                    self.photos_table.query,
+                    limit=limit,
                     IndexName='taxonomy-species',
                     KeyConditionExpression=Key('species').eq(species),
-                    Limit=limit
                 )
             elif family:
                 # Query the taxonomy-family GSI
-                response = self.photos_table.query(
+                return self._paginate(
+                    self.photos_table.query,
+                    limit=limit,
                     IndexName='taxonomy-family',
                     KeyConditionExpression=Key('family').eq(family),
-                    Limit=limit
                 )
             elif order:
                 # Query the taxonomy-order GSI
-                response = self.photos_table.query(
+                return self._paginate(
+                    self.photos_table.query,
+                    limit=limit,
                     IndexName='taxonomy-order',
                     KeyConditionExpression=Key('order').eq(order),
-                    Limit=limit
                 )
             elif date_prefix:
                 # Scan with date filter
-                response = self.photos_table.scan(
+                return self._paginate(
+                    self.photos_table.scan,
+                    limit=limit,
                     FilterExpression=Attr('date').begins_with(date_prefix),
-                    Limit=limit
                 )
             else:
                 # Get all photos
-                response = self.photos_table.scan(Limit=limit)
+                return self._paginate(self.photos_table.scan, limit=limit)
 
-            return response.get('Items', [])
-            
         except Exception as e:
             print(f'Error getting photos: {str(e)}')
             raise e
-    
+
     def get_photo_by_id(self, photo_id):
         """Get specific photo by S3 URI"""
         try:
@@ -59,24 +78,25 @@ class DynamoUtil:
                 Key={'s3_uri': photo_id}
             )
             return response.get('Item')
-            
+
         except Exception as e:
             print(f'Error getting photo {photo_id}: {str(e)}')
             raise e
-    
+
     def get_all_species(self):
         """Get list of all unique species"""
         try:
-            response = self.photos_table.scan(
+            items = self._paginate(
+                self.photos_table.scan,
                 ProjectionExpression='species'
             )
-            
+
             # Extract unique species names
             species_set = set()
-            for item in response.get('Items', []):
+            for item in items:
                 if 'species' in item:
                     species_set.add(item['species'])
-            
+
             return sorted(list(species_set))
 
         except Exception as e:

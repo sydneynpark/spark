@@ -22,7 +22,8 @@ def list_photos():
         year = request.args.get('year')
         month = request.args.get('month')
         day = request.args.get('day')
-        limit = int(request.args.get('limit', 50))
+        limit_param = request.args.get('limit')
+        limit = int(limit_param) if limit_param else None
 
         photos = dynamo.get_photos(
             species=species,
