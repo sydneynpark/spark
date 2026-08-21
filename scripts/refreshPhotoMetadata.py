@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """
-Iterate over every object in an S3 bucket and invoke a (private) Lambda for
-each one, passing an S3-event-shaped payload where the object key is swapped in
-for the real key.
+Iterate over every object in an S3 bucket (or a given path/prefix within it)
+and invoke a (private) Lambda for each one, passing an S3-event-shaped payload
+where the object key is swapped in for the real key.
+
+Usage:
+    python refreshPhotoMetadata.py                              # whole bucket
+    python refreshPhotoMetadata.py 2024/vacation/                # just this prefix
+    python refreshPhotoMetadata.py s3://spark.wiki.photos/2024/  # full s3:// URI
 
 Credentials:
     The AWS access key and secret access key are read from local files
@@ -12,6 +17,7 @@ Credentials:
 normal AWS API with credentials that have lambda:InvokeFunction permission.
 """
 
+import argparse
 import json
 import os
 import sys
@@ -127,7 +133,41 @@ def invoke(lambda_client, payload):
     return ok, (function_error and body) or None
 
 
+def parse_prefix(raw):
+    """Normalize a user-supplied S3 path/prefix into a bucket-relative prefix.
+
+    Accepts a bare prefix ("2024/vacation/") or a full s3:// URI
+    ("s3://spark.wiki.photos/2024/vacation/"), and requires the URI's bucket
+    (if given) to match BUCKET_NAME.
+    """
+    if raw is None:
+        return ""
+
+    if raw.startswith("s3://"):
+        rest = raw[len("s3://"):]
+        bucket, _, key = rest.partition("/")
+        if bucket != BUCKET_NAME:
+            sys.exit(f"Bucket in path ({bucket!r}) does not match BUCKET_NAME ({BUCKET_NAME!r}).")
+        return key
+
+    return raw.lstrip("/")
+
+
 def main():
+    parser = argparse.ArgumentParser(
+        description="Refresh photo metadata by re-invoking the Lambda for every "
+        "object in the bucket, optionally scoped to an S3 path/prefix."
+    )
+    parser.add_argument(
+        "path",
+        nargs="?",
+        default=None,
+        help="S3 prefix to limit processing to, e.g. '2024/vacation/' or "
+        f"'s3://{BUCKET_NAME}/2024/vacation/'. Omit to process the whole bucket.",
+    )
+    args = parser.parse_args()
+    prefix = parse_prefix(args.path)
+
     if not LAMBDA_FUNCTION_NAME:
         sys.exit("Set LAMBDA_FUNCTION_NAME before running.")
 
@@ -142,7 +182,10 @@ def main():
 
     total = succeeded = failed = 0
 
-    for page in paginator.paginate(Bucket=BUCKET_NAME):
+    if prefix:
+        print(f"Restricting to prefix: {prefix!r}\n")
+
+    for page in paginator.paginate(Bucket=BUCKET_NAME, Prefix=prefix):
         for obj in page.get("Contents", []):
             key = obj["Key"]
 
