@@ -7,6 +7,23 @@ class DynamoUtil:
         self.photos_table = self.dynamodb.Table('spark.wiki.photos')
         self.books_table = self.dynamodb.Table('spark.wiki.books')
     
+    def _paginate(self, table_method, limit=None, **kwargs):
+        """Call a boto3 scan/query method repeatedly, following
+        LastEvaluatedKey, until either the table/index is exhausted or
+        `limit` total items have been collected."""
+        items = []
+        while True:
+            response = table_method(**kwargs)
+            items.extend(response.get('Items', []))
+
+            last_key = response.get('LastEvaluatedKey')
+            if not last_key or (limit is not None and len(items) >= limit):
+                break
+
+            kwargs['ExclusiveStartKey'] = last_key
+
+        return items[:limit] if limit is not None else items
+
     def get_photos(self, species=None, family=None, order=None, year=None, month=None, day=None, limit=50):
         """Get photos with optional filtering by taxonomy or date captured"""
         try:
@@ -15,39 +32,44 @@ class DynamoUtil:
             date_prefix = day or month or year
 
             if species:
-                # Scan with species filter
-                response = self.photos_table.scan(
-                    FilterExpression=Attr('species').eq(species),
-                    Limit=limit
+                # Query the taxonomy-species GSI
+                return self._paginate(
+                    self.photos_table.query,
+                    limit=limit,
+                    IndexName='taxonomy-species',
+                    KeyConditionExpression=Key('species').eq(species),
                 )
             elif family:
-                # Scan with family filter
-                response = self.photos_table.scan(
-                    FilterExpression=Attr('family').eq(family),
-                    Limit=limit
+                # Query the taxonomy-family GSI
+                return self._paginate(
+                    self.photos_table.query,
+                    limit=limit,
+                    IndexName='taxonomy-family',
+                    KeyConditionExpression=Key('family').eq(family),
                 )
             elif order:
-                # Scan with order filter
-                response = self.photos_table.scan(
-                    FilterExpression=Attr('order').eq(order),
-                    Limit=limit
+                # Query the taxonomy-order GSI
+                return self._paginate(
+                    self.photos_table.query,
+                    limit=limit,
+                    IndexName='taxonomy-order',
+                    KeyConditionExpression=Key('order').eq(order),
                 )
             elif date_prefix:
                 # Scan with date filter
-                response = self.photos_table.scan(
+                return self._paginate(
+                    self.photos_table.scan,
+                    limit=limit,
                     FilterExpression=Attr('date').begins_with(date_prefix),
-                    Limit=limit
                 )
             else:
                 # Get all photos
-                response = self.photos_table.scan(Limit=limit)
+                return self._paginate(self.photos_table.scan, limit=limit)
 
-            return response.get('Items', [])
-            
         except Exception as e:
             print(f'Error getting photos: {str(e)}')
             raise e
-    
+
     def get_photo_by_id(self, photo_id):
         """Get specific photo by S3 URI"""
         try:
@@ -56,24 +78,57 @@ class DynamoUtil:
                 Key={'s3_uri': photo_id}
             )
             return response.get('Item')
-            
+
         except Exception as e:
             print(f'Error getting photo {photo_id}: {str(e)}')
             raise e
-    
+
+    def get_taxonomy(self):
+        """Build a class > order > family > species hierarchy with counts
+        and up to 3 sample thumbnail URIs per species, so the frontend
+        doesn't need to fetch every photo just to render the browse tree."""
+        try:
+            items = self._paginate(self.photos_table.scan)
+            tree = {}
+
+            for item in items:
+                class_name = item.get('class') or 'Unknown Class'
+                order = item.get('order') or 'Unknown Order'
+                family = item.get('family') or 'Unknown Family'
+                species = item.get('species') or 'Unknown Species'
+
+                class_node = tree.setdefault(class_name, {'count': 0, 'orders': {}})
+                order_node = class_node['orders'].setdefault(order, {'count': 0, 'families': {}})
+                family_node = order_node['families'].setdefault(family, {'count': 0, 'species': {}})
+                species_node = family_node['species'].setdefault(species, {'count': 0, 'thumbnails': []})
+
+                class_node['count'] += 1
+                order_node['count'] += 1
+                family_node['count'] += 1
+                species_node['count'] += 1
+                if len(species_node['thumbnails']) < 3:
+                    species_node['thumbnails'].append(item['s3_uri'])
+
+            return tree
+
+        except Exception as e:
+            print(f'Error getting taxonomy: {str(e)}')
+            raise e
+
     def get_all_species(self):
         """Get list of all unique species"""
         try:
-            response = self.photos_table.scan(
+            items = self._paginate(
+                self.photos_table.scan,
                 ProjectionExpression='species'
             )
-            
+
             # Extract unique species names
             species_set = set()
-            for item in response.get('Items', []):
+            for item in items:
                 if 'species' in item:
                     species_set.add(item['species'])
-            
+
             return sorted(list(species_set))
 
         except Exception as e:
