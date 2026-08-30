@@ -45,11 +45,20 @@ class GoogleBooksUtil:
         returns the full BISAC category list and the complete set of cover
         sizes, so that's what this returns whenever the detail fetch
         succeeds -- falling back to the search summary otherwise.
+
+        Without langRestrict, Google Books will happily rank a foreign
+        translation's edition above the English one (observed: an
+        Indonesian description came back for an English-language title),
+        and there's no per-request way to ask for the description in a
+        given language -- it's a property of which edition matched. Since
+        this whole pipeline assumes English throughout, results are
+        restricted to English-language editions at search time.
         """
         params = {
             'q': f'intitle:{title} inauthor:{author}',
             'key': self.api_key,
             'maxResults': 1,
+            'langRestrict': 'en',
         }
         url = f'{BASE_URL}?{urllib.parse.urlencode(params)}'
 

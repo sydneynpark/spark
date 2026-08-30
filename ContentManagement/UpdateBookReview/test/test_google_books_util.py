@@ -102,6 +102,17 @@ class TestGoogleBooksUtil(unittest.TestCase):
         self.assertIn('key=fake-api-key', requested_url)
 
     @patch('google_books_util.urllib.request.urlopen')
+    def test_request_restricts_search_to_english(self, mock_urlopen):
+        # Without this, Google Books can match a foreign-language edition
+        # (and its non-English description) over the English one.
+        mock_urlopen.return_value = _response_with({'items': []})
+
+        self.util.find_volume_info('Project Hail Mary', 'Andy Weir')
+
+        requested_url = mock_urlopen.call_args[0][0].full_url
+        self.assertIn('langRestrict=en', requested_url)
+
+    @patch('google_books_util.urllib.request.urlopen')
     def test_search_request_sets_user_agent(self, mock_urlopen):
         # Google's front end has been observed shedding load from requests
         # carrying urllib's default User-Agent -- this is the header that

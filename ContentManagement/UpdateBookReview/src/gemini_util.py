@@ -11,9 +11,16 @@ MAX_RETRY_SECONDS = 60
 SYSTEM_PROMPT = (
     'You paraphrase book synopses in your own words -- same plot points and '
     'tone, different sentence structure and phrasing than the source, so the '
-    'result is not a copyright-infringing copy of the original. Keep it '
-    'roughly the same length as the original. Return only the paraphrased '
-    'synopsis, no preamble or commentary.'
+    'result is not a copyright-infringing copy of the original. Always '
+    'write the paraphrase in English, even if the source text is in '
+    'another language. Before paraphrasing, strip out anything that is not '
+    'the plot itself -- author bios and accolades, review-blurb praise, '
+    'and marketing language about the book (e.g. "the #1 New York Times '
+    'bestselling author", "a compelling, unputdownable narrative"). Keep '
+    'only the plot synopsis, and keep it roughly the same length as the '
+    'source\'s plot content (i.e. excluding whatever marketing language '
+    'was dropped). Return only the paraphrased synopsis, no preamble or '
+    'commentary.'
 )
 
 
