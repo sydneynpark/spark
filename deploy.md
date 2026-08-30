@@ -61,4 +61,4 @@ This is also a lambda. We'll update UpdateBlogPostMetadata with its new info. Th
 
 ## ContentManagement/UpdateBookReview
 
-This is also a lambda. We'll update UpdateBookReview with its new info. There's no `scripts/refreshBookReviews.py` but if there were, we'd need to run it.
+This is also a lambda. We'll update UpdateBookReview with its new info. After this, we'll need to run the script in `scripts/refreshBookReviewData.py` to retouch all book reviews and update them with whatever new metadata the update stores.

@@ -34,6 +34,16 @@ import boto3
 ROOT = Path(__file__).resolve().parent
 AWS_REGION = "us-east-1"
 
+# All Lambda functions here run on x86_64. pip installs using the local
+# interpreter by default, which grabs native wheels for whatever machine runs
+# this script (e.g. macOS/arm64) -- fine for pure-Python deps, but silently
+# wrong for compiled ones (pydantic-core, cryptography, cffi, ...), producing
+# a zip that fails to import on Lambda with an error like "No module named
+# 'pydantic_core._pydantic_core'". Passing --platform/--implementation/
+# --python-version/--abi forces pip to resolve and download the
+# manylinux/CPython wheels Lambda actually needs, regardless of the host.
+LAMBDA_PLATFORM = "manylinux2014_x86_64"
+
 ACCESS_KEY_FILE = ROOT / "scripts" / ".accesskey"
 SECRET_KEY_FILE = ROOT / "scripts" / ".secretaccesskey"
 
@@ -85,13 +95,17 @@ def run(cmd, cwd):
     subprocess.run(cmd, cwd=cwd, shell=(os.name == "nt"), check=True)
 
 
-def build_lambda_zip(project_dir, copy_into_package):
+def build_lambda_zip(project_dir, copy_into_package, python_version):
     """Install requirements and copy source into project_dir/.build/packages,
     then zip its contents into project_dir/.build/lambda.zip.
 
     copy_into_package(packages_dir) copies this project's own source files
     into the freshly created packages directory; each project's file list
     differs (see its README's "Zipping for upload to Lambda" section).
+
+    python_version (e.g. "3.12") must match the target Lambda function's
+    configured runtime -- it's used to pick Lambda-compatible wheels
+    regardless of what's installing them (see LAMBDA_PLATFORM above).
     """
     build_dir = project_dir / ".build"
     packages_dir = build_dir / "packages"
@@ -108,6 +122,15 @@ def build_lambda_zip(project_dir, copy_into_package):
             "install",
             "--target",
             str(packages_dir),
+            "--platform",
+            LAMBDA_PLATFORM,
+            "--implementation",
+            "cp",
+            "--python-version",
+            python_version,
+            "--abi",
+            "cp" + python_version.replace(".", ""),
+            "--only-binary=:all:",
             "-r",
             str(project_dir / "src" / "requirements.txt"),
         ],
@@ -212,7 +235,7 @@ def deploy_backend(session):
         )
 
     print("Building backend Lambda package ...")
-    zip_path = build_lambda_zip(project_dir, copy_into_package)
+    zip_path = build_lambda_zip(project_dir, copy_into_package, python_version="3.12")
     update_lambda_code(session, CONTENT_API_FUNCTION, zip_path)
 
 
@@ -225,7 +248,7 @@ def deploy_update_photo_metadata(session):
         shutil.copy(project_dir / "src" / "Bird keywords.txt", packages_dir)
 
     print("Building UpdatePhotoMetadata Lambda package ...")
-    zip_path = build_lambda_zip(project_dir, copy_into_package)
+    zip_path = build_lambda_zip(project_dir, copy_into_package, python_version="3.12")
     update_lambda_code(session, UPDATE_PHOTO_METADATA_FUNCTION, zip_path)
 
     print("Refreshing photo metadata for every photo in the bucket ...")
@@ -240,7 +263,7 @@ def deploy_update_blog_post_metadata(session):
             shutil.copy(py_file, packages_dir)
 
     print("Building UpdateBlogPostMetadata Lambda package ...")
-    zip_path = build_lambda_zip(project_dir, copy_into_package)
+    zip_path = build_lambda_zip(project_dir, copy_into_package, python_version="3.12")
     update_lambda_code(session, UPDATE_BLOG_POST_METADATA_FUNCTION, zip_path)
     # No scripts/refreshBlogPostMetadata.py exists yet, so there's nothing
     # further to run after this lambda's code is updated.
@@ -254,10 +277,11 @@ def deploy_update_book_review(session):
             shutil.copy(py_file, packages_dir)
 
     print("Building UpdateBookReview Lambda package ...")
-    zip_path = build_lambda_zip(project_dir, copy_into_package)
+    zip_path = build_lambda_zip(project_dir, copy_into_package, python_version="3.14")
     update_lambda_code(session, UPDATE_BOOK_REVIEW_FUNCTION, zip_path)
-    # No scripts/refreshBookReviews.py exists yet, so there's nothing further
-    # to run after this lambda's code is updated.
+
+    print("Refreshing book review data for every review in the bucket ...")
+    run([sys.executable, "refreshBookReviewData.py"], cwd=ROOT / "scripts")
 
 
 TARGETS = {
