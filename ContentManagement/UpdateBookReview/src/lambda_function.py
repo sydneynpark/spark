@@ -93,7 +93,7 @@ def lambda_handler(event, context):
                 else:
                     print(f'No Google Books cover found for "{book_review.title}"')
 
-                book_review.genres = volume_info.get('categories', [])
+                book_review.genres = books_client.extract_genres(volume_info)
                 description = volume_info.get('description')
                 if description:
                     paraphrased = _get_gemini().paraphrase_synopsis(description)

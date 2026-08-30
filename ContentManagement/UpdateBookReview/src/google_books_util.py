@@ -9,6 +9,14 @@ USER_AGENT = 'spark.wiki backend (https://spark.wiki)'
 # smallThumbnail/thumbnail. Prefer the largest one actually present.
 IMAGE_SIZE_PREFERENCE = ['extraLarge', 'large', 'medium', 'small', 'thumbnail', 'smallThumbnail']
 
+# Google Books' `categories` field is raw BISAC subject headings (the book
+# trade's standardized -- but publisher/shelving-oriented, not reader-facing
+# -- classification), formatted as "TopLevel / Sub / Sub" paths. The leading
+# segment is one of these two umbrella terms on nearly every novel, adding
+# no genre information of its own, so it's dropped whenever a more specific
+# segment follows it.
+GENERIC_TOP_LEVEL_CATEGORIES = {'fiction', 'nonfiction', 'non-fiction'}
+
 
 class GoogleBooksUtil:
     def __init__(self, api_key):
@@ -72,6 +80,29 @@ class GoogleBooksUtil:
                 # Google Books returns these as http:// -- upgrade to https.
                 return image_links[size].replace('http://', 'https://', 1)
         return None
+
+    def extract_genres(self, volume_info):
+        """Turn the raw BISAC category paths on a volumeInfo dict (e.g.
+        "Fiction / Mystery & Detective / Cozy / Animals") into a flat,
+        deduped list of individual genre tags, e.g. "Mystery & Detective",
+        "Cozy", "Animals". This is a heuristic, not a lookup -- Google
+        Books' own website shows a further-simplified genre list, but that
+        list is generated internally and isn't exposed anywhere in the API
+        response, so splitting/deduping the BISAC paths we do get is the
+        closest available approximation.
+        """
+        tags = []
+        seen = set()
+        for category in volume_info.get('categories', []):
+            segments = [segment.strip() for segment in category.split(' / ') if segment.strip()]
+            if len(segments) > 1 and segments[0].lower() in GENERIC_TOP_LEVEL_CATEGORIES:
+                segments = segments[1:]
+            for segment in segments:
+                key = segment.lower()
+                if key not in seen:
+                    seen.add(key)
+                    tags.append(segment)
+        return tags
 
     def fetch_cover_image(self, cover_url):
         """Download the cover image itself, once, so we can store our own

@@ -99,6 +99,43 @@ class TestGoogleBooksUtil(unittest.TestCase):
         self.assertIn('inauthor%3AAndy+Weir', requested_url)
         self.assertIn('key=fake-api-key', requested_url)
 
+    def test_extract_genres_drops_generic_top_level_and_dedupes(self):
+        volume_info = {
+            'categories': [
+                'Fiction / Mystery & Detective / Cozy / Animals',
+                'Fiction / Mystery & Detective / Women Sleuths',
+                'Fiction / Mystery & Detective / Amateur Sleuth',
+            ],
+        }
+
+        genres = self.util.extract_genres(volume_info)
+
+        self.assertEqual(
+            genres, ['Mystery & Detective', 'Cozy', 'Animals', 'Women Sleuths', 'Amateur Sleuth'])
+
+    def test_extract_genres_keeps_specific_top_level_category(self):
+        # "Cooking" (unlike "Fiction"/"Nonfiction") already carries genre
+        # information, so it shouldn't be dropped just for being first.
+        volume_info = {'categories': ['Cooking / Regional & Ethnic / Chinese']}
+
+        genres = self.util.extract_genres(volume_info)
+
+        self.assertEqual(genres, ['Cooking', 'Regional & Ethnic', 'Chinese'])
+
+    def test_extract_genres_keeps_bare_generic_category(self):
+        # A single-segment "Fiction" is all the info there is -- dropping
+        # it would leave nothing.
+        volume_info = {'categories': ['Fiction']}
+
+        genres = self.util.extract_genres(volume_info)
+
+        self.assertEqual(genres, ['Fiction'])
+
+    def test_extract_genres_returns_empty_list_when_no_categories(self):
+        genres = self.util.extract_genres({})
+
+        self.assertEqual(genres, [])
+
     def test_find_cover_url_prefers_largest_available_size(self):
         volume_info = {
             'imageLinks': {
