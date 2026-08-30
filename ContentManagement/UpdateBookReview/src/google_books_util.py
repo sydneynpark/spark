@@ -1,9 +1,20 @@
 import json
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
 BASE_URL = 'https://www.googleapis.com/books/v1/volumes'
 USER_AGENT = 'spark.wiki backend (https://spark.wiki)'
+
+# Google's front end sheds load from traffic it doesn't like -- including,
+# empirically, requests carrying urllib's default User-Agent -- with a 503
+# rather than always queueing it, and occasionally a 429 if a quota's
+# involved. Google's own client guidance is to retry both with backoff
+# rather than treat them as hard failures.
+RETRYABLE_STATUSES = {429, 503}
+MAX_ATTEMPTS = 3
+RETRY_BACKOFF_SECONDS = 1
 
 # Not every book has every size -- imageLinks commonly only has
 # smallThumbnail/thumbnail. Prefer the largest one actually present.
@@ -43,8 +54,7 @@ class GoogleBooksUtil:
         url = f'{BASE_URL}?{urllib.parse.urlencode(params)}'
 
         try:
-            with urllib.request.urlopen(url, timeout=10) as response:
-                data = json.load(response)
+            data = json.loads(self._fetch_with_retry(url))
         except Exception as e:
             print(f'Google Books search failed for "{title}" by {author}: {e}')
             return None
@@ -64,8 +74,7 @@ class GoogleBooksUtil:
         url = f'{BASE_URL}/{volume_id}?{urllib.parse.urlencode({"key": self.api_key})}'
 
         try:
-            with urllib.request.urlopen(url, timeout=10) as response:
-                data = json.load(response)
+            data = json.loads(self._fetch_with_retry(url))
             return data.get('volumeInfo', {})
         except Exception as e:
             print(f'Google Books volume detail fetch failed for {volume_id}: {e}')
@@ -107,11 +116,24 @@ class GoogleBooksUtil:
     def fetch_cover_image(self, cover_url):
         """Download the cover image itself, once, so we can store our own
         copy instead of hotlinking Google Books on every page view."""
-        request = urllib.request.Request(cover_url, headers={'User-Agent': USER_AGENT})
-
         try:
-            with urllib.request.urlopen(request, timeout=10) as response:
-                return response.read()
+            return self._fetch_with_retry(cover_url)
         except Exception as e:
             print(f'Failed to download Google Books cover from {cover_url}: {e}')
             return None
+
+    def _fetch_with_retry(self, url):
+        """GET url with a real User-Agent (Google's front end sheds
+        urllib's default one under load) and retry on 429/503, which
+        Google's client guidance treats as transient rather than final."""
+        request = urllib.request.Request(url, headers={'User-Agent': USER_AGENT})
+
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+            try:
+                with urllib.request.urlopen(request, timeout=10) as response:
+                    return response.read()
+            except urllib.error.HTTPError as e:
+                if e.code in RETRYABLE_STATUSES and attempt < MAX_ATTEMPTS:
+                    time.sleep(RETRY_BACKOFF_SECONDS * attempt)
+                    continue
+                raise

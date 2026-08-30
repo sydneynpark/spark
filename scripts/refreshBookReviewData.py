@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Iterate over every object in an S3 bucket (or a given path/prefix within it)
-and invoke a (private) Lambda for each one, passing an S3-event-shaped payload
-where the object key is swapped in for the real key.
+Iterate over every book review in the spark.wiki.books S3 bucket (or a given
+path/prefix within it) and invoke the UpdateBookReview Lambda for each one,
+passing an S3-event-shaped payload where the object key is swapped in for the
+real key.
 
 Usage:
-    python refreshPhotoMetadata.py                              # whole bucket
-    python refreshPhotoMetadata.py 2024/vacation/                # just this prefix
-    python refreshPhotoMetadata.py s3://spark.wiki.photos/2024/  # full s3:// URI
+    python refreshBookReviewData.py                                   # whole bucket
+    python refreshBookReviewData.py "Project Hail Mary.md"             # just this review
+    python refreshBookReviewData.py s3://spark.wiki.books/Pet.md       # full s3:// URI
 
 Credentials:
     The AWS access key and secret access key are read from local files
@@ -26,14 +27,11 @@ from s3_lambda_refresh import AWS_REGION, make_session, parse_prefix, refresh_bu
 # CONSTANTS
 # ─────────────────────────────────────────────────────────────────────────────
 
-BUCKET_NAME = "spark.wiki.photos"
-BUCKET_ARN = "arn:aws:s3:::spark.wiki.photos"
-
-# Objects under this prefix are archived and shouldn't be (re)processed.
-ARCHIVE_PREFIX = "archive/"
+BUCKET_NAME = "spark.wiki.books"
+BUCKET_ARN = "arn:aws:s3:::spark.wiki.books"
 
 # Lambda function name or full ARN
-LAMBDA_FUNCTION_NAME = "UpdatePhotoMetadata"  # e.g. "process-photo" or the function's ARN
+LAMBDA_FUNCTION_NAME = "UpdateBookReview"
 
 # Invocation type:
 #   "RequestResponse" — synchronous; waits for the function and surfaces errors.
@@ -44,21 +42,24 @@ INVOCATION_TYPE = "RequestResponse"
 
 
 def should_process(key, obj):
-    # Skip archived photos.
-    return not key.startswith(ARCHIVE_PREFIX)
+    # Review files are the only thing UpdateBookReview processes -- this
+    # notably excludes the cover images it writes into covers/ within this
+    # same bucket (see lambda_function.py's own key.endswith('.md') check).
+    return key.endswith(".md")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Refresh photo metadata by re-invoking the Lambda for every "
-        "object in the bucket, optionally scoped to an S3 path/prefix."
+        description="Refresh book review data by re-invoking the Lambda for every "
+        "review in the bucket, optionally scoped to an S3 path/prefix."
     )
     parser.add_argument(
         "path",
         nargs="?",
         default=None,
-        help="S3 prefix to limit processing to, e.g. '2024/vacation/' or "
-        f"'s3://{BUCKET_NAME}/2024/vacation/'. Omit to process the whole bucket.",
+        help="S3 prefix (or exact key) to limit processing to, e.g. "
+        f"'Project Hail Mary.md' or 's3://{BUCKET_NAME}/Project Hail Mary.md'. "
+        "Omit to process every review in the bucket.",
     )
     args = parser.parse_args()
     prefix = parse_prefix(args.path, BUCKET_NAME)
