@@ -29,6 +29,20 @@ class ApiService {
     }
   }
 
+  async fetchTaxonomy() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/photos/taxonomy`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      return data.taxonomy || {};
+    } catch (error) {
+      console.error('Error fetching taxonomy:', error);
+      throw error;
+    }
+  }
+
   async fetchPhoto(photoId) {
     try {
       const response = await fetch(`${API_BASE_URL}/photos/${encodeURIComponent(photoId)}`);
