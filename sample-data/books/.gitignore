@@ -1,0 +1,5 @@
+# Cover images fetched from Open Library on demand by run_local.py --
+# fetched/cached content, not authored fixture data (same rationale as
+# backend/local_data/covers/).
+covers/
+dynamo/

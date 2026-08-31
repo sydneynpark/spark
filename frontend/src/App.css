@@ -837,6 +837,50 @@ footer {
   margin: 2rem 0;
 }
 
+/* SortBar: reusable pill-button sort control (see components/SortBar.js) */
+.sort-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.sort-bar-label {
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+  opacity: 0.8;
+  margin-right: 0.25rem;
+}
+
+.sort-bar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+  background: var(--color-card-background);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.sort-bar-button:hover {
+  border-color: var(--color-accent-medium);
+}
+
+.sort-bar-button--active {
+  background: var(--color-accent-dark);
+  color: var(--color-white);
+}
+
+.sort-bar-arrow {
+  font-size: 0.8rem;
+}
+
 /* Book reviews list page */
 .books-page {
   width: 100%;
@@ -1046,6 +1090,27 @@ footer {
 
 .book-review-body {
   padding: 2.5rem 3rem;
+}
+
+.book-review-genres {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.book-review-genre-tag {
+  background: var(--color-card-background);
+  border: 1px solid var(--color-accent-medium);
+  border-radius: 999px;
+  padding: 0.3rem 0.9rem;
+  font-size: 0.85rem;
+  color: var(--color-accent-dark);
+}
+
+.book-review-synopsis {
+  line-height: 1.7;
 }
 
 .book-review-section {

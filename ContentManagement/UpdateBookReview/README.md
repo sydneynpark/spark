@@ -6,6 +6,15 @@ Book review files use YAML frontmatter for title, author, date reviewed, and rat
 
 The `spark.wiki.books` DynamoDB table is keyed by `s3_uri` (partition key), matching the convention used by `spark.wiki.photos`.
 
+For each review, the lambda also looks the book up on the Google Books API -- one lookup serves the cover image, genres (`categories`), and `description`, which is paraphrased into a copyright-safe `synopsis` using Gemini. (Cover art previously came from Open Library; Google Books now supplies it too, via `volumeInfo.imageLinks`, so that's one fewer external dependency.) This enrichment is best-effort -- a lookup or paraphrase failure logs and is skipped rather than blocking the review from being stored. It requires two values in AWS Parameter Store (SecureString), and `ssm:GetParameter` + `kms:Decrypt` permission on them for this lambda's execution role:
+
+* `GoogleBooksAPIKey`
+* `GeminiAPIKey`
+
+(`GeminiProjectNumber` is not currently used -- the Gemini call uses the simple API-key-based Gemini Developer API, not Vertex AI, so no GCP project is needed.)
+
+For a local batch test run against markdown files (without touching real AWS/DynamoDB), see `run_local.py`.
+
 
 ## Local development
 

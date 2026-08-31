@@ -8,6 +8,7 @@ from flask import send_from_directory
 from lambda_function import app
 
 LOCAL_DATA_DIR = os.path.join(os.path.dirname(__file__), 'local_data')
+BOOKS_DIR = os.path.join(os.path.dirname(__file__), '..', 'sample-data', 'books')
 
 # Stand-in for the photos.spark.wiki CDN, mirroring its URL structure
 # (/<key> for full-size, /thumbnail/<key> for thumbnails) against local files.
@@ -20,10 +21,11 @@ def local_photo(key):
     return send_from_directory(os.path.join(LOCAL_DATA_DIR, 'photos'), key)
 
 # Stand-in for the covers CDN in front of spark.wiki.books/covers, against
-# the disk-cached covers LocalDynamoUtil fetches from Open Library.
+# the same sample-data/books/covers the UpdateBookReview lambda writes to
+# S3 (see ContentManagement/UpdateBookReview/run_local.py).
 @app.route('/cdn/books/covers/<path:filename>')
 def local_book_cover(filename):
-    return send_from_directory(os.path.join(LOCAL_DATA_DIR, 'covers'), filename)
+    return send_from_directory(os.path.join(BOOKS_DIR, 'covers'), filename)
 
 if __name__ == '__main__':
     print('Starting local API server at http://localhost:5000')
