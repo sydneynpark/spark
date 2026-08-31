@@ -51,24 +51,21 @@ class GoogleBooksUtil:
         Indonesian description came back for an English-language title),
         and there's no per-request way to ask for the description in a
         given language -- it's a property of which edition matched. Since
-        this whole pipeline assumes English throughout, results are
-        restricted to English-language editions at search time.
+        this whole pipeline assumes English throughout, the search is tried
+        restricted to English-language editions first. Obscure titles and
+        books translated *into* English (where an English edition may not
+        exist on Google Books at all) can come up empty under that
+        restriction, so a second, unrestricted search is tried before
+        giving up -- some match (even non-English) still gets a cover and
+        genres, and Gemini is instructed to translate the synopsis to
+        English regardless of source language.
         """
-        params = {
-            'q': f'intitle:{title} inauthor:{author}',
-            'key': self.api_key,
-            'maxResults': 1,
-            'langRestrict': 'en',
-        }
-        url = f'{BASE_URL}?{urllib.parse.urlencode(params)}'
-
-        try:
-            data = json.loads(self._fetch_with_retry(url))
-        except Exception as e:
-            print(f'Google Books search failed for "{title}" by {author}: {e}')
+        items = self._search(title, author, lang_restrict='en')
+        if items is None:
             return None
-
-        items = data.get('items', [])
+        if not items:
+            print(f'No English-language Google Books match for "{title}" by {author}; retrying without a language restriction')
+            items = self._search(title, author, lang_restrict=None)
         if not items:
             return None
 
@@ -78,6 +75,30 @@ class GoogleBooksUtil:
             return summary_info
 
         return self._fetch_full_volume_info(volume_id) or summary_info
+
+    def _search(self, title, author, lang_restrict):
+        """Run one title/author search, optionally restricted to a
+        language. Returns the items list (possibly empty, if the search
+        succeeded but matched nothing), or None if the request itself
+        failed -- distinguished so find_volume_info can tell "no match in
+        this language" (worth retrying without the restriction) apart from
+        "the request errored out" (not worth retrying at all)."""
+        params = {
+            'q': f'intitle:{title} inauthor:{author}',
+            'key': self.api_key,
+            'maxResults': 1,
+        }
+        if lang_restrict:
+            params['langRestrict'] = lang_restrict
+        url = f'{BASE_URL}?{urllib.parse.urlencode(params)}'
+
+        try:
+            data = json.loads(self._fetch_with_retry(url))
+        except Exception as e:
+            print(f'Google Books search failed for "{title}" by {author}: {e}')
+            return None
+
+        return data.get('items', [])
 
     def _fetch_full_volume_info(self, volume_id):
         url = f'{BASE_URL}/{volume_id}?{urllib.parse.urlencode({"key": self.api_key})}'

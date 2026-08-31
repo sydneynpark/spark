@@ -105,12 +105,55 @@ class TestGoogleBooksUtil(unittest.TestCase):
     def test_request_restricts_search_to_english(self, mock_urlopen):
         # Without this, Google Books can match a foreign-language edition
         # (and its non-English description) over the English one.
-        mock_urlopen.return_value = _response_with({'items': []})
+        mock_urlopen.return_value = _response_with({
+            'items': [{'volumeInfo': {'title': 'Project Hail Mary'}}]
+        })
 
         self.util.find_volume_info('Project Hail Mary', 'Andy Weir')
 
-        requested_url = mock_urlopen.call_args[0][0].full_url
-        self.assertIn('langRestrict=en', requested_url)
+        first_search_url = mock_urlopen.call_args_list[0][0][0].full_url
+        self.assertIn('langRestrict=en', first_search_url)
+
+    @patch('google_books_util.urllib.request.urlopen')
+    def test_falls_back_to_unrestricted_search_when_no_english_match(self, mock_urlopen):
+        # Obscure titles, or books translated *into* English, may have no
+        # English-language edition on Google Books at all -- a match in
+        # some language beats no cover/genres/synopsis whatsoever, since
+        # Gemini is instructed to translate the synopsis to English anyway.
+        mock_urlopen.side_effect = [
+            _response_with({'items': []}),
+            _response_with({'items': [{'volumeInfo': {'title': 'Some Translated Novel'}}]}),
+        ]
+
+        volume_info = self.util.find_volume_info('Some Translated Novel', 'An Author')
+
+        self.assertEqual(volume_info, {'title': 'Some Translated Novel'})
+        self.assertEqual(mock_urlopen.call_count, 2)
+        first_search_url = mock_urlopen.call_args_list[0][0][0].full_url
+        second_search_url = mock_urlopen.call_args_list[1][0][0].full_url
+        self.assertIn('langRestrict=en', first_search_url)
+        self.assertNotIn('langRestrict', second_search_url)
+
+    @patch('google_books_util.urllib.request.urlopen')
+    def test_returns_none_when_neither_english_nor_fallback_search_matches(self, mock_urlopen):
+        mock_urlopen.return_value = _response_with({'items': []})
+
+        volume_info = self.util.find_volume_info('Some Unpublished Book', 'Nobody')
+
+        self.assertIsNone(volume_info)
+        self.assertEqual(mock_urlopen.call_count, 2)
+
+    @patch('google_books_util.urllib.request.urlopen')
+    def test_does_not_fall_back_when_english_search_request_errors(self, mock_urlopen):
+        # A failed request is not the same as "no English match" -- retrying
+        # in another language wouldn't fix a network error, so this should
+        # fail fast rather than doubling up on a doomed request.
+        mock_urlopen.side_effect = Exception('network error')
+
+        volume_info = self.util.find_volume_info('Project Hail Mary', 'Andy Weir')
+
+        self.assertIsNone(volume_info)
+        self.assertEqual(mock_urlopen.call_count, 1)
 
     @patch('google_books_util.urllib.request.urlopen')
     def test_search_request_sets_user_agent(self, mock_urlopen):
@@ -212,12 +255,12 @@ class TestGoogleBooksUtil(unittest.TestCase):
     def test_retries_after_a_503_then_succeeds(self, mock_urlopen, mock_sleep):
         mock_urlopen.side_effect = [
             urllib.error.HTTPError('url', 503, 'Service Unavailable', {}, None),
-            _response_with({'items': []}),
+            _response_with({'items': [{'volumeInfo': {'title': 'Project Hail Mary'}}]}),
         ]
 
         volume_info = self.util.find_volume_info('Project Hail Mary', 'Andy Weir')
 
-        self.assertIsNone(volume_info)
+        self.assertEqual(volume_info, {'title': 'Project Hail Mary'})
         self.assertEqual(mock_urlopen.call_count, 2)
         mock_sleep.assert_called_once()
 
