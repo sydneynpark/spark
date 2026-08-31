@@ -9,6 +9,7 @@ Usage:
     python refreshBookReviewData.py                                   # whole bucket
     python refreshBookReviewData.py "Project Hail Mary.md"             # just this review
     python refreshBookReviewData.py s3://spark.wiki.books/Pet.md       # full s3:// URI
+    python refreshBookReviewData.py --missing-only                    # only reviews missing a cover/synopsis
 
 Credentials:
     The AWS access key and secret access key are read from local files
@@ -30,6 +31,10 @@ from s3_lambda_refresh import AWS_REGION, make_session, parse_prefix, refresh_bu
 BUCKET_NAME = "spark.wiki.books"
 BUCKET_ARN = "arn:aws:s3:::spark.wiki.books"
 
+# The DynamoDB table UpdateBookReview writes review metadata to -- happens to
+# share its name with the S3 bucket above, but it's a separate resource.
+TABLE_NAME = "spark.wiki.books"
+
 # Lambda function name or full ARN
 LAMBDA_FUNCTION_NAME = "UpdateBookReview"
 
@@ -48,12 +53,43 @@ def should_process(key, obj):
     return key.endswith(".md")
 
 
+def find_keys_missing_data(session, table_name=TABLE_NAME):
+    """Scan the DynamoDB table for reviews missing a cover and/or synopsis.
+
+    cover_key/synopsis are only written when Google Books/Gemini enrichment
+    succeeds (see book_review.py's to_item) -- a transient failure (e.g. a
+    Google Books 503) leaves them off the item entirely, with no other
+    record that enrichment was attempted. Returns the S3 keys to reprocess,
+    read from each item's s3_uri (always set by to_item) rather than
+    reconstructed from title + '.md' -- title comes from the review's own
+    frontmatter and isn't guaranteed to match its actual filename.
+    """
+    table = session.resource("dynamodb").Table(table_name)
+    uri_prefix = f"s3://{BUCKET_NAME}/"
+
+    keys = set()
+    scan_kwargs = {}
+    while True:
+        response = table.scan(**scan_kwargs)
+        for item in response.get("Items", []):
+            if "cover_key" in item and "synopsis" in item:
+                continue
+            keys.add(item["s3_uri"][len(uri_prefix):])
+
+        if "LastEvaluatedKey" not in response:
+            break
+        scan_kwargs["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+
+    return keys
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Refresh book review data by re-invoking the Lambda for every "
         "review in the bucket, optionally scoped to an S3 path/prefix."
     )
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         "path",
         nargs="?",
         default=None,
@@ -61,13 +97,31 @@ def main():
         f"'Project Hail Mary.md' or 's3://{BUCKET_NAME}/Project Hail Mary.md'. "
         "Omit to process every review in the bucket.",
     )
+    group.add_argument(
+        "--missing-only",
+        action="store_true",
+        help="Only reprocess reviews currently missing a cover and/or synopsis in "
+        "DynamoDB, e.g. to retry ones that hit a flaky Google Books API on the "
+        "last run.",
+    )
     args = parser.parse_args()
-    prefix = parse_prefix(args.path, BUCKET_NAME)
 
     if not LAMBDA_FUNCTION_NAME:
         sys.exit("Set LAMBDA_FUNCTION_NAME before running.")
 
     session = make_session(region=AWS_REGION)
+
+    if args.missing_only:
+        missing_keys = find_keys_missing_data(session)
+        if not missing_keys:
+            print("No reviews are missing a cover or synopsis -- nothing to do.")
+            return
+        print(f"Found {len(missing_keys)} review(s) missing a cover and/or synopsis.\n")
+        process = lambda key, obj: key in missing_keys
+    else:
+        process = should_process
+
+    prefix = parse_prefix(args.path, BUCKET_NAME)
 
     refresh_bucket(
         session,
@@ -77,7 +131,7 @@ def main():
         lambda_function_name=LAMBDA_FUNCTION_NAME,
         invocation_type=INVOCATION_TYPE,
         prefix=prefix,
-        should_process=should_process,
+        should_process=process,
     )
 
 
