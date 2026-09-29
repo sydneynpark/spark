@@ -1622,15 +1622,59 @@ footer {
 
 .admin-facet-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr auto;
+  grid-template-columns: 1fr auto;
   gap: 0.6rem;
   align-items: center;
 }
 
-.admin-facet-row--header {
+/* Shared row layout for both facet-weight sliders (step 1) and facet-rating
+   sliders (step 2): a name label, a native range input, and a value readout. */
+.admin-slider-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.admin-slider-row {
+  display: grid;
+  grid-template-columns: 8rem 1fr 3ch;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.admin-slider-name {
   font-weight: 600;
-  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-slider-row input[type="range"] {
+  width: 100%;
+}
+
+.admin-slider-value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.admin-form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.admin-back-button {
+  padding: 0.7rem 1.5rem;
+  background: none;
+  border: 1px solid var(--color-accent-dark);
   color: var(--color-accent-dark);
+  border-radius: 6px;
+}
+
+.admin-back-button:hover {
+  background: rgba(95, 106, 96, 0.1);
 }
 
 .admin-checkbox-label {
@@ -1692,15 +1736,12 @@ footer {
     grid-template-columns: 1fr;
   }
 
-  .admin-facet-row,
-  .admin-facet-row--header {
+  .admin-slider-row {
     grid-template-columns: 1fr;
-    gap: 0.3rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid rgba(43, 49, 63, 0.1);
+    gap: 0.35rem;
   }
 
-  .admin-facet-row--header {
-    display: none;
+  .admin-slider-value {
+    text-align: left;
   }
 }
