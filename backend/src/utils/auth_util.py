@@ -14,14 +14,15 @@ import os
 import time
 from functools import wraps
 
-from flask import jsonify, request
+# Flask is imported lazily, inside require_admin_auth below, rather than at
+# module level -- everything else here (hashing, token issue/verify) is pure
+# stdlib with no dependency on it, which lets scripts/generate_admin_credentials.py
+# import hash_password directly without needing Flask installed.
 
 TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60  # 7 days
 PBKDF2_ITERATIONS = 210_000
 
 LOCAL_MODE = os.getenv('LOCAL_MODE') == 'true'
-
-_param_cache = {}
 
 
 def _fetch_ssm_parameter(name):
@@ -30,14 +31,11 @@ def _fetch_ssm_parameter(name):
     return ssm.get_parameter(Name=name, WithDecryption=True)['Parameter']['Value']
 
 
-def _cached_param(name):
-    # Cached per warm Lambda container, mirroring how DynamoUtil/S3Util
-    # construct their AWS clients once at import time rather than per-request.
-    if name not in _param_cache:
-        _param_cache[name] = _fetch_ssm_parameter(name)
-    return _param_cache[name]
-
-
+# Deliberately NOT cached: this only runs on the low-traffic /admin/* routes
+# (an SSM GetParameter call is a few ms, negligible here), and caching for the
+# life of a warm Lambda container previously meant that rotating the admin
+# password in SSM wouldn't take effect until every warm container happened to
+# recycle -- a confusing "I just changed it and it's still rejecting me" bug.
 if LOCAL_MODE:
     def _admin_username():
         return os.getenv('ADMIN_USERNAME', 'admin')
@@ -51,13 +49,13 @@ if LOCAL_MODE:
         return os.getenv('ADMIN_TOKEN_SECRET', 'local-dev-token-secret-do-not-use-in-prod')
 else:
     def _admin_username():
-        return _cached_param('AdminUsername')
+        return _fetch_ssm_parameter('AdminUsername')
 
     def _admin_password_hash():
-        return _cached_param('AdminPasswordHash')
+        return _fetch_ssm_parameter('AdminPasswordHash')
 
     def _token_secret():
-        return _cached_param('AdminTokenSecret')
+        return _fetch_ssm_parameter('AdminTokenSecret')
 
 
 def hash_password(password, salt=None):
@@ -124,6 +122,8 @@ def _verify_token(token):
 
 
 def require_admin_auth(view):
+    from flask import jsonify, request
+
     @wraps(view)
     def wrapper(*args, **kwargs):
         header = request.headers.get('Authorization', '')
