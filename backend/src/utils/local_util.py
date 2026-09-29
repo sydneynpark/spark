@@ -6,6 +6,7 @@ LOCAL_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 
 REPO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..')
 
 BOOKS_DYNAMO_DIR = os.path.join(REPO_ROOT, 'sample-data', 'books', 'dynamo')
+BOOKS_MARKDOWN_DIR = os.path.join(REPO_ROOT, 'sample-data', 'books', 'markdown')
 
 
 class LocalDynamoUtil:
@@ -106,4 +107,54 @@ class LocalS3Util:
         local_path = os.path.join(LOCAL_DATA_DIR, 'posts', *key.split('/'))
         with open(local_path) as f:
             return f.read()
+
+
+class LocalBooksAdminUtil:
+    """Local stand-in for BooksAdminUtil. Writes the generated markdown into
+    sample-data/books/markdown (same place a real S3 upload would land, per
+    ContentManagement/UpdateBookReview/run_local.py's LOCAL_MODE convention),
+    and also synthesizes the DynamoDB item directly -- there's no local
+    equivalent of the S3-triggered UpdateBookReview lambda actually running,
+    so without this the admin form would have nothing to show for a
+    submission until someone manually re-runs that lambda's own run_local.py.
+    Cover/genre/synopsis enrichment is skipped, matching how it's already
+    best-effort/absent-on-failure in production."""
+
+    def publish_book_review(self, title, markdown, payload):
+        os.makedirs(BOOKS_MARKDOWN_DIR, exist_ok=True)
+        with open(os.path.join(BOOKS_MARKDOWN_DIR, f'{title}.md'), 'w', encoding='utf-8') as f:
+            f.write(markdown)
+
+        os.makedirs(BOOKS_DYNAMO_DIR, exist_ok=True)
+        item = _payload_to_local_item(title, payload)
+        with open(os.path.join(BOOKS_DYNAMO_DIR, f'{title}.json'), 'w', encoding='utf-8') as f:
+            json.dump(item, f, indent=2, ensure_ascii=False)
+
+
+def _payload_to_local_item(title, payload):
+    date_reviewed = payload.get('date_reviewed', '') or ''
+    digits = date_reviewed.replace('-', '')
+    date_number = int(digits) if digits.isdigit() else 0
+
+    rating_elements = [
+        {'name': el['name'], 'weight': el['weight'], 'rating': el['rating']}
+        for el in payload['rating_elements']
+    ]
+
+    commentary = []
+    overall_review = (payload.get('overall_review') or '').strip()
+    if overall_review:
+        commentary.append({'text': overall_review})
+    for entry in sorted(payload.get('commentary') or [], key=lambda e: e['point']):
+        commentary.append({'text': entry['text'].strip(), 'point': entry['point']})
+
+    return {
+        'title': title,
+        'date': date_number,
+        'date_reviewed': date_reviewed,
+        'author': payload.get('author', ''),
+        's3_uri': f's3://spark.wiki.books/{title}.md',
+        'rating_elements': rating_elements,
+        'commentary': commentary,
+    }
 
