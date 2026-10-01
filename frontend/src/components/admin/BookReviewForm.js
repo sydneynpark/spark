@@ -12,7 +12,19 @@ const DEFAULT_RATING = 5;
 // they keep summing to 100. The backend doesn't require this (weighted_rating
 // just divides by the total), it's purely a UI convention.
 const TOTAL_WEIGHT = 100;
-const MIN_WEIGHT = 0.1;
+
+// Rescales `facets` so their weights sum to exactly `target`, keeping their
+// proportions. Scales by what they actually sum to (not what they're assumed
+// to sum to) so any floating-point drift is corrected rather than compounded.
+// If they're all at 0 there are no proportions to keep, so split evenly.
+function scaleWeightsTo(facets, target) {
+  const currentTotal = facets.reduce((sum, f) => sum + f.weight, 0);
+  if (currentTotal <= 0) {
+    return facets.map(f => ({ ...f, weight: target / facets.length }));
+  }
+  const scale = target / currentTotal;
+  return facets.map(f => ({ ...f, weight: f.weight * scale }));
+}
 
 let nextId = 0;
 function newId(prefix) {
@@ -82,41 +94,25 @@ function BookReviewForm() {
       const changed = prev.find(f => f.id === id);
       if (!changed || prev.length < 2) return prev;
 
-      const othersOldTotal = TOTAL_WEIGHT - changed.weight;
-      const clampedNew = Math.min(
-        Math.max(newWeight, MIN_WEIGHT),
-        TOTAL_WEIGHT - MIN_WEIGHT * (prev.length - 1)
-      );
-      const othersNewTotal = TOTAL_WEIGHT - clampedNew;
-      const scale = othersOldTotal > 0 ? othersNewTotal / othersOldTotal : 0;
+      const clampedNew = Math.min(Math.max(newWeight, 0), TOTAL_WEIGHT);
+      const others = scaleWeightsTo(prev.filter(f => f.id !== id), TOTAL_WEIGHT - clampedNew);
+      const othersById = new Map(others.map(f => [f.id, f]));
 
-      return prev.map(f => (
-        f.id === id
-          ? { ...f, weight: clampedNew }
-          : { ...f, weight: Math.max(MIN_WEIGHT, f.weight * scale) }
-      ));
+      return prev.map(f => (f.id === id ? { ...f, weight: clampedNew } : othersById.get(f.id)));
     });
   }
 
   function addFacet() {
     const newShare = TOTAL_WEIGHT / (facets.length + 1);
-    const scale = (TOTAL_WEIGHT - newShare) / TOTAL_WEIGHT;
     setFacets([
-      ...facets.map(f => ({ ...f, weight: f.weight * scale })),
+      ...scaleWeightsTo(facets, TOTAL_WEIGHT - newShare),
       { id: newId('facet'), name: '', weight: newShare, rating: DEFAULT_RATING },
     ]);
   }
 
   function removeFacet(id) {
-    const removed = facets.find(f => f.id === id);
     const remaining = facets.filter(f => f.id !== id);
-    if (!removed || remaining.length === 0) {
-      setFacets(remaining);
-      return;
-    }
-    const remainingOldTotal = TOTAL_WEIGHT - removed.weight;
-    const scale = remainingOldTotal > 0 ? TOTAL_WEIGHT / remainingOldTotal : 1;
-    setFacets(remaining.map(f => ({ ...f, weight: f.weight * scale })));
+    setFacets(remaining.length === 0 ? remaining : scaleWeightsTo(remaining, TOTAL_WEIGHT));
   }
 
   function updateTimelineEntry(id, field, value) {
