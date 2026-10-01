@@ -960,6 +960,169 @@ footer {
   font-size: 0.95rem;
 }
 
+/* Reading shelf: book covers placed on a time axis at their exact review
+   date, scattered above and below it and sized by rating (see
+   ReadingShelf.js). A stem runs from a dot at each date to its cover, and
+   both light up while the cover is hovered. Duds (<= 2 stars) also fade
+   out; standouts (>= 4.5 stars) also glow. */
+.reading-shelf {
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin-bottom: 1.5rem;
+  background: var(--color-card-background);
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.reading-shelf-track {
+  position: relative;
+}
+
+.reading-shelf-axis {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(43, 49, 63, 0.25);
+}
+
+.reading-shelf-tick {
+  position: absolute;
+  width: 1px;
+  height: 6px;
+  background: rgba(43, 49, 63, 0.3);
+}
+
+.reading-shelf-tick span {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  color: var(--color-accent-dark);
+  opacity: 0.7;
+}
+
+.reading-shelf-tick--major {
+  height: 10px;
+  background: rgba(43, 49, 63, 0.55);
+}
+
+.reading-shelf-tick--major span {
+  font-weight: 600;
+  opacity: 1;
+}
+
+.reading-shelf-today {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -3px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--color-accent-medium);
+}
+
+.reading-shelf-stem {
+  position: absolute;
+  width: 1px;
+  background: rgba(43, 49, 63, 0.2);
+  transition: background 0.15s;
+}
+
+.reading-shelf-stem--active {
+  background: var(--color-accent-dark);
+}
+
+.reading-shelf-mark {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  margin: -2px 0 0 -2.5px;
+  border-radius: 50%;
+  background: rgba(43, 49, 63, 0.35);
+  transition: transform 0.15s, background 0.15s;
+}
+
+.reading-shelf-mark--active {
+  background: var(--color-accent-dark);
+  transform: scale(1.8);
+}
+
+.reading-shelf-book {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+.reading-shelf-book img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  background: var(--color-accent-medium);
+}
+
+.reading-shelf-book--dud {
+  opacity: 0.3;
+}
+
+.reading-shelf-book--standout {
+  box-shadow:
+    0 0 6px 2px rgba(255, 214, 102, 0.95),
+    0 0 16px 6px rgba(255, 196, 61, 0.45);
+}
+
+.reading-shelf-book:hover,
+.reading-shelf-book:focus-visible {
+  z-index: 2;
+  opacity: 1;
+  transform: rotate(0deg) scale(1.15);
+  outline: none;
+}
+
+.reading-shelf-book:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-accent-dark);
+}
+
+.reading-shelf-tooltip {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.87);
+  transform-origin: top center;
+  z-index: 1;
+  display: none;
+  flex-direction: column;
+  padding: 0.3rem 0.55rem;
+  border-radius: 5px;
+  background: var(--color-header-footer);
+  color: var(--color-white);
+  font-size: 0.75rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.reading-shelf-book--below .reading-shelf-tooltip {
+  top: auto;
+  bottom: calc(100% + 4px);
+  transform-origin: bottom center;
+}
+
+.reading-shelf-tooltip span {
+  opacity: 0.8;
+}
+
+.reading-shelf-book:hover .reading-shelf-tooltip,
+.reading-shelf-book:focus-visible .reading-shelf-tooltip {
+  display: flex;
+}
+
 /* Star rating: two stacked copies of the same star path per star -- a
    muted "empty" one underneath, and a colored one clipped via a
    percentage-width wrapper so quarter/half-star fills (see
