@@ -1,5 +1,7 @@
 import json
+import re
 import time
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -28,6 +30,69 @@ IMAGE_SIZE_PREFERENCE = ['extraLarge', 'large', 'medium', 'small', 'thumbnail', 
 # segment follows it.
 GENERIC_TOP_LEVEL_CATEGORIES = {'fiction', 'nonfiction', 'non-fiction'}
 
+# Enough candidates for _pick_match to skip past study guides, summaries
+# and other books that merely mention the title, without paging.
+MAX_RESULTS = 10
+
+
+def _normalize(text):
+    """Lowercase, fold accents, and turn all punctuation into spaces, so
+    "Dept. of Speculation" and "Dept of Speculation", or "Addie LaRue" and
+    "Addie Larue", compare equal."""
+    text = unicodedata.normalize('NFKD', text or '')
+    text = ''.join(c for c in text if not unicodedata.combining(c))
+    return ' '.join(re.sub(r'[^\w\s]', ' ', text.lower()).split())
+
+
+def _surname(author):
+    """Last word of the author's name. Searching on this alone sidesteps
+    initials, which Google stores inconsistently ("V. E. Schwab" vs our
+    "V.E. Schwab") and which Books' tokenizer won't match across."""
+    words = _normalize(author).split()
+    return words[-1] if words else ''
+
+
+def _queries(title, author):
+    """Queries to try, strictest first. Google Books' intitle:/inauthor:
+    prefixes only bind the single word after them unless the value is
+    quoted, so the title is a quoted phrase -- with punctuation stripped,
+    since a stray "word:" inside q can be read as another field operator.
+    A quoted phrase still matches longer titles like "Yellowface: A Novel".
+    The plain keyword search catches records whose title Google words
+    differently enough to break the phrase."""
+    normalized_title = _normalize(title)
+    surname = _surname(author)
+
+    fielded = f'intitle:"{normalized_title}"'
+    if surname:
+        fielded += f' inauthor:{surname}'
+
+    return [fielded, f'{normalized_title} {surname}'.strip()]
+
+
+def _strip_article(normalized_title):
+    return re.sub(r'^(the|a|an) ', '', normalized_title)
+
+
+def _pick_match(items, title, author):
+    """First result whose title starts with ours (tolerating subtitles
+    Google appends, e.g. ": A Novel") and, if we know the author, whose
+    authors include our surname. Google sometimes splits the subtitle into
+    its own field, so title + subtitle is compared too, and a leading
+    article is ignored on both sides. None if nothing qualifies."""
+    wanted_title = _strip_article(_normalize(title))
+    surname = _surname(author)
+
+    for item in items:
+        info = item.get('volumeInfo', {})
+        found_title = _strip_article(_normalize(f"{info.get('title', '')} {info.get('subtitle', '')}"))
+        if not wanted_title or not found_title.startswith(wanted_title):
+            continue
+        if surname and not any(surname in _normalize(a).split() for a in info.get('authors', [])):
+            continue
+        return item
+    return None
+
 
 class GoogleBooksUtil:
     def __init__(self, api_key):
@@ -35,8 +100,7 @@ class GoogleBooksUtil:
 
     def find_volume_info(self, title, author):
         """Search Google Books by title/author, then fetch and return the
-        full volumeInfo for the first match by its volume ID. Assumes the
-        first search result is correct -- no disambiguation.
+        full volumeInfo for the best match by its volume ID.
 
         The search endpoint's volumeInfo is a trimmed summary: categories
         collapse to one broad label (often just "Fiction", regardless of
@@ -59,34 +123,53 @@ class GoogleBooksUtil:
         giving up -- some match (even non-English) still gets a cover and
         genres, and Gemini is instructed to translate the synopsis to
         English regardless of source language.
+
+        Within each language pass, a fielded query is tried first, then a
+        plain keyword one (see _queries). Results are vetted by _pick_match
+        rather than blindly taking the first one, since the looser queries
+        can rank an unrelated book first.
         """
-        items = self._search(title, author, lang_restrict='en')
-        if items is None:
+        item = self._find_item(title, author, lang_restrict='en')
+        if item is None:
             return None
-        if not items:
+        if not item:
             print(f'No English-language Google Books match for "{title}" by {author}; retrying without a language restriction')
-            items = self._search(title, author, lang_restrict=None)
-        if not items:
+            item = self._find_item(title, author, lang_restrict=None)
+        if not item:
             return None
 
-        summary_info = items[0].get('volumeInfo', {})
-        volume_id = items[0].get('id')
+        summary_info = item.get('volumeInfo', {})
+        volume_id = item.get('id')
         if not volume_id:
             return summary_info
 
         return self._fetch_full_volume_info(volume_id) or summary_info
 
-    def _search(self, title, author, lang_restrict):
-        """Run one title/author search, optionally restricted to a
-        language. Returns the items list (possibly empty, if the search
-        succeeded but matched nothing), or None if the request itself
-        failed -- distinguished so find_volume_info can tell "no match in
-        this language" (worth retrying without the restriction) apart from
-        "the request errored out" (not worth retrying at all)."""
+    def _find_item(self, title, author, lang_restrict):
+        """Try each query from _queries in turn and return the first
+        acceptable search result. Returns {} if every search succeeded but
+        none matched, or None if a request failed outright (same
+        distinction as _search)."""
+        for query in _queries(title, author):
+            items = self._search(query, title, author, lang_restrict)
+            if items is None:
+                return None
+            item = _pick_match(items, title, author)
+            if item:
+                return item
+        return {}
+
+    def _search(self, query, title, author, lang_restrict):
+        """Run one search, optionally restricted to a language. Returns the
+        items list (possibly empty, if the search succeeded but matched
+        nothing), or None if the request itself failed -- distinguished so
+        find_volume_info can tell "no match in this language" (worth
+        retrying without the restriction) apart from "the request errored
+        out" (not worth retrying at all)."""
         params = {
-            'q': f'intitle:{title} inauthor:{author}',
+            'q': query,
             'key': self.api_key,
-            'maxResults': 1,
+            'maxResults': MAX_RESULTS,
         }
         if lang_restrict:
             params['langRestrict'] = lang_restrict
