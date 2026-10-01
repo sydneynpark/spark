@@ -107,9 +107,8 @@ class TestGoogleBooksUtil(unittest.TestCase):
 
         self.util.find_volume_info('Project Hail Mary', 'Andy Weir')
 
-        requested_url = mock_urlopen.call_args[0][0].full_url
-        self.assertIn('intitle%3A%22project+hail+mary%22', requested_url)
-        self.assertIn('inauthor%3Aweir', requested_url)
+        requested_url = mock_urlopen.call_args_list[0][0][0].full_url
+        self.assertIn('q=project+hail+mary+andy+weir', requested_url)
         self.assertIn('key=fake-api-key', requested_url)
 
     @patch('google_books_util.urllib.request.urlopen')
@@ -134,17 +133,18 @@ class TestGoogleBooksUtil(unittest.TestCase):
         mock_urlopen.side_effect = [
             _response_with({'items': []}),
             _response_with({'items': []}),
+            _response_with({'items': []}),
             _response_with({'items': [_item('Some Translated Novel', 'An Author')]}),
         ]
 
         volume_info = self.util.find_volume_info('Some Translated Novel', 'An Author')
 
         self.assertEqual(volume_info, _item('Some Translated Novel', 'An Author')['volumeInfo'])
-        self.assertEqual(mock_urlopen.call_count, 3)
+        self.assertEqual(mock_urlopen.call_count, 4)
         search_urls = [call[0][0].full_url for call in mock_urlopen.call_args_list]
-        self.assertIn('langRestrict=en', search_urls[0])
-        self.assertIn('langRestrict=en', search_urls[1])
-        self.assertNotIn('langRestrict', search_urls[2])
+        for url in search_urls[:3]:
+            self.assertIn('langRestrict=en', url)
+        self.assertNotIn('langRestrict', search_urls[3])
 
     @patch('google_books_util.urllib.request.urlopen')
     def test_returns_none_when_neither_english_nor_fallback_search_matches(self, mock_urlopen):
@@ -153,8 +153,8 @@ class TestGoogleBooksUtil(unittest.TestCase):
         volume_info = self.util.find_volume_info('Some Unpublished Book', 'Nobody')
 
         self.assertIsNone(volume_info)
-        # Fielded + keyword query, in English and then unrestricted.
-        self.assertEqual(mock_urlopen.call_count, 4)
+        # All three keyword queries, in English and then unrestricted.
+        self.assertEqual(mock_urlopen.call_count, 6)
 
     @patch('google_books_util.urllib.request.urlopen')
     def test_does_not_fall_back_when_english_search_request_errors(self, mock_urlopen):
@@ -187,32 +187,38 @@ class TestGoogleBooksUtil(unittest.TestCase):
         ]
 
     @patch('google_books_util.urllib.request.urlopen')
-    def test_searches_on_author_surname_to_sidestep_initials(self, mock_urlopen):
-        # Google stores "V. E. Schwab"; "inauthor:V.E." never matches that.
+    def test_queries_are_plain_keywords_without_field_operators(self, mock_urlopen):
+        # Google Books returns zero results for many intitle:/inauthor:
+        # queries that should match (e.g. "vicious inauthor:schwab"), so
+        # matching is done by _pick_match instead. Punctuation is stripped
+        # so a stray "word:" can't be read as an operator.
+        mock_urlopen.return_value = _response_with({'items': []})
+
+        self.util.find_volume_info('shut up 2: the sequel', 'V.E. Schwab')
+
+        self.assertEqual(self._search_queries(mock_urlopen)[:3], [
+            'shut up 2 the sequel v e schwab',
+            '"shut up 2 the sequel" schwab',
+            '"shut up 2 the sequel"',
+        ])
+
+    @patch('google_books_util.urllib.request.urlopen')
+    def test_matches_author_with_initials_on_surname(self, mock_urlopen):
+        # Google stores "V. E. Schwab"; ours is "V.E. Schwab".
         mock_urlopen.return_value = _response_with({'items': [_item('Vicious', 'V. E. Schwab')]})
 
         volume_info = self.util.find_volume_info('Vicious', 'V.E. Schwab')
 
         self.assertEqual(volume_info['title'], 'Vicious')
-        self.assertEqual(self._search_queries(mock_urlopen), ['intitle:"vicious" inauthor:schwab'])
 
     @patch('google_books_util.urllib.request.urlopen')
-    def test_strips_punctuation_from_title_query(self, mock_urlopen):
-        # A stray "word:" inside q can be parsed as another field operator.
-        mock_urlopen.return_value = _response_with({'items': [_item('Shut Up 2: The Sequel', 'Sydney Park')]})
-
-        self.util.find_volume_info('shut up 2: the sequel', 'sydney park')
-
-        self.assertEqual(self._search_queries(mock_urlopen), ['intitle:"shut up 2 the sequel" inauthor:park'])
-
-    @patch('google_books_util.urllib.request.urlopen')
-    def test_omits_inauthor_when_review_has_no_author(self, mock_urlopen):
+    def test_skips_author_check_when_review_has_no_author(self, mock_urlopen):
         mock_urlopen.return_value = _response_with({'items': [_item('Holiday Ever After', 'Someone')]})
 
         volume_info = self.util.find_volume_info('Holiday Ever After', '')
 
         self.assertEqual(volume_info['title'], 'Holiday Ever After')
-        self.assertEqual(self._search_queries(mock_urlopen), ['intitle:"holiday ever after"'])
+        self.assertEqual(self._search_queries(mock_urlopen), ['holiday ever after'])
 
     @patch('google_books_util.urllib.request.urlopen')
     def test_matches_title_with_appended_subtitle(self, mock_urlopen):
@@ -256,7 +262,7 @@ class TestGoogleBooksUtil(unittest.TestCase):
         self.assertEqual(volume_info['authors'], ['Donna Tartt'])
 
     @patch('google_books_util.urllib.request.urlopen')
-    def test_falls_back_to_keyword_query_when_fielded_query_has_no_match(self, mock_urlopen):
+    def test_tries_next_query_when_first_has_no_match(self, mock_urlopen):
         mock_urlopen.side_effect = [
             _response_with({'items': [_item('Unrelated', 'Jenny Offill')]}),
             _response_with({'items': [_item('Dept. of Speculation', 'Jenny Offill')]}),
@@ -267,7 +273,33 @@ class TestGoogleBooksUtil(unittest.TestCase):
         self.assertEqual(volume_info['title'], 'Dept. of Speculation')
         self.assertEqual(
             self._search_queries(mock_urlopen),
-            ['intitle:"dept of speculation" inauthor:offill', 'dept of speculation offill'])
+            ['dept of speculation jenny offill', '"dept of speculation" offill'])
+
+    @patch('google_books_util.urllib.request.urlopen')
+    def test_prefers_retail_edition_over_library_scan(self, mock_urlopen):
+        # Library scans have no ISBN, and their "cover" is a photo of an
+        # interior page.
+        scan = _item('The Metamorphosis', 'Franz Kafka')
+        scan['volumeInfo']['imageLinks'] = {'thumbnail': 'http://books.google.com/scan.jpg'}
+        retail = _item('The Metamorphosis', 'Franz Kafka')
+        retail['volumeInfo']['industryIdentifiers'] = [{'type': 'ISBN_13', 'identifier': '9780000000000'}]
+        retail['volumeInfo']['imageLinks'] = {'thumbnail': 'http://books.google.com/retail.jpg'}
+        mock_urlopen.return_value = _response_with({'items': [scan, retail]})
+
+        volume_info = self.util.find_volume_info('The Metamorphosis', 'Franz Kafka')
+
+        self.assertEqual(volume_info['imageLinks']['thumbnail'], 'http://books.google.com/retail.jpg')
+
+    @patch('google_books_util.urllib.request.urlopen')
+    def test_prefers_edition_with_a_cover(self, mock_urlopen):
+        coverless = _item('Pet', 'Catherine Chidgey')
+        with_cover = _item('Pet', 'Catherine Chidgey')
+        with_cover['volumeInfo']['imageLinks'] = {'thumbnail': 'http://books.google.com/pet.jpg'}
+        mock_urlopen.return_value = _response_with({'items': [coverless, with_cover]})
+
+        volume_info = self.util.find_volume_info('Pet', 'Catherine Chidgey')
+
+        self.assertIn('imageLinks', volume_info)
 
     def test_extract_genres_drops_generic_top_level_and_dedupes(self):
         volume_info = {
@@ -306,25 +338,38 @@ class TestGoogleBooksUtil(unittest.TestCase):
 
         self.assertEqual(genres, [])
 
-    def test_find_cover_url_prefers_largest_available_size(self):
+    def test_find_cover_url_uses_thumbnail_resized_rather_than_larger_sizes(self):
+        # The larger sizes are often an interior page, not the cover.
         volume_info = {
             'imageLinks': {
-                'smallThumbnail': 'http://books.google.com/small-thumb.jpg',
-                'thumbnail': 'http://books.google.com/thumb.jpg',
-                'medium': 'http://books.google.com/medium.jpg',
+                'smallThumbnail': 'http://books.google.com/books/content?id=abc&printsec=frontcover&img=1&zoom=5',
+                'thumbnail': 'http://books.google.com/books/content?id=abc&printsec=frontcover&img=1&zoom=1',
+                'extraLarge': 'http://books.google.com/books/content?id=abc&printsec=frontcover&img=1&zoom=6',
             }
         }
 
         cover_url = self.util.find_cover_url(volume_info)
 
-        self.assertEqual(cover_url, 'https://books.google.com/medium.jpg')
+        self.assertEqual(
+            cover_url,
+            'https://books.google.com/books/content?id=abc&printsec=frontcover&img=1&zoom=1&fife=w800')
 
-    def test_find_cover_url_upgrades_http_to_https(self):
-        volume_info = {'imageLinks': {'thumbnail': 'http://books.google.com/thumb.jpg'}}
+    def test_find_cover_url_strips_page_curl(self):
+        volume_info = {'imageLinks': {
+            'thumbnail': 'http://books.google.com/books/publisher/content?id=abc&zoom=1&edge=curl&source=gbs_api',
+        }}
 
         cover_url = self.util.find_cover_url(volume_info)
 
-        self.assertEqual(cover_url, 'https://books.google.com/thumb.jpg')
+        self.assertNotIn('edge', cover_url)
+        self.assertIn('source=gbs_api', cover_url)
+
+    def test_find_cover_url_falls_back_to_small_thumbnail(self):
+        volume_info = {'imageLinks': {'smallThumbnail': 'http://books.google.com/thumb.jpg?id=abc&zoom=5'}}
+
+        cover_url = self.util.find_cover_url(volume_info)
+
+        self.assertEqual(cover_url, 'https://books.google.com/thumb.jpg?id=abc&zoom=1&fife=w800')
 
     def test_find_cover_url_returns_none_when_no_image_links(self):
         cover_url = self.util.find_cover_url({})

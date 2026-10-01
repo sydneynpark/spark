@@ -53,7 +53,7 @@ class TestLambda(unittest.TestCase):
 
         self.mock_google_books.find_volume_info.assert_called_once_with('Project Hail Mary', 'Andy Weir')
         # http:// from the API is upgraded to https:// before downloading.
-        self.mock_google_books.fetch_cover_image.assert_called_once_with('https://books.google.com/cover.jpg')
+        self.mock_google_books.fetch_cover_image.assert_called_once_with('https://books.google.com/cover.jpg?zoom=1&fife=w800')
 
         self.mock_aws.put_s3_object.assert_called_once_with(
             'spark.wiki.books', 'covers/Project Hail Mary.jpg', b'fake-jpeg-bytes')

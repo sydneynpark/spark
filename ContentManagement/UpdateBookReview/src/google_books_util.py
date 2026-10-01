@@ -18,9 +18,8 @@ RETRYABLE_STATUSES = {429, 503}
 MAX_ATTEMPTS = 3
 RETRY_BACKOFF_SECONDS = 1
 
-# Not every book has every size -- imageLinks commonly only has
-# smallThumbnail/thumbnail. Prefer the largest one actually present.
-IMAGE_SIZE_PREFERENCE = ['extraLarge', 'large', 'medium', 'small', 'thumbnail', 'smallThumbnail']
+# Width, in pixels, to have Google render covers at (see find_cover_url).
+COVER_WIDTH = 800
 
 # Google Books' `categories` field is raw BISAC subject headings (the book
 # trade's standardized -- but publisher/shelving-oriented, not reader-facing
@@ -53,21 +52,25 @@ def _surname(author):
 
 
 def _queries(title, author):
-    """Queries to try, strictest first. Google Books' intitle:/inauthor:
-    prefixes only bind the single word after them unless the value is
-    quoted, so the title is a quoted phrase -- with punctuation stripped,
-    since a stray "word:" inside q can be read as another field operator.
-    A quoted phrase still matches longer titles like "Yellowface: A Novel".
-    The plain keyword search catches records whose title Google words
-    differently enough to break the phrase."""
+    """Plain keyword queries to try, most specific first. Deliberately no
+    intitle:/inauthor: operators: observed in practice, Google Books
+    returns zero results for many fielded queries that plainly should
+    match ("tender is the flesh inauthor:bazterrica", "vicious
+    inauthor:schwab", and every operator-only query), while keyword
+    searches for the same books work. _pick_match checks title and author
+    on our side instead. Punctuation is stripped so a stray "word:" can't
+    be read as an operator. The full author name (initials included) ranks
+    the right book far higher than the surname alone -- "appliance morgan"
+    buries J. O. Morgan's Appliance under office-equipment catalogues."""
     normalized_title = _normalize(title)
-    surname = _surname(author)
+    normalized_author = _normalize(author)
 
-    fielded = f'intitle:"{normalized_title}"'
-    if surname:
-        fielded += f' inauthor:{surname}'
-
-    return [fielded, f'{normalized_title} {surname}'.strip()]
+    queries = [
+        f'{normalized_title} {normalized_author}'.strip(),
+        f'"{normalized_title}" {_surname(author)}'.strip(),
+        f'"{normalized_title}"',
+    ]
+    return list(dict.fromkeys(queries))
 
 
 def _strip_article(normalized_title):
@@ -79,10 +82,17 @@ def _pick_match(items, title, author):
     Google appends, e.g. ": A Novel") and, if we know the author, whose
     authors include our surname. Google sometimes splits the subtitle into
     its own field, so title + subtitle is compared too, and a leading
-    article is ignored on both sides. None if nothing qualifies."""
+    article is ignored on both sides.
+
+    Among matches, retail editions (those with an ISBN) and ones with a
+    cover image win over the rest, in Google's order otherwise. Without
+    an ISBN, a match is usually a library scan (e.g. a 1972 Metamorphosis)
+    whose "cover" is a photo of the title or copyright page. None if
+    nothing qualifies."""
     wanted_title = _strip_article(_normalize(title))
     surname = _surname(author)
 
+    matches = []
     for item in items:
         info = item.get('volumeInfo', {})
         found_title = _strip_article(_normalize(f"{info.get('title', '')} {info.get('subtitle', '')}"))
@@ -90,8 +100,19 @@ def _pick_match(items, title, author):
             continue
         if surname and not any(surname in _normalize(a).split() for a in info.get('authors', [])):
             continue
-        return item
-    return None
+        matches.append(item)
+
+    if not matches:
+        return None
+    # max() keeps the first of equally ranked items, preserving Google's order.
+    return max(matches, key=_edition_rank)
+
+
+def _edition_rank(item):
+    info = item.get('volumeInfo', {})
+    has_isbn = any(i.get('type', '').startswith('ISBN') for i in info.get('industryIdentifiers', []))
+    has_cover = bool(info.get('imageLinks'))
+    return (has_isbn, has_cover)
 
 
 class GoogleBooksUtil:
@@ -124,10 +145,10 @@ class GoogleBooksUtil:
         genres, and Gemini is instructed to translate the synopsis to
         English regardless of source language.
 
-        Within each language pass, a fielded query is tried first, then a
-        plain keyword one (see _queries). Results are vetted by _pick_match
-        rather than blindly taking the first one, since the looser queries
-        can rank an unrelated book first.
+        Within each language pass, a few keyword queries are tried in turn
+        (see _queries). Results are vetted by _pick_match rather than
+        blindly taking the first one, since keyword search often ranks
+        study guides, summaries or unrelated books first.
         """
         item = self._find_item(title, author, lang_restrict='en')
         if item is None:
@@ -194,14 +215,28 @@ class GoogleBooksUtil:
             return None
 
     def find_cover_url(self, volume_info):
-        """Return the highest-resolution cover image URL available on a
-        volumeInfo dict, or None if it has no imageLinks at all."""
+        """Return a large cover image URL for a volumeInfo dict, or None if
+        it has no thumbnail to build one from.
+
+        Only the thumbnail links are trusted to be the front cover. The
+        detail endpoint's small/medium/large/extraLarge links render the
+        preview at a higher zoom, which for publisher previews is often an
+        interior page instead (observed: Tender Is the Flesh's extraLarge
+        is its blank title page with the Scribner logo). Google's own
+        fife=w<width> parameter re-renders the thumbnail at that width,
+        so it gets the real cover at a usable size. edge=curl, which
+        Google adds to some publisher thumbnails, draws a fake page curl
+        on the corner, so it's removed."""
         image_links = volume_info.get('imageLinks', {})
-        for size in IMAGE_SIZE_PREFERENCE:
-            if size in image_links:
-                # Google Books returns these as http:// -- upgrade to https.
-                return image_links[size].replace('http://', 'https://', 1)
-        return None
+        thumbnail = image_links.get('thumbnail') or image_links.get('smallThumbnail')
+        if not thumbnail:
+            return None
+
+        # Google Books returns these as http:// -- upgrade to https.
+        parts = urllib.parse.urlsplit(thumbnail.replace('http://', 'https://', 1))
+        params = [(k, v) for k, v in urllib.parse.parse_qsl(parts.query) if k not in ('edge', 'zoom', 'fife')]
+        params += [('zoom', '1'), ('fife', f'w{COVER_WIDTH}')]
+        return urllib.parse.urlunsplit(parts._replace(query=urllib.parse.urlencode(params)))
 
     def extract_genres(self, volume_info):
         """Turn the raw BISAC category paths on a volumeInfo dict (e.g.

@@ -50,6 +50,10 @@ SECRET_KEY_FILE = ROOT / "scripts" / ".secretaccesskey"
 FRONTEND_BUCKET = "spark.wiki.frontend"
 FRONTEND_DISTRIBUTION_ID = "E2JO5BSJ5WRP9P"
 
+# Serves the spark.wiki.books bucket (reviews and covers/) at
+# d3ab4gbazprxq.cloudfront.net.
+BOOKS_DISTRIBUTION_ID = "E2Y8FRIT378S9Y"
+
 CONTENT_API_FUNCTION = "ContentAPI"
 UPDATE_PHOTO_METADATA_FUNCTION = "UpdatePhotoMetadata"
 UPDATE_BLOG_POST_METADATA_FUNCTION = "UpdateBlogPostMetadata"
@@ -148,6 +152,19 @@ def build_lambda_zip(project_dir, copy_into_package, python_version):
     return zip_path
 
 
+def invalidate_cloudfront(session, distribution_id):
+    print(f"Creating CloudFront invalidation for /* on {distribution_id} ...")
+    cf = session.client("cloudfront")
+    resp = cf.create_invalidation(
+        DistributionId=distribution_id,
+        InvalidationBatch={
+            "Paths": {"Quantity": 1, "Items": ["/*"]},
+            "CallerReference": str(uuid.uuid4()),
+        },
+    )
+    print(f"  Invalidation {resp['Invalidation']['Id']} created.")
+
+
 def update_lambda_code(session, function_name, zip_path):
     print(f"  Updating Lambda function {function_name} from {zip_path} ...")
     lambda_client = session.client("lambda")
@@ -205,16 +222,7 @@ def deploy_frontend(session):
         s3.upload_file(str(path), FRONTEND_BUCKET, key, ExtraArgs=extra_args)
     print("  Upload complete.")
 
-    print(f"Creating CloudFront invalidation for /* on {FRONTEND_DISTRIBUTION_ID} ...")
-    cf = session.client("cloudfront")
-    resp = cf.create_invalidation(
-        DistributionId=FRONTEND_DISTRIBUTION_ID,
-        InvalidationBatch={
-            "Paths": {"Quantity": 1, "Items": ["/*"]},
-            "CallerReference": str(uuid.uuid4()),
-        },
-    )
-    print(f"  Invalidation {resp['Invalidation']['Id']} created.")
+    invalidate_cloudfront(session, FRONTEND_DISTRIBUTION_ID)
 
 
 def deploy_backend(session):
@@ -282,6 +290,12 @@ def deploy_update_book_review(session):
 
     print("Refreshing book review data for every review in the bucket ...")
     run([sys.executable, "refreshBookReviewData.py"], cwd=ROOT / "scripts")
+
+    # The refresh rewrites covers in place (covers/<title>.jpg), so without
+    # this CloudFront keeps serving the old image until its TTL expires.
+    # refreshBookReviewData.py invokes the lambda synchronously, so every
+    # cover has been rewritten by the time it returns.
+    invalidate_cloudfront(session, BOOKS_DISTRIBUTION_ID)
 
 
 TARGETS = {
