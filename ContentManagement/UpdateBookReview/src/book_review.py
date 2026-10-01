@@ -59,13 +59,22 @@ class BookReview:
         digits = self.date_reviewed.replace('-', '')
         return int(digits) if digits.isdigit() else 0
 
+    @staticmethod
+    def _to_dynamo_number(value):
+        # boto3 rejects Python floats outright, so non-integer weights/ratings
+        # (e.g. 14.3 from YAML) have to go in as Decimal. Going via str avoids
+        # carrying binary float noise like 14.2857142857142847 into the item.
+        if isinstance(value, float):
+            return Decimal(str(value))
+        return value
+
     def to_item(self, s3_uri):
         rating_elements = []
         for element in self.rating_elements:
             item = {
                 'name': element.get('name', ''),
-                'weight': element.get('weight'),
-                'rating': element.get('rating'),
+                'weight': self._to_dynamo_number(element.get('weight')),
+                'rating': self._to_dynamo_number(element.get('rating')),
             }
             if element.get('elaboration'):
                 item['elaboration'] = element.get('elaboration').strip()

@@ -30,6 +30,24 @@ function makeDefaultFacets() {
   }));
 }
 
+// Weights are fractional while editing so the sliders move smoothly, but are
+// stored as whole numbers. Plain rounding can drift off 100 (7 x 14.29 -> 98),
+// so this floors everything and hands the leftover points to the facets with
+// the largest fractional parts.
+function roundWeightsToTotal(weights) {
+  const floored = weights.map(w => Math.floor(w));
+  let leftover = TOTAL_WEIGHT - floored.reduce((sum, w) => sum + w, 0);
+  const byRemainder = weights
+    .map((w, index) => ({ index, remainder: w - Math.floor(w) }))
+    .sort((a, b) => b.remainder - a.remainder);
+  for (const { index } of byRemainder) {
+    if (leftover <= 0) break;
+    floored[index] += 1;
+    leftover -= 1;
+  }
+  return floored;
+}
+
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -143,13 +161,14 @@ function BookReviewForm() {
     setError(null);
     setSuccess(null);
 
+    const weights = roundWeightsToTotal(facets.map(f => Number(f.weight)));
     const payload = {
       title: title.trim(),
       author: author.trim(),
       date_reviewed: dateReviewed,
-      rating_elements: facets.map(f => ({
+      rating_elements: facets.map((f, index) => ({
         name: f.name.trim(),
-        weight: Number(f.weight),
+        weight: weights[index],
         rating: Number(f.rating),
       })),
       commentary: timelineEnabled
