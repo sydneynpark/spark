@@ -22,8 +22,9 @@ const COVER_W = 36; // base size, for an unrated book
 const COVER_H = 54;
 const GAP_ABOVE = 10; // between the axis and covers above it
 const GAP_BELOW = 26; // room for the month labels under the axis
-const JITTER = 22; // how far a cover may drift from the axis on its own
-const SEARCH_STEP = 7; // how far a crowded cover moves per placement attempt
+const BAND = 130; // depth of the scatter band on each side of the axis
+const RANDOM_TRIES = 12; // random spots in the bands tried before overflowing
+const SEARCH_STEP = 7; // how far an overflowing cover moves per attempt
 const MAX_OVERLAP = 0.2; // share of the smaller cover a larger one may hide
 const MAX_TILT = 7; // degrees
 const EDGE_PAD = 28;
@@ -87,31 +88,32 @@ function coverTop(side, offset, h) {
   return side === 'above' ? -GAP_ABOVE - offset - h : GAP_BELOW + offset;
 }
 
-// Each book gets a random preferred side, drift, and tilt. If that spot
-// hides too much of an already-placed cover (or vice versa), it tries
-// alternating sides at increasing distances until one is clear enough --
-// so busy reading periods spread outward into a loose pile.
+// Every cover lands at a random depth within the band on a random side of
+// the axis -- whether or not it has neighbors, so height reads as scatter
+// rather than as a sign of a busy reading period. If a spot hides too much
+// of an already-placed cover (or vice versa), it tries more random spots in
+// both bands; only if those are all taken does it overflow past the band,
+// alternating sides at increasing distances.
 function scatter(dated) {
   const placed = [];
   dated.forEach(({ book, x }) => {
     const random = seededRandom(book.title);
-    const preferred = random() < 0.5 ? 'above' : 'below';
-    const other = preferred === 'above' ? 'below' : 'above';
-    const drift = random() * JITTER;
     const tilt = (random() * 2 - 1) * MAX_TILT;
     const { w, h } = coverSize(book.star_rating);
     const left = x - w / 2;
+    const room = Math.max(0, BAND - h);
+    const at = (side, offset) => ({ side, left, top: coverTop(side, offset, h), w, h });
+    const fits = spot => placed.every(p => overlapShare(p, spot) <= MAX_OVERLAP);
 
-    for (let step = 0; ; step++) {
-      const offset = drift + step * SEARCH_STEP;
-      const spot = [preferred, other]
-        .map(side => ({ side, left, top: coverTop(side, offset, h), w, h }))
-        .find(candidate => placed.every(p => overlapShare(p, candidate) <= MAX_OVERLAP));
-      if (spot) {
-        placed.push({ book, x, tilt, ...spot });
-        return;
-      }
+    let spot;
+    for (let i = 0; i < RANDOM_TRIES && !spot; i++) {
+      const candidate = at(random() < 0.5 ? 'above' : 'below', random() * room);
+      if (fits(candidate)) spot = candidate;
     }
+    for (let step = 1; !spot; step++) {
+      spot = [at('above', room + step * SEARCH_STEP), at('below', room + step * SEARCH_STEP)].find(fits);
+    }
+    placed.push({ book, x, tilt, ...spot });
   });
   return placed;
 }
