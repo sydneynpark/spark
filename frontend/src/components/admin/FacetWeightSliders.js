@@ -43,7 +43,10 @@ function positionToWeight(position, facetCount) {
 // Moving one slider redistributes the difference across every other facet
 // proportionally to their current shares -- like Humble Bundle's donation
 // split sliders -- rather than only trading with a single neighbor.
-function FacetWeightSliders({ facets, onWeightChange }) {
+// `submittedWeights` are the whole-number weights the review will actually be
+// saved with (see roundWeightsToTotal in BookReviewForm), shown as each
+// slider's label so it never reads 0% for a facet that will be saved at 1%.
+function FacetWeightSliders({ facets, submittedWeights, onWeightChange }) {
   if (facets.length === 0) return null;
   const facetCount = facets.length;
 
@@ -62,7 +65,7 @@ function FacetWeightSliders({ facets, onWeightChange }) {
             style={{ accentColor: SLIDER_COLORS[index % SLIDER_COLORS.length] }}
             disabled={facets.length < 2}
           />
-          <span className="admin-slider-value">{Math.round(facet.weight)}%</span>
+          <span className="admin-slider-value">{submittedWeights[index]}%</span>
         </div>
       ))}
     </div>

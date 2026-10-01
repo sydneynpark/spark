@@ -42,22 +42,36 @@ function makeDefaultFacets() {
   }));
 }
 
+// Every submitted facet keeps at least this much weight, so it always gets a
+// visible slice on the review's rating chart -- a facet dragged to 0 would
+// otherwise show up in the chart's legend with a rating but no slice.
+const MIN_SUBMITTED_WEIGHT = 1;
+
 // Weights are fractional while editing so the sliders move smoothly, but are
 // stored as whole numbers. Plain rounding can drift off 100 (7 x 14.29 -> 98),
-// so this floors everything and hands the leftover points to the facets with
-// the largest fractional parts.
+// so this floors everything (but not below MIN_SUBMITTED_WEIGHT) and then
+// settles the difference: leftover points go to the facets with the largest
+// fractional parts, and points owed for bumping a facet up to the minimum
+// come out of the largest weights, which notice the loss least.
 function roundWeightsToTotal(weights) {
-  const floored = weights.map(w => Math.floor(w));
-  let leftover = TOTAL_WEIGHT - floored.reduce((sum, w) => sum + w, 0);
+  const rounded = weights.map(w => Math.max(MIN_SUBMITTED_WEIGHT, Math.floor(w)));
+  let leftover = TOTAL_WEIGHT - rounded.reduce((sum, w) => sum + w, 0);
+
   const byRemainder = weights
-    .map((w, index) => ({ index, remainder: w - Math.floor(w) }))
+    .map((w, index) => ({ index, remainder: w - rounded[index] }))
     .sort((a, b) => b.remainder - a.remainder);
   for (const { index } of byRemainder) {
     if (leftover <= 0) break;
-    floored[index] += 1;
+    rounded[index] += 1;
     leftover -= 1;
   }
-  return floored;
+
+  while (leftover < 0) {
+    const largest = rounded.indexOf(Math.max(...rounded));
+    rounded[largest] -= 1;
+    leftover += 1;
+  }
+  return rounded;
 }
 
 function todayIso() {
@@ -231,7 +245,11 @@ function BookReviewForm() {
             </div>
             <button type="button" className="admin-add-button" onClick={addFacet}>+ Add Facet</button>
 
-            <FacetWeightSliders facets={facets} onWeightChange={handleWeightChange} />
+            <FacetWeightSliders
+              facets={facets}
+              submittedWeights={roundWeightsToTotal(facets.map(f => Number(f.weight)))}
+              onWeightChange={handleWeightChange}
+            />
           </section>
 
           <button type="submit" className="admin-submit-button">Next: Rate Facets →</button>

@@ -57,9 +57,7 @@ def build_review_markdown(payload):
         'rating_elements': [
             {
                 'name': element['name'].strip(),
-                # Reviews store whole-number weights; the admin form already
-                # rounds them, this just keeps other API callers consistent.
-                'weight': round(element['weight']),
+                'weight': element['weight'],
                 'rating': element['rating'],
             }
             for element in payload['rating_elements']
