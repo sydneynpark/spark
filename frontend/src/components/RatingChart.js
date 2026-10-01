@@ -16,6 +16,8 @@ const CATEGORICAL_COLORS = [
 
 const MAX_RATING = 10;
 const RING_STEPS = [2, 4, 6, 8, 10];
+// Facets weighted below this share of the total aren't drawn (see below).
+const MIN_SHARE = 0.01;
 
 const LABEL_GAP = 16;
 const LABEL_DOT_RADIUS = 3;
@@ -26,9 +28,13 @@ const CORNER_RADIUS = 5;
 // caption, so the ring can claim nearly the whole box instead of most of
 // it being reserved margin the labels would otherwise get clipped into.
 const COMPACT_BREAKPOINT = 600;
+// chartPadding is the room beside the ring for direct labels, which extend
+// sideways from their dot; labels above/below the ring only need a couple of
+// text lines, so verticalPadding crops the otherwise-square box down to that
+// instead of leaving the same 120px empty above and below the chart.
 const GEOMETRY = {
-  full: { outerRadius: 92, chartPadding: 130 },
-  compact: { outerRadius: 130, chartPadding: 24 },
+  full: { outerRadius: 110, chartPadding: 120, verticalPadding: 48 },
+  compact: { outerRadius: 130, chartPadding: 24, verticalPadding: 24 },
 };
 
 function useCompactLayout() {
@@ -110,19 +116,94 @@ function labelTransform(midAngle) {
   return { anchor: flip ? 'end' : 'start' };
 }
 
+// Font sizes match .rating-chart-label-name / -rating in App.css. Rough
+// per-character widths are the fallback when canvas measuring isn't
+// available (e.g. tests) -- deliberately generous, since overestimating only
+// drops a label the legend already covers, while underestimating overlaps.
+const LABEL_NAME_FONT = '600 15px';
+const LABEL_RATING_FONT = '12px';
+const LABEL_LINE_ABOVE = 12;
+const LABEL_LINE_BELOW = 22;
+
+let measureContext;
+function measureText(text, font, fallbackCharWidth) {
+  if (measureContext === undefined) {
+    measureContext = typeof document !== 'undefined'
+      ? document.createElement('canvas').getContext('2d')
+      : null;
+  }
+  if (!measureContext) return text.length * fallbackCharWidth;
+  const family = getComputedStyle(document.body).fontFamily || 'sans-serif';
+  measureContext.font = `${font} ${family}`;
+  return measureContext.measureText(text).width;
+}
+
+// Direct labels are a supplement to the legend, so a label only goes on the
+// ring when it has room. Bigger slices claim their spot first; any label that
+// would overlap one already placed is left off (that facet is still in the
+// legend and highlights on hover). The same goes for a label too long to
+// fit beside the ring without being clipped by the chart's edge. Nudging labels apart instead detaches
+// them from thin slices and, for a cluster of slivers, still ends in a pile.
+function placeLabels(wedges, outerRadius, center, bounds) {
+  const placed = [];
+  const byWeight = [...wedges].sort((a, b) => b.weight - a.weight);
+  for (const wedge of byWeight) {
+    const anchorPoint = polarToCartesian(wedge.midAngle, outerRadius + LABEL_GAP, center);
+    const { anchor } = labelTransform(wedge.midAngle);
+    const direction = anchor === 'end' ? -1 : 1;
+    const textStart = anchorPoint.x + direction * (LABEL_DOT_RADIUS + 6);
+    const textWidth = Math.max(
+      measureText(wedge.name, LABEL_NAME_FONT, 9.5),
+      measureText(`${formatNumber(wedge.rating)}/${MAX_RATING}`, LABEL_RATING_FONT, 7.5)
+    );
+    const xs = [anchorPoint.x - direction * LABEL_DOT_RADIUS, textStart + direction * textWidth];
+    const box = {
+      left: Math.min(...xs),
+      right: Math.max(...xs),
+      top: anchorPoint.y - LABEL_LINE_ABOVE,
+      bottom: anchorPoint.y + LABEL_LINE_BELOW,
+    };
+    const outOfBounds = box.left < bounds.left || box.right > bounds.right
+      || box.top < bounds.top || box.bottom > bounds.bottom;
+    const collides = outOfBounds || placed.some(({ box: other }) => (
+      box.left < other.right && box.right > other.left && box.top < other.bottom && box.bottom > other.top
+    ));
+    if (!collides) placed.push({ wedge, anchorPoint, anchor, textStart, box });
+  }
+  return placed;
+}
+
 function RatingChart({ ratingElements }) {
   const [activeIndex, setActiveIndex] = useState(null);
   const compact = useCompactLayout();
-  const { outerRadius: OUTER_RADIUS, chartPadding: CHART_PADDING } = compact ? GEOMETRY.compact : GEOMETRY.full;
+  const {
+    outerRadius: OUTER_RADIUS,
+    chartPadding: CHART_PADDING,
+    verticalPadding: VERTICAL_PADDING,
+  } = compact ? GEOMETRY.compact : GEOMETRY.full;
   const SIZE = (OUTER_RADIUS + CHART_PADDING) * 2;
   const CENTER = SIZE / 2;
+  // All the geometry is laid out in a SIZE x SIZE square around CENTER; the
+  // viewBox just crops its top and bottom.
+  const HEIGHT = (OUTER_RADIUS + VERTICAL_PADDING) * 2;
+  const TOP = CENTER - HEIGHT / 2;
 
+  // Weights can be on any scale (e.g. 1-5 per facet, or a 100-point budget),
+  // so "too small to draw" is judged by share of the total, not raw weight.
+  // A facet under MIN_SHARE wouldn't produce a visible slice, so it's left
+  // out of the chart and legend entirely (it still counts toward the book's
+  // overall rating). Each facet keeps its original index so its color stays
+  // the same whether or not a neighbor was omitted.
   const totalWeight = ratingElements.reduce((sum, el) => sum + el.weight, 0);
   if (!ratingElements.length || totalWeight <= 0) return null;
+  const shown = ratingElements
+    .map((el, index) => ({ el, index }))
+    .filter(({ el }) => el.weight / totalWeight >= MIN_SHARE);
+  const shownWeight = shown.reduce((sum, { el }) => sum + el.weight, 0);
 
   let cumulativeAngle = 0;
-  const wedges = ratingElements.map((el, index) => {
-    const angleSpan = (el.weight / totalWeight) * 360;
+  const wedges = shown.map(({ el, index }) => {
+    const angleSpan = (el.weight / shownWeight) * 360;
     const startAngle = cumulativeAngle;
     const endAngle = cumulativeAngle + angleSpan;
     cumulativeAngle = endAngle;
@@ -138,7 +219,9 @@ function RatingChart({ ratingElements }) {
     };
   });
 
-  const hasElaborations = wedges.some((w) => w.elaboration);
+  const labels = compact ? [] : placeLabels(wedges, OUTER_RADIUS, CENTER, {
+    left: 0, right: SIZE, top: TOP, bottom: TOP + HEIGHT,
+  });
   const activeWedge = wedges.find((w) => w.index === activeIndex) ?? null;
   const activate = (index) => () => setActiveIndex(index);
   const deactivate = () => setActiveIndex(null);
@@ -147,7 +230,7 @@ function RatingChart({ ratingElements }) {
     <div className="rating-chart">
       <svg
         className="rating-chart-svg"
-        viewBox={`0 0 ${SIZE} ${SIZE}`}
+        viewBox={`0 ${TOP} ${SIZE} ${HEIGHT}`}
         role="img"
         aria-label="Book rating chart"
       >
@@ -204,26 +287,21 @@ function RatingChart({ ratingElements }) {
           );
         })}
 
-        {!compact && wedges.map((wedge) => {
-          const anchorPoint = polarToCartesian(wedge.midAngle, OUTER_RADIUS + LABEL_GAP, CENTER);
-          const { anchor } = labelTransform(wedge.midAngle);
-          const textStart = anchorPoint.x + (anchor === 'end' ? -1 : 1) * (LABEL_DOT_RADIUS + 6);
-          return (
-            <g
-              key={`label-${wedge.index}`}
-              className={`rating-chart-label${activeIndex === wedge.index ? ' active' : ''}`}
-              aria-hidden="true"
-            >
-              <circle cx={anchorPoint.x} cy={anchorPoint.y} r={LABEL_DOT_RADIUS} fill={wedge.color} />
-              <text x={textStart} y={anchorPoint.y} textAnchor={anchor} className="rating-chart-label-name">
-                {wedge.name}
-              </text>
-              <text x={textStart} y={anchorPoint.y} dy="1.15em" textAnchor={anchor} className="rating-chart-label-rating">
-                {formatNumber(wedge.rating)}/{MAX_RATING}
-              </text>
-            </g>
-          );
-        })}
+        {labels.map(({ wedge, anchorPoint, anchor, textStart }) => (
+          <g
+            key={`label-${wedge.index}`}
+            className={`rating-chart-label${activeIndex === wedge.index ? ' active' : ''}`}
+            aria-hidden="true"
+          >
+            <circle cx={anchorPoint.x} cy={anchorPoint.y} r={LABEL_DOT_RADIUS} fill={wedge.color} />
+            <text x={textStart} y={anchorPoint.y} textAnchor={anchor} className="rating-chart-label-name">
+              {wedge.name}
+            </text>
+            <text x={textStart} y={anchorPoint.y} dy="1.15em" textAnchor={anchor} className="rating-chart-label-rating">
+              {formatNumber(wedge.rating)}/{MAX_RATING}
+            </text>
+          </g>
+        ))}
       </svg>
 
       {compact && (
@@ -246,24 +324,27 @@ function RatingChart({ ratingElements }) {
         </p>
       )}
 
-      {hasElaborations && (
-        <ul className="rating-chart-notes">
-          {wedges.filter((w) => w.elaboration).map((wedge) => (
-            <li
-              key={wedge.index}
-              className={`rating-chart-note${activeIndex === wedge.index ? ' active' : ''}`}
-              onMouseEnter={activate(wedge.index)}
-              onMouseLeave={deactivate}
-            >
-              <span className="rating-chart-swatch" style={{ backgroundColor: wedge.color }} />
-              <div className="rating-chart-note-text">
-                <span className="rating-chart-note-name">{wedge.name}</span>
-                <p className="rating-chart-note-elaboration">{wedge.elaboration}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* The legend: every facet with its rating (and elaboration, if the review
+          has one), so identity never depends on a direct label fitting on the ring. */}
+      <ul className="rating-chart-notes">
+        {wedges.map((wedge) => (
+          <li
+            key={wedge.index}
+            className={`rating-chart-note${activeIndex === wedge.index ? ' active' : ''}`}
+            onMouseEnter={activate(wedge.index)}
+            onMouseLeave={deactivate}
+          >
+            <span className="rating-chart-swatch" style={{ backgroundColor: wedge.color }} />
+            <div className="rating-chart-note-text">
+              <span className="rating-chart-note-name">
+                {wedge.name}
+                <span className="rating-chart-note-rating">{formatNumber(wedge.rating)}/{MAX_RATING}</span>
+              </span>
+              {wedge.elaboration && <p className="rating-chart-note-elaboration">{wedge.elaboration}</p>}
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

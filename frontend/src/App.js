@@ -11,6 +11,10 @@ import BlogPost from './components/BlogPost';
 import Books from './components/Books';
 import BookReview from './components/BookReview';
 import Footer from './components/Footer';
+import AdminLogin from './components/admin/AdminLogin';
+import AdminDashboard from './components/admin/AdminDashboard';
+import AdminRoute from './components/admin/AdminRoute';
+import BookReviewForm from './components/admin/BookReviewForm';
 
 function App() {
   return (
@@ -31,6 +35,9 @@ function App() {
             <Route path="/blog/:postId" element={<BlogPost />} />
             <Route path="/books" element={<Books />} />
             <Route path="/books/:title" element={<BookReview />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+            <Route path="/admin/books/new" element={<AdminRoute><BookReviewForm /></AdminRoute>} />
           </Routes>
         </main>
         <Footer />

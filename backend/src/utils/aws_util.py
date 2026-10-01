@@ -196,3 +196,24 @@ class S3Util:
         response = self.s3.get_object(Bucket=BLOG_BUCKET, Key=key)
         return response['Body'].read().decode('utf-8')
 
+
+BOOKS_BUCKET = 'spark.wiki.books'
+
+
+class BooksAdminUtil:
+    """Publishes admin-authored reviews into the same S3 bucket (and same
+    <title>.md key convention) that a manually-uploaded review would use, so
+    the existing UpdateBookReview lambda's S3 trigger does the rest (cover
+    art, genres, synopsis, and the actual DynamoDB write)."""
+
+    def __init__(self):
+        self.s3 = boto3.client('s3')
+
+    def publish_book_review(self, title, markdown, payload):
+        self.s3.put_object(
+            Bucket=BOOKS_BUCKET,
+            Key=f'{title}.md',
+            Body=markdown.encode('utf-8'),
+            ContentType='text/markdown; charset=utf-8',
+        )
+

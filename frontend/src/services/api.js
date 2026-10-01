@@ -1,4 +1,5 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.spark.wiki';
+const ADMIN_TOKEN_KEY = 'spark_admin_token';
 const CDN_BASE_URL = process.env.REACT_APP_CDN_URL || 'https://photos.spark.wiki';
 // CloudFront distribution in front of spark.wiki.books, origin = bucket root
 // (no origin path override), so this mirrors S3 keys 1:1 the same way
@@ -116,6 +117,74 @@ class ApiService {
     if (!coverKey) return null;
     const path = coverKey.split('/').map(encodeURIComponent).join('/');
     return `${COVERS_CDN_BASE_URL}/${path}`;
+  }
+
+  // --- Admin ---
+
+  getAdminToken() {
+    return localStorage.getItem(ADMIN_TOKEN_KEY);
+  }
+
+  setAdminToken(token) {
+    localStorage.setItem(ADMIN_TOKEN_KEY, token);
+  }
+
+  clearAdminToken() {
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
+  }
+
+  async adminLogin(username, password) {
+    const response = await fetch(`${API_BASE_URL}/admin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || 'Login failed');
+    }
+    this.setAdminToken(data.token);
+    return data;
+  }
+
+  // Confirms the stored token (if any) is still accepted by the backend --
+  // used on admin page load so an expired token bounces back to the login
+  // page instead of the UI just failing silently on the next real request.
+  async verifyAdminSession() {
+    const token = this.getAdminToken();
+    if (!token) return false;
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/session`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        this.clearAdminToken();
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Error verifying admin session:', error);
+      return false;
+    }
+  }
+
+  async submitBookReview(payload) {
+    const response = await fetch(`${API_BASE_URL}/admin/book-reviews`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.getAdminToken()}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      this.clearAdminToken();
+    }
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to submit book review');
+    }
+    return data;
   }
 }
 
