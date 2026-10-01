@@ -161,9 +161,7 @@ function BookReviewForm() {
     setSubmitting(true);
     try {
       const result = await ApiService.submitBookReview(payload);
-      setSuccess(result.status === 'published'
-        ? `"${payload.title}" was published.`
-        : (result.message || `"${payload.title}" was submitted.`));
+      setSuccess(result.message || `"${payload.title}" was submitted.`);
       resetForm();
     } catch (err) {
       setError(err.message);
