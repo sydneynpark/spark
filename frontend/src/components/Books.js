@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import ApiService from '../services/api';
 import StarRating from './StarRating';
 import SortBar from './SortBar';
+import ReadingShelf from './ReadingShelf';
 import { useSort } from '../utils/sort';
 
 function formatDate(dateStr) {
@@ -42,6 +43,7 @@ function Books() {
         <p>No book reviews yet.</p>
       ) : (
         <>
+          <ReadingShelf books={books} />
           <SortBar options={SORT_OPTIONS} sortKey={sortKey} sortDirection={sortDirection} onSort={handleSort} />
           <ul className="book-list">
             {sortedBooks.map(book => (
