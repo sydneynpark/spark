@@ -1,0 +1,2 @@
+# Dependencies of the refresh*.py scripts, which the deploy workflow runs too.
+boto3

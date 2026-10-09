@@ -1,2 +1,6 @@
 .accesskey
 .secretaccesskey
+# The same files as spelled on disk; patterns are case-sensitive on Linux and
+# anywhere core.ignoreCase is off.
+.accessKey
+.secretAccessKey

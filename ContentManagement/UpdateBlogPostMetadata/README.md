@@ -22,20 +22,19 @@ $env:PYTHONPATH = ".\src"
 python -m unittest test\test_markdown_util.py
 ```
 
-## Zipping for upload to Lambda
+## Dependencies
 
+`src/requirements.in` lists the direct dependencies. `src/requirements.txt` is
+generated from it, pinning every package (including transitive ones) to an
+exact version and hash; local installs and the deployed Lambda both use it.
+After editing `requirements.in`, regenerate it from this directory:
 
 ```
-mkdir .build/packages
-pip install --target .build/packages -r src/requirements.txt
-cp src/*.py .build/packages
-
-$compress = @{
-  Path = ".build/packages/*"
-  CompressionLevel = "Fastest"
-  DestinationPath = ".build/lambda.zip"
-}
-Compress-Archive @compress -Force
+uv pip compile src/requirements.in --universal --python-version 3.12 --generate-hashes -o src/requirements.txt
 ```
 
-Upload the resulting `lambda.zip` file to Lambda.
+Add `--upgrade` to also move everything to the latest versions.
+
+## Deploying
+
+Pushing to `master` deploys this Lambda -- see [terraform/README.md](../../terraform/README.md).

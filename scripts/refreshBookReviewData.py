@@ -3,7 +3,8 @@
 Iterate over every book review in the spark.wiki.books S3 bucket (or a given
 path/prefix within it) and invoke the UpdateBookReview Lambda for each one,
 passing an S3-event-shaped payload where the object key is swapped in for the
-real key.
+real key. Then invalidates the bucket's CloudFront distribution, so rewritten
+covers are served right away.
 
 Usage:
     python refreshBookReviewData.py                                   # whole bucket
@@ -12,8 +13,7 @@ Usage:
     python refreshBookReviewData.py --missing-only                    # only reviews missing a cover/synopsis
 
 Credentials:
-    The AWS access key and secret access key are read from local files
-    (.accesskey and .secretaccesskey) and used for all S3 and Lambda calls.
+    See s3_lambda_refresh.py.
 
 "Private" Lambda just means it's your own function — you invoke it through the
 normal AWS API with credentials that have lambda:InvokeFunction permission.
@@ -21,6 +21,7 @@ normal AWS API with credentials that have lambda:InvokeFunction permission.
 
 import argparse
 import sys
+import uuid
 
 from s3_lambda_refresh import AWS_REGION, make_session, parse_prefix, refresh_bucket
 
@@ -34,6 +35,9 @@ BUCKET_ARN = "arn:aws:s3:::spark.wiki.books"
 # The DynamoDB table UpdateBookReview writes review metadata to -- happens to
 # share its name with the S3 bucket above, but it's a separate resource.
 TABLE_NAME = "spark.wiki.books"
+
+# Serves the bucket above (reviews and covers/).
+BOOKS_DISTRIBUTION_ID = "E2Y8FRIT378S9Y"
 
 # Lambda function name or full ARN
 LAMBDA_FUNCTION_NAME = "UpdateBookReview"
@@ -123,7 +127,7 @@ def main():
 
     prefix = parse_prefix(args.path, BUCKET_NAME)
 
-    refresh_bucket(
+    _, succeeded, failed = refresh_bucket(
         session,
         bucket_name=BUCKET_NAME,
         bucket_arn=BUCKET_ARN,
@@ -133,6 +137,25 @@ def main():
         prefix=prefix,
         should_process=process,
     )
+
+    # Reprocessing rewrites covers in place (covers/<title>.jpg), so without
+    # this CloudFront keeps serving the old image until its TTL expires.
+    # INVOCATION_TYPE is synchronous, so every cover has been rewritten by now.
+    if succeeded:
+        print(f"\nCreating CloudFront invalidation for /* on {BOOKS_DISTRIBUTION_ID} ...")
+        resp = session.client("cloudfront").create_invalidation(
+            DistributionId=BOOKS_DISTRIBUTION_ID,
+            InvalidationBatch={
+                "Paths": {"Quantity": 1, "Items": ["/*"]},
+                "CallerReference": str(uuid.uuid4()),
+            },
+        )
+        print(f"  Invalidation {resp['Invalidation']['Id']} created.")
+
+    # Fails the deploy that ran this (see terraform/content_reprocess.tf), so
+    # failures aren't missed -- and it reruns on the next one.
+    if failed:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

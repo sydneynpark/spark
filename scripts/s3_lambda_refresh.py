@@ -6,13 +6,12 @@ for each one, passing an S3-event-shaped payload where the object key is
 swapped in for the real key.
 
 Credentials:
-    The AWS access key and secret access key are read from local files
-    (.accesskey and .secretaccesskey, relative to the current working
-    directory) and used for all S3 and Lambda calls.
+    boto3's default credential chain: the deploy role's short-lived
+    credentials in GitHub Actions, or locally, your `aws login` session (or
+    whatever AWS_PROFILE points at).
 """
 
 import json
-import os
 import sys
 from urllib.parse import quote
 
@@ -22,28 +21,9 @@ from botocore.exceptions import ClientError
 
 AWS_REGION = "us-east-1"
 
-# Local files holding the AWS credentials.
-ACCESS_KEY_FILE = ".accesskey"
-SECRET_KEY_FILE = ".secretaccesskey"
 
-
-def read_secret(path):
-    """Read a single-line secret/value from a local file."""
-    if not os.path.exists(path):
-        sys.exit(f"Required file not found: {path}")
-    with open(path, "r", encoding="utf-8") as f:
-        value = f.read().strip()  # drops trailing newline / surrounding whitespace
-    if not value:
-        sys.exit(f"File is empty: {path}")
-    return value
-
-
-def make_session(region=AWS_REGION, access_key_file=ACCESS_KEY_FILE, secret_key_file=SECRET_KEY_FILE):
-    return boto3.Session(
-        aws_access_key_id=read_secret(access_key_file),
-        aws_secret_access_key=read_secret(secret_key_file),
-        region_name=region,
-    )
+def make_session(region=AWS_REGION):
+    return boto3.Session(region_name=region)
 
 
 def build_event(bucket_name, bucket_arn, region, obj):
