@@ -36,7 +36,7 @@ Add `--upgrade` to also move everything to the latest versions.
 
 ## Deploying
 
-Pushing to `master` deploys this Lambda -- see [terraform/README.md](../terraform/README.md).
+Every push builds this Lambda and plans deploying it, for you to approve -- see [terraform/README.md](../terraform/README.md).
 
 ## Admin auth setup (one-time, AWS-side)
 

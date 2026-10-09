@@ -12,6 +12,9 @@ permissions: {}
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    # Waits for your approval, like Deploy's apply: the deploy role only
+    # trusts this environment.
+    environment: production
     permissions:
       contents: read
       id-token: write

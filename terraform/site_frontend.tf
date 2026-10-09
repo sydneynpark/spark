@@ -1,4 +1,4 @@
-# The site's frontend: frontend/build (built by .github/workflows/build.yml),
+# The site's frontend: frontend/build (built by .github/workflows/deploy.yml),
 # uploaded to the bucket CloudFront serves the site from. Only changed files
 # are uploaded, files no longer in the build are deleted, and CloudFront's
 # cache is invalidated after any change. (The bucket and distribution

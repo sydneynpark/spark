@@ -12,46 +12,52 @@ repo's Lambda projects.
 
 ## How changes reach AWS
 
-Any branch can be deployed to production, and `master` always is:
+One workflow, **[Deploy](../.github/workflows/deploy.yml)**, runs on every
+push to any branch:
 
-- **[Plan](../.github/workflows/plan.yml)**, on every pull request: builds
-  everything, then runs `terraform plan` with a read-only role -- what
-  deploying the branch would change.
-- **[Deploy](../.github/workflows/deploy.yml)**, on every push to `master`,
-  and on any branch when you run it from the Actions tab (Run workflow, then
-  pick the branch): builds everything, then runs `terraform apply`, which
-  changes only what differs from what's deployed.
+```
+build frontend ┐
+build lambdas  ┴→ plan → (waits for your approval) → apply
+```
 
-So a branch can be tried out in production before it's merged. Production
-is whatever was deployed last, so merging, which redeploys `master`, should
-change nothing if the branch was deployed already. Deploying one branch
-undoes whatever another branch deployed that isn't on it.
-
-Both build with [Build](../.github/workflows/build.yml):
-
-- **Lambdas**: [scripts/build_lambda.py](../scripts/build_lambda.py)
-  packages a project as `.build/lambda.zip` -- its `src/` plus the locked
+- **Build**: [scripts/build_lambda.py](../scripts/build_lambda.py) packages
+  each Lambda project as `.build/lambda.zip` -- its `src/` plus the locked
   `src/requirements.txt`, installed for the project's `.python-version` on
-  Lambda's platform. The zip is reproducible, so a function is only
-  redeployed when something in it changed.
-- **Frontend**: `npm run build`. Terraform uploads changed files, deletes ones
-  no longer in the build, and if anything changed, invalidates CloudFront
-  once they're all uploaded ([site_frontend.tf](site_frontend.tf)).
+  Lambda's platform -- and `npm run build` builds the frontend. Both are
+  reproducible, so unchanged code is never redeployed.
+- **Plan**: `terraform plan` with a read-only role, against the build -- what
+  deploying this push would change. Read it in the job's log.
+- **Apply**: the job declares the `production` environment, whose required
+  reviewer is you, so the run stops here with a *Review deployments* button.
+  Approving applies exactly the plan you read, using the same build. If
+  anything else was deployed since that plan was made, Terraform refuses it
+  as stale, so approving an old run can't roll production back.
 
-Two more workflows only run when you start them from the Actions tab:
+Terraform uploads changed frontend files, deletes ones no longer in the
+build, and if anything changed, invalidates CloudFront once they're all
+uploaded ([site_frontend.tf](site_frontend.tf)).
+
+So any branch can be tried out in production before it's merged. Production
+is whatever was applied last: applying one branch undoes whatever another
+branch applied that isn't on it, and if a branch was applied before it was
+merged, `master`'s plan afterwards shows no changes. Runs you don't approve
+just expire.
+
+Two more workflows only run when you start them from the Actions tab (Run
+workflow), and also wait for your approval:
 **[Refresh photo metadata](../.github/workflows/refresh-photos.yml)** and
 **[Refresh book review data](../.github/workflows/refresh-book-reviews.yml)**.
 They reprocess every existing photo or review, as if each were uploaded
 again -- e.g. after changing what metadata the Lambda stores.
 
 The workflows authenticate to AWS through GitHub's OIDC provider, so there
-are no AWS credentials stored anywhere. The deploy role trusts workflow runs
-on any of this repo's branches -- which only people with write access can
-push to -- and the plan role, pull requests from this repo's own branches
-(GitHub doesn't give pull requests from forks a token).
+are no AWS credentials stored anywhere. The plan role trusts runs on any of
+this repo's branches (which only people with write access can push to); the
+deploy role trusts only jobs in the `production` environment, which can't
+start without your approval.
 
-To roll back, deploy `master` (or revert the commit there). To redeploy
-without a change, run Deploy from the Actions tab.
+To roll back, re-run `master`'s latest Deploy run (Re-run all jobs) and
+approve it, or revert the change and push.
 
 ## One-time setup
 
@@ -59,29 +65,30 @@ without a change, run Deploy from the Actions tab.
    OIDC provider, deploy role, and plan role -- as described
    [below](#bootstrap-resources).
 
-2. **Configure the repo**: in GitHub's Settings > Secrets and variables >
-   Actions > Variables, add two repository variables: `AWS_DEPLOY_ROLE_ARN` =
-   the deploy role's ARN, and `AWS_PLAN_ROLE_ARN` = the plan role's ARN.
+2. **Configure the repo** in GitHub's Settings:
+   - Environments > New environment `production`: check Required reviewers,
+     and add yourself. Leave Deployment branches and tags at *No
+     restriction*.
+   - Secrets and variables > Actions > Variables: add two repository
+     variables, `AWS_DEPLOY_ROLE_ARN` = the deploy role's ARN, and
+     `AWS_PLAN_ROLE_ARN` = the plan role's ARN.
 
-3. **Open the pull request** that adds all this, and read its Plan job's
-   output. The functions were created in the console, so this first deploy
-   imports them ([imports.tf](imports.tf)). Expect:
+3. **Push**, and read the Deploy run's plan. The functions were created in
+   the console, so this first deploy imports them ([imports.tf](imports.tf)).
+   Expect:
    - per function: an import, a code update, and a new `ManagedBy` tag
    - every frontend file uploaded, and one CloudFront invalidation
 
-   Anything else is a console setting the configuration doesn't match yet.
-   Add it to the function's `module` block, and push again.
+   Anything else is a console setting the configuration doesn't match yet:
+   add it to the function's `module` block, and push again. Once the plan
+   looks right, approve it.
 
-4. **Deploy**: push to the branch (until this is on `master`, Deploy runs on
-   pushes to `ci` too -- remove that from deploy.yml afterwards), or merge.
-   Watch Deploy in the Actions tab.
-
-5. **Delete the previous build's leftovers** from `spark.wiki.frontend`, if
+4. **Delete the previous build's leftovers** from `spark.wiki.frontend`, if
    you like: files from before Terraform managed the bucket aren't in its
    state, so it won't remove them. They're the ones without a `ManagedBy`
    tag (old `static/` files with different hashes in their names).
 
-6. **Retire the old access keys**: in IAM, delete the access keys of the
+5. **Retire the old access keys**: in IAM, delete the access keys of the
    `deploy` user and of the user the refresh scripts used (and the users
    themselves, if nothing else uses them). Then delete the local copies:
    `scripts/.accessKey`, `scripts/.secretAccessKey`, `scripts/deploy.user/`,
@@ -109,21 +116,21 @@ without a change, run Deploy from the Actions tab.
   create functions), with its execution role. Add both to the deploy role's
   policy (`ManageFunctions`, `PassExecutionRoles`), and update the copy
   below. Then add a `module` block and an `import` block for it, and a
-  build step to [build.yml](../.github/workflows/build.yml).
+  build step to [deploy.yml](../.github/workflows/deploy.yml).
 
 ## Bringing the rest under Terraform
 
-One area per pull request:
+One area per branch:
 
 1. Add its configuration, and an `import` block for each existing resource
    to [imports.tf](imports.tf). Write the configuration from the resource's
    current settings (e.g. the output of the AWS CLI's `get`/`describe`
    commands for it), so that importing it changes nothing.
-2. Open the pull request. Its plan should show each resource imported,
-   with no changes. Any change means the configuration doesn't match what
-   exists yet, and merging would apply that change to the live resource.
+2. Push it. Its plan should show each resource imported, with no changes.
+   Any change means the configuration doesn't match what exists yet, and
+   approving would apply that change to the live resource.
 3. Extend the deploy role's policy to manage the new resources (the plan
-   role can already read everything). Then merge.
+   role can already read everything). Then approve.
 4. Replace the hardcoded names and IDs that now have resources with
    references to them (e.g. the distribution ID in
    [site_frontend.tf](site_frontend.tf)).
@@ -195,8 +202,10 @@ An IAM identity provider of type OpenID Connect, with provider URL
 
 ### Deploy role
 
-Used by Deploy and the Refresh workflows. Trust policy, accepting runs on
-any branch:
+Used by Deploy's apply job and the Refresh workflows. Trust policy,
+accepting only jobs in the `production` environment (the `sub` has to name
+the environment, not a branch: jobs that declare an environment get a token
+identifying it instead of their branch):
 
 ```json
 {
@@ -210,10 +219,8 @@ any branch:
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
         "StringEquals": {
-          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-        },
-        "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:sydneynpark/spark:ref:refs/heads/*"
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+          "token.actions.githubusercontent.com:sub": "repo:sydneynpark/spark:environment:production"
         }
       }
     }
@@ -340,7 +347,7 @@ Permissions, as a single inline policy (and nothing else attached):
 
 ### Plan role
 
-Used by Plan. Trust policy:
+Used by Deploy's plan job. Trust policy, accepting runs on any branch:
 
 ```json
 {
@@ -354,8 +361,10 @@ Used by Plan. Trust policy:
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
         "StringEquals": {
-          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": "repo:sydneynpark/spark:pull_request"
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": "repo:sydneynpark/spark:ref:refs/heads/*"
         }
       }
     }
