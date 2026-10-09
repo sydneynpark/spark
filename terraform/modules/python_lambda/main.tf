@@ -1,6 +1,6 @@
 # A Python Lambda function deployed from one of this repo's Lambda projects:
-# a directory with src/, a .python-version, and the .build/lambda.zip that
-# scripts/build_lambda.py packages from them.
+# a directory with a .python-version, and the .build/lambda.zip that
+# scripts/build_lambda.py packages from it.
 
 terraform {
   required_providers {
@@ -13,15 +13,6 @@ terraform {
 locals {
   package        = "${var.project_dir}/.build/lambda.zip"
   python_version = trimspace(file("${var.project_dir}/.python-version"))
-
-  # A hash of what the package is built from. Unlike the zip's own hash, it
-  # doesn't change with the build tooling (e.g. the metadata uv writes for
-  # installed packages), only with the code, its locked dependencies, or the
-  # Python version.
-  source_hash = sha256(join("\n", concat(
-    ["python ${local.python_version}"],
-    [for path in sort(fileset("${var.project_dir}/src", "**")) : "${path} ${filesha256("${var.project_dir}/src/${path}")}"],
-  )))
 }
 
 resource "aws_lambda_function" "this" {

@@ -152,8 +152,8 @@ def main():
         )
         print(f"  Invalidation {resp['Invalidation']['Id']} created.")
 
-    # Fails the deploy that ran this (see terraform/content_reprocess.tf), so
-    # failures aren't missed -- and it reruns on the next one.
+    # Fails the workflow run that ran this (.github/workflows/refresh-*.yml),
+    # so failures aren't missed.
     if failed:
         sys.exit(1)
 

@@ -12,14 +12,20 @@ repo's Lambda projects.
 
 ## How changes reach AWS
 
-Pull requests are planned, and merges to `master` are applied:
+Any branch can be deployed to production, and `master` always is:
 
 - **[Plan](../.github/workflows/plan.yml)**, on every pull request: builds
   everything, then runs `terraform plan` with a read-only role -- what
-  merging would change.
-- **[Deploy](../.github/workflows/deploy.yml)**, on every push to `master`:
-  builds everything, then runs `terraform apply`, which changes only what
-  differs from what's deployed.
+  deploying the branch would change.
+- **[Deploy](../.github/workflows/deploy.yml)**, on every push to `master`,
+  and on any branch when you run it from the Actions tab (Run workflow, then
+  pick the branch): builds everything, then runs `terraform apply`, which
+  changes only what differs from what's deployed.
+
+So a branch can be tried out in production before it's merged. Production
+is whatever was deployed last, so merging, which redeploys `master`, should
+change nothing if the branch was deployed already. Deploying one branch
+undoes whatever another branch deployed that isn't on it.
 
 Both build with [Build](../.github/workflows/build.yml):
 
@@ -32,18 +38,20 @@ Both build with [Build](../.github/workflows/build.yml):
   no longer in the build, and if anything changed, invalidates CloudFront
   once they're all uploaded ([site_frontend.tf](site_frontend.tf)).
 
-When `UpdatePhotoMetadata`'s or `UpdateBookReview`'s source changes,
-Deploy also reprocesses every existing photo or review with the new code
-([content_reprocess.tf](content_reprocess.tf)).
+Two more workflows only run when you start them from the Actions tab:
+**[Refresh photo metadata](../.github/workflows/refresh-photos.yml)** and
+**[Refresh book review data](../.github/workflows/refresh-book-reviews.yml)**.
+They reprocess every existing photo or review, as if each were uploaded
+again -- e.g. after changing what metadata the Lambda stores.
 
 The workflows authenticate to AWS through GitHub's OIDC provider, so there
-are no AWS credentials stored anywhere. The deploy role trusts only jobs in
-this repo's `production` environment, which only `master` can deploy to; the
-plan role, only pull requests from this repo's own branches (GitHub doesn't
-give pull requests from forks a token).
+are no AWS credentials stored anywhere. The deploy role trusts workflow runs
+on any of this repo's branches -- which only people with write access can
+push to -- and the plan role, pull requests from this repo's own branches
+(GitHub doesn't give pull requests from forks a token).
 
-To roll back, revert the commit and merge. To redeploy without a change, run
-Deploy from the Actions tab.
+To roll back, deploy `master` (or revert the commit there). To redeploy
+without a change, run Deploy from the Actions tab.
 
 ## One-time setup
 
@@ -51,26 +59,22 @@ Deploy from the Actions tab.
    OIDC provider, deploy role, and plan role -- as described
    [below](#bootstrap-resources).
 
-2. **Configure the repo** in GitHub's Settings:
-   - Environments > New environment `production`: under Deployment branches
-     and tags, *Selected branches and tags*, add `master`. Add the variable
-     `AWS_DEPLOY_ROLE_ARN` = the deploy role's ARN. (Optionally, add yourself
-     as a Required reviewer, to approve each deploy before it starts.)
-   - Secrets and variables > Actions > Variables: add the repository
-     variable `AWS_PLAN_ROLE_ARN` = the plan role's ARN.
+2. **Configure the repo**: in GitHub's Settings > Secrets and variables >
+   Actions > Variables, add two repository variables: `AWS_DEPLOY_ROLE_ARN` =
+   the deploy role's ARN, and `AWS_PLAN_ROLE_ARN` = the plan role's ARN.
 
 3. **Open the pull request** that adds all this, and read its Plan job's
    output. The functions were created in the console, so this first deploy
    imports them ([imports.tf](imports.tf)). Expect:
    - per function: an import, a code update, and a new `ManagedBy` tag
    - every frontend file uploaded, and one CloudFront invalidation
-   - both reprocessing steps created -- they'll reprocess every photo and
-     review, since Terraform hasn't seen this code before
 
    Anything else is a console setting the configuration doesn't match yet.
    Add it to the function's `module` block, and push again.
 
-4. **Merge**, and watch Deploy in the Actions tab.
+4. **Deploy**: push to the branch (until this is on `master`, Deploy runs on
+   pushes to `ci` too -- remove that from deploy.yml afterwards), or merge.
+   Watch Deploy in the Actions tab.
 
 5. **Delete the previous build's leftovers** from `spark.wiki.frontend`, if
    you like: files from before Terraform managed the bucket aren't in its
@@ -85,8 +89,9 @@ Deploy from the Actions tab.
 
 ## Day to day
 
-- **Reprocessing content by hand**, e.g. without a code change: the
-  `scripts/refresh*.py` scripts use your `aws login` session (or
+- **Reprocessing content**: run a Refresh workflow. To run the scripts
+  locally instead (e.g. `refreshBookReviewData.py --missing-only`, or on just
+  one prefix), `scripts/refresh*.py` use your `aws login` session (or
   `AWS_PROFILE`), and the packages in `scripts/requirements.txt`. If one
   can't find credentials, export the session into your shell (PowerShell):
   `aws configure export-credentials --format powershell | Invoke-Expression`.
@@ -190,9 +195,8 @@ An IAM identity provider of type OpenID Connect, with provider URL
 
 ### Deploy role
 
-Used by Deploy. Trust policy -- the `sub` condition has to name the
-environment, not a branch: jobs that declare `environment: production` get a
-token identifying that environment instead of their branch.
+Used by Deploy and the Refresh workflows. Trust policy, accepting runs on
+any branch:
 
 ```json
 {
@@ -206,8 +210,10 @@ token identifying that environment instead of their branch.
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
         "StringEquals": {
-          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": "repo:sydneynpark/spark:environment:production"
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": "repo:sydneynpark/spark:ref:refs/heads/*"
         }
       }
     }

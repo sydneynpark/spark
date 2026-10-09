@@ -1,0 +1,574 @@
+data.aws_caller_identity.current: Reading...
+data.aws_caller_identity.current: Read complete after 0s [id=***]
+module.content_api.aws_lambda_function.this: Preparing import... [id=ContentAPI]
+module.update_blog_post_metadata.aws_lambda_function.this: Preparing import... [id=UpdateBlogPostMetadata]
+module.update_book_review.aws_lambda_function.this: Preparing import... [id=UpdateBookReview]
+module.update_photo_metadata.aws_lambda_function.this: Preparing import... [id=UpdatePhotoMetadata]
+module.update_photo_metadata.aws_lambda_function.this: Refreshing state... [id=UpdatePhotoMetadata]
+module.content_api.aws_lambda_function.this: Refreshing state... [id=ContentAPI]
+module.update_book_review.aws_lambda_function.this: Refreshing state... [id=UpdateBookReview]
+module.update_blog_post_metadata.aws_lambda_function.this: Refreshing state... [id=UpdateBlogPostMetadata]
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+  ~ update in-place
+Terraform will perform the following actions:
+  # aws_s3_object.frontend["asset-manifest.json"] will be created
+  + resource "aws_s3_object" "frontend" {
+      + acl                    = (known after apply)
+      + arn                    = (known after apply)
+      + bucket                 = "spark.wiki.frontend"
+      + bucket_key_enabled     = (known after apply)
+      + checksum_crc32         = (known after apply)
+      + checksum_crc32c        = (known after apply)
+      + checksum_crc64nvme     = (known after apply)
+      + checksum_sha1          = (known after apply)
+      + checksum_sha256        = (known after apply)
+      + content_type           = "application/json"
+      + etag                   = "80b1c7e56c97f070fdd7e7000814c85d"
+      + force_destroy          = false
+      + id                     = (known after apply)
+      + key                    = "asset-manifest.json"
+      + kms_key_id             = (known after apply)
+      + region                 = "us-east-1"
+      + server_side_encryption = (known after apply)
+      + source                 = "./../frontend/build/asset-manifest.json"
+      + storage_class          = (known after apply)
+      + tags_all               = {
+          + "ManagedBy" = "terraform"
+        }
+      + version_id             = (known after apply)
+    }
+  # aws_s3_object.frontend["images/placeholder-book.jpg"] will be created
+  + resource "aws_s3_object" "frontend" {
+      + acl                    = (known after apply)
+      + arn                    = (known after apply)
+      + bucket                 = "spark.wiki.frontend"
+      + bucket_key_enabled     = (known after apply)
+      + checksum_crc32         = (known after apply)
+      + checksum_crc32c        = (known after apply)
+      + checksum_crc64nvme     = (known after apply)
+      + checksum_sha1          = (known after apply)
+      + checksum_sha256        = (known after apply)
+      + content_type           = "image/jpeg"
+      + etag                   = "4a573b477637e95b217f1894a66dc9c3"
+      + force_destroy          = false
+      + id                     = (known after apply)
+      + key                    = "images/placeholder-book.jpg"
+      + kms_key_id             = (known after apply)
+      + region                 = "us-east-1"
+      + server_side_encryption = (known after apply)
+      + source                 = "./../frontend/build/images/placeholder-book.jpg"
+      + storage_class          = (known after apply)
+      + tags_all               = {
+          + "ManagedBy" = "terraform"
+        }
+      + version_id             = (known after apply)
+    }
+  # aws_s3_object.frontend["images/placeholder-loading.jpg"] will be created
+  + resource "aws_s3_object" "frontend" {
+      + acl                    = (known after apply)
+      + arn                    = (known after apply)
+      + bucket                 = "spark.wiki.frontend"
+      + bucket_key_enabled     = (known after apply)
+      + checksum_crc32         = (known after apply)
+      + checksum_crc32c        = (known after apply)
+      + checksum_crc64nvme     = (known after apply)
+      + checksum_sha1          = (known after apply)
+      + checksum_sha256        = (known after apply)
+      + content_type           = "image/jpeg"
+      + etag                   = "274338061717dc1d33870c9eb74ef4e1"
+      + force_destroy          = false
+      + id                     = (known after apply)
+      + key                    = "images/placeholder-loading.jpg"
+      + kms_key_id             = (known after apply)
+      + region                 = "us-east-1"
+      + server_side_encryption = (known after apply)
+      + source                 = "./../frontend/build/images/placeholder-loading.jpg"
+      + storage_class          = (known after apply)
+      + tags_all               = {
+          + "ManagedBy" = "terraform"
+        }
+      + version_id             = (known after apply)
+    }
+  # aws_s3_object.frontend["images/placeholder-unknown.jpg"] will be created
+  + resource "aws_s3_object" "frontend" {
+      + acl                    = (known after apply)
+      + arn                    = (known after apply)
+      + bucket                 = "spark.wiki.frontend"
+      + bucket_key_enabled     = (known after apply)
+      + checksum_crc32         = (known after apply)
+      + checksum_crc32c        = (known after apply)
+      + checksum_crc64nvme     = (known after apply)
+      + checksum_sha1          = (known after apply)
+      + checksum_sha256        = (known after apply)
+      + content_type           = "image/jpeg"
+      + etag                   = "6781325ac75c60d8659be2ab8e4057bf"
+      + force_destroy          = false
+      + id                     = (known after apply)
+      + key                    = "images/placeholder-unknown.jpg"
+      + kms_key_id             = (known after apply)
+      + region                 = "us-east-1"
+      + server_side_encryption = (known after apply)
+      + source                 = "./../frontend/build/images/placeholder-unknown.jpg"
+      + storage_class          = (known after apply)
+      + tags_all               = {
+          + "ManagedBy" = "terraform"
+        }
+      + version_id             = (known after apply)
+    }
+  # aws_s3_object.frontend["images/profile.jpg"] will be created
+  + resource "aws_s3_object" "frontend" {
+      + acl                    = (known after apply)
+      + arn                    = (known after apply)
+      + bucket                 = "spark.wiki.frontend"
+      + bucket_key_enabled     = (known after apply)
+      + checksum_crc32         = (known after apply)
+      + checksum_crc32c        = (known after apply)
+      + checksum_crc64nvme     = (known after apply)
+      + checksum_sha1          = (known after apply)
+      + checksum_sha256        = (known after apply)
+      + content_type           = "image/jpeg"
+      + etag                   = "8702fd7e9f1c82344f35e832ec2d067d"
+      + force_destroy          = false
+      + id                     = (known after apply)
+      + key                    = "images/profile.jpg"
+      + kms_key_id             = (known after apply)
+      + region                 = "us-east-1"
+      + server_side_encryption = (known after apply)
+      + source                 = "./../frontend/build/images/profile.jpg"
+      + storage_class          = (known after apply)
+      + tags_all               = {
+          + "ManagedBy" = "terraform"
+        }
+      + version_id             = (known after apply)
+    }
+  # aws_s3_object.frontend["index.html"] will be created
+  + resource "aws_s3_object" "frontend" {
+      + acl                    = (known after apply)
+      + arn                    = (known after apply)
+      + bucket                 = "spark.wiki.frontend"
+      + bucket_key_enabled     = (known after apply)
+      + checksum_crc32         = (known after apply)
+      + checksum_crc32c        = (known after apply)
+      + checksum_crc64nvme     = (known after apply)
+      + checksum_sha1          = (known after apply)
+      + checksum_sha256        = (known after apply)
+      + content_type           = "text/html"
+      + etag                   = "4c1248165adc71a0a76b3e9172d3a9a7"
+      + force_destroy          = false
+      + id                     = (known after apply)
+      + key                    = "index.html"
+      + kms_key_id             = (known after apply)
+      + region                 = "us-east-1"
+      + server_side_encryption = (known after apply)
+      + source                 = "./../frontend/build/index.html"
+      + storage_class          = (known after apply)
+      + tags_all               = {
+          + "ManagedBy" = "terraform"
+        }
+      + version_id             = (known after apply)
+    }
+  # aws_s3_object.frontend["static/css/main.132e8ddd.css"] will be created
+  + resource "aws_s3_object" "frontend" {
+      + acl                    = (known after apply)
+      + arn                    = (known after apply)
+      + bucket                 = "spark.wiki.frontend"
+      + bucket_key_enabled     = (known after apply)
+      + checksum_crc32         = (known after apply)
+      + checksum_crc32c        = (known after apply)
+      + checksum_crc64nvme     = (known after apply)
+      + checksum_sha1          = (known after apply)
+      + checksum_sha256        = (known after apply)
+      + content_type           = "text/css"
+      + etag                   = "5dee1ebbe79244d9ccdd0133657ff987"
+      + force_destroy          = false
+      + id                     = (known after apply)
+      + key                    = "static/css/main.132e8ddd.css"
+      + kms_key_id             = (known after apply)
+      + region                 = "us-east-1"
+      + server_side_encryption = (known after apply)
+      + source                 = "./../frontend/build/static/css/main.132e8ddd.css"
+      + storage_class          = (known after apply)
+      + tags_all               = {
+          + "ManagedBy" = "terraform"
+        }
+      + version_id             = (known after apply)
+    }
+  # aws_s3_object.frontend["static/css/main.132e8ddd.css.map"] will be created
+  + resource "aws_s3_object" "frontend" {
+      + acl                    = (known after apply)
+      + arn                    = (known after apply)
+      + bucket                 = "spark.wiki.frontend"
+      + bucket_key_enabled     = (known after apply)
+      + checksum_crc32         = (known after apply)
+      + checksum_crc32c        = (known after apply)
+      + checksum_crc64nvme     = (known after apply)
+      + checksum_sha1          = (known after apply)
+      + checksum_sha256        = (known after apply)
+      + content_type           = "application/json"
+      + etag                   = "e6a916941051fc22610a8fc87060f2f3"
+      + force_destroy          = false
+      + id                     = (known after apply)
+      + key                    = "static/css/main.132e8ddd.css.map"
+      + kms_key_id             = (known after apply)
+      + region                 = "us-east-1"
+      + server_side_encryption = (known after apply)
+      + source                 = "./../frontend/build/static/css/main.132e8ddd.css.map"
+      + storage_class          = (known after apply)
+      + tags_all               = {
+          + "ManagedBy" = "terraform"
+        }
+      + version_id             = (known after apply)
+    }
+  # aws_s3_object.frontend["static/js/main.6abfb7c1.js"] will be created
+  + resource "aws_s3_object" "frontend" {
+      + acl                    = (known after apply)
+      + arn                    = (known after apply)
+      + bucket                 = "spark.wiki.frontend"
+      + bucket_key_enabled     = (known after apply)
+      + checksum_crc32         = (known after apply)
+      + checksum_crc32c        = (known after apply)
+      + checksum_crc64nvme     = (known after apply)
+      + checksum_sha1          = (known after apply)
+      + checksum_sha256        = (known after apply)
+      + content_type           = "text/javascript"
+      + etag                   = "5e3281b94b7d70de96c71da549e7e227"
+      + force_destroy          = false
+      + id                     = (known after apply)
+      + key                    = "static/js/main.6abfb7c1.js"
+      + kms_key_id             = (known after apply)
+      + region                 = "us-east-1"
+      + server_side_encryption = (known after apply)
+      + source                 = "./../frontend/build/static/js/main.6abfb7c1.js"
+      + storage_class          = (known after apply)
+      + tags_all               = {
+          + "ManagedBy" = "terraform"
+        }
+      + version_id             = (known after apply)
+    }
+  # aws_s3_object.frontend["static/js/main.6abfb7c1.js.LICENSE.txt"] will be created
+  + resource "aws_s3_object" "frontend" {
+      + acl                    = (known after apply)
+      + arn                    = (known after apply)
+      + bucket                 = "spark.wiki.frontend"
+      + bucket_key_enabled     = (known after apply)
+      + checksum_crc32         = (known after apply)
+      + checksum_crc32c        = (known after apply)
+      + checksum_crc64nvme     = (known after apply)
+      + checksum_sha1          = (known after apply)
+      + checksum_sha256        = (known after apply)
+      + content_type           = "text/plain"
+      + etag                   = "aa6c2220b0712496ba0e7f30d95bdfbb"
+      + force_destroy          = false
+      + id                     = (known after apply)
+      + key                    = "static/js/main.6abfb7c1.js.LICENSE.txt"
+      + kms_key_id             = (known after apply)
+      + region                 = "us-east-1"
+      + server_side_encryption = (known after apply)
+      + source                 = "./../frontend/build/static/js/main.6abfb7c1.js.LICENSE.txt"
+      + storage_class          = (known after apply)
+      + tags_all               = {
+          + "ManagedBy" = "terraform"
+        }
+      + version_id             = (known after apply)
+    }
+  # aws_s3_object.frontend["static/js/main.6abfb7c1.js.map"] will be created
+  + resource "aws_s3_object" "frontend" {
+      + acl                    = (known after apply)
+      + arn                    = (known after apply)
+      + bucket                 = "spark.wiki.frontend"
+      + bucket_key_enabled     = (known after apply)
+      + checksum_crc32         = (known after apply)
+      + checksum_crc32c        = (known after apply)
+      + checksum_crc64nvme     = (known after apply)
+      + checksum_sha1          = (known after apply)
+      + checksum_sha256        = (known after apply)
+      + content_type           = "application/json"
+      + etag                   = "37baa4d2addc089631055d27cd1c8d80"
+      + force_destroy          = false
+      + id                     = (known after apply)
+      + key                    = "static/js/main.6abfb7c1.js.map"
+      + kms_key_id             = (known after apply)
+      + region                 = "us-east-1"
+      + server_side_encryption = (known after apply)
+      + source                 = "./../frontend/build/static/js/main.6abfb7c1.js.map"
+      + storage_class          = (known after apply)
+      + tags_all               = {
+          + "ManagedBy" = "terraform"
+        }
+      + version_id             = (known after apply)
+    }
+  # terraform_data.frontend_release will be created
+  + resource "terraform_data" "frontend_release" {
+      + id     = (known after apply)
+      + input  = {
+          + "asset-manifest.json"                    = "80b1c7e56c97f070fdd7e7000814c85d"
+          + "images/placeholder-book.jpg"            = "4a573b477637e95b217f1894a66dc9c3"
+          + "images/placeholder-loading.jpg"         = "274338061717dc1d33870c9eb74ef4e1"
+          + "images/placeholder-unknown.jpg"         = "6781325ac75c60d8659be2ab8e4057bf"
+          + "images/profile.jpg"                     = "8702fd7e9f1c82344f35e832ec2d067d"
+          + "index.html"                             = "4c1248165adc71a0a76b3e9172d3a9a7"
+          + "static/css/main.132e8ddd.css"           = "5dee1ebbe79244d9ccdd0133657ff987"
+          + "static/css/main.132e8ddd.css.map"       = "e6a916941051fc22610a8fc87060f2f3"
+          + "static/js/main.6abfb7c1.js"             = "5e3281b94b7d70de96c71da549e7e227"
+          + "static/js/main.6abfb7c1.js.LICENSE.txt" = "aa6c2220b0712496ba0e7f30d95bdfbb"
+          + "static/js/main.6abfb7c1.js.map"         = "37baa4d2addc089631055d27cd1c8d80"
+        }
+      + output = (known after apply)
+    }
+    # Actions to be invoked after this change in order:
+    # action.aws_cloudfront_create_invalidation.frontend
+    action "aws_cloudfront_create_invalidation" "frontend" {
+        config {
+            distribution_id = "E2JO5BSJ5WRP9P"
+            paths           = [
+                "/*",
+            ]
+        }
+    }
+  # terraform_data.reprocess_book_reviews will be created
+  + resource "terraform_data" "reprocess_book_reviews" {
+      + id               = (known after apply)
+      + triggers_replace = "12e7144b0bd8f7ed69276ac1705c95cb12af69dcac0518690f289c24819830fb"
+    }
+  # terraform_data.reprocess_photos will be created
+  + resource "terraform_data" "reprocess_photos" {
+      + id               = (known after apply)
+      + triggers_replace = "39a40b71f174522c462b5fd7191751c9cd4c9350fca733e3cb7209eae2dca535"
+    }
+  # module.content_api.aws_lambda_function.this will be updated in-place
+  # (imported from "ContentAPI")
+  ~ resource "aws_lambda_function" "this" {
+        architectures                  = [
+            "x86_64",
+        ]
+        arn                            = "arn:aws:lambda:us-east-1:***:function:ContentAPI"
+        code_sha256                    = "rOyEch4cPXQcCheDGTi2+MPoVKvhLkbHwCb7ggrCgeg="
+        code_signing_config_arn        = null
+        description                    = null
+      + filename                       = "./../backend/.build/lambda.zip"
+        function_name                  = "ContentAPI"
+        handler                        = "lambda_function.lambda_handler"
+        id                             = "ContentAPI"
+        image_uri                      = null
+        invoke_arn                     = "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:***:function:ContentAPI/invocations"
+        kms_key_arn                    = null
+      ~ last_modified                  = "2026-10-01T04:46:31.000+0000" -> (known after apply)
+        layers                         = []
+        memory_size                    = 128
+        package_type                   = "Zip"
+      + publish                        = false
+        qualified_arn                  = "arn:aws:lambda:us-east-1:***:function:ContentAPI:$LATEST"
+        qualified_invoke_arn           = "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:***:function:ContentAPI:$LATEST/invocations"
+        region                         = "us-east-1"
+        reserved_concurrent_executions = -1
+        response_streaming_invoke_arn  = "arn:aws:apigateway:us-east-1:lambda:path/2021-11-15/functions/arn:aws:lambda:us-east-1:***:function:ContentAPI/response-streaming-invocations"
+        role                           = "arn:aws:iam::***:role/service-role/ContentAPI-role-rab0br82"
+        runtime                        = "python3.12"
+        signing_job_arn                = null
+        signing_profile_version_arn    = null
+        skip_destroy                   = false
+      + source_code_hash               = "ga1gtXSP8j6Sn870JgwYnVRodvRGAcGtB1yyjATQvp8="
+        source_code_size               = 20637797
+        source_kms_key_arn             = null
+        tags                           = {}
+      ~ tags_all                       = {
+          + "ManagedBy" = "terraform"
+        }
+        timeout                        = 45
+        version                        = "$LATEST"
+        ephemeral_storage {
+            size = 512
+        }
+        logging_config {
+            application_log_level = null
+            log_format            = "Text"
+            log_group             = "/aws/lambda/ContentAPI"
+            system_log_level      = null
+        }
+        tracing_config {
+            mode = "PassThrough"
+        }
+    }
+  # module.update_blog_post_metadata.aws_lambda_function.this will be updated in-place
+  # (imported from "UpdateBlogPostMetadata")
+  ~ resource "aws_lambda_function" "this" {
+        architectures                  = [
+            "x86_64",
+        ]
+        arn                            = "arn:aws:lambda:us-east-1:***:function:UpdateBlogPostMetadata"
+        code_sha256                    = "J77OgSHToD1zXqowEdqsK6jaxEbJPyyP7eXJ5czXqHk="
+        code_signing_config_arn        = null
+        description                    = null
+      + filename                       = "./../ContentManagement/UpdateBlogPostMetadata/.build/lambda.zip"
+        function_name                  = "UpdateBlogPostMetadata"
+        handler                        = "lambda_function.lambda_handler"
+        id                             = "UpdateBlogPostMetadata"
+        image_uri                      = null
+        invoke_arn                     = "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:***:function:UpdateBlogPostMetadata/invocations"
+        kms_key_arn                    = null
+      ~ last_modified                  = "2026-07-24T01:41:54.000+0000" -> (known after apply)
+        layers                         = []
+        memory_size                    = 128
+        package_type                   = "Zip"
+      + publish                        = false
+        qualified_arn                  = "arn:aws:lambda:us-east-1:***:function:UpdateBlogPostMetadata:$LATEST"
+        qualified_invoke_arn           = "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:***:function:UpdateBlogPostMetadata:$LATEST/invocations"
+        region                         = "us-east-1"
+        reserved_concurrent_executions = -1
+        response_streaming_invoke_arn  = "arn:aws:apigateway:us-east-1:lambda:path/2021-11-15/functions/arn:aws:lambda:us-east-1:***:function:UpdateBlogPostMetadata/response-streaming-invocations"
+        role                           = "arn:aws:iam::***:role/Lambda_UpdateBlogPostMetadata"
+        runtime                        = "python3.12"
+        signing_job_arn                = null
+        signing_profile_version_arn    = null
+        skip_destroy                   = false
+      + source_code_hash               = "mFH8963hf3Dlf07Eu+JpfgUzBTMxCbel4X3l1mdZPpc="
+        source_code_size               = 17647025
+        source_kms_key_arn             = null
+        tags                           = {}
+      ~ tags_all                       = {
+          + "ManagedBy" = "terraform"
+        }
+        timeout                        = 3
+        version                        = "$LATEST"
+        ephemeral_storage {
+            size = 512
+        }
+        logging_config {
+            application_log_level = null
+            log_format            = "Text"
+            log_group             = "/aws/lambda/UpdateBlogPostMetadata"
+            system_log_level      = null
+        }
+        tracing_config {
+            mode = "PassThrough"
+        }
+    }
+  # module.update_book_review.aws_lambda_function.this will be updated in-place
+  # (imported from "UpdateBookReview")
+  ~ resource "aws_lambda_function" "this" {
+        architectures                  = [
+            "x86_64",
+        ]
+        arn                            = "arn:aws:lambda:us-east-1:***:function:UpdateBookReview"
+        code_sha256                    = "kFLBGR9wwEVg3pujjN1JvEKpOUJmthDT9YK+pU6B2SE="
+        code_signing_config_arn        = null
+        description                    = null
+      + filename                       = "./../ContentManagement/UpdateBookReview/.build/lambda.zip"
+        function_name                  = "UpdateBookReview"
+        handler                        = "lambda_function.lambda_handler"
+        id                             = "UpdateBookReview"
+        image_uri                      = null
+        invoke_arn                     = "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:***:function:UpdateBookReview/invocations"
+        kms_key_arn                    = null
+      ~ last_modified                  = "2026-10-01T05:41:03.000+0000" -> (known after apply)
+        layers                         = []
+        memory_size                    = 128
+        package_type                   = "Zip"
+      + publish                        = false
+        qualified_arn                  = "arn:aws:lambda:us-east-1:***:function:UpdateBookReview:$LATEST"
+        qualified_invoke_arn           = "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:***:function:UpdateBookReview:$LATEST/invocations"
+        region                         = "us-east-1"
+        reserved_concurrent_executions = -1
+        response_streaming_invoke_arn  = "arn:aws:apigateway:us-east-1:lambda:path/2021-11-15/functions/arn:aws:lambda:us-east-1:***:function:UpdateBookReview/response-streaming-invocations"
+        role                           = "arn:aws:iam::***:role/service-role/UpdateBookReview-role-qcl2ltqh"
+        runtime                        = "python3.14"
+        signing_job_arn                = null
+        signing_profile_version_arn    = null
+        skip_destroy                   = false
+      + source_code_hash               = "GQLl02Oe7F01bwqelO5H18kgLW46W1Jp55HQ/Aj/6oc="
+        source_code_size               = 34910089
+        source_kms_key_arn             = null
+        tags                           = {}
+      ~ tags_all                       = {
+          + "ManagedBy" = "terraform"
+        }
+        timeout                        = 300
+        version                        = "$LATEST"
+        ephemeral_storage {
+            size = 512
+        }
+        logging_config {
+            application_log_level = null
+            log_format            = "Text"
+            log_group             = "/aws/lambda/UpdateBookReview"
+            system_log_level      = null
+        }
+        tracing_config {
+            mode = "PassThrough"
+        }
+    }
+  # module.update_photo_metadata.aws_lambda_function.this will be updated in-place
+  # (imported from "UpdatePhotoMetadata")
+  ~ resource "aws_lambda_function" "this" {
+        architectures                  = [
+            "x86_64",
+        ]
+        arn                            = "arn:aws:lambda:us-east-1:***:function:UpdatePhotoMetadata"
+        code_sha256                    = "VTbHLzcTJgKdK+YuC79WgdtMnUfvuAYIy5f0gcm2HQo="
+        code_signing_config_arn        = null
+        description                    = "An Amazon S3 trigger that retrieves metadata for the object that has been updated."
+      + filename                       = "./../ContentManagement/UpdatePhotoMetadata/.build/lambda.zip"
+        function_name                  = "UpdatePhotoMetadata"
+        handler                        = "lambda_function.lambda_handler"
+        id                             = "UpdatePhotoMetadata"
+        image_uri                      = null
+        invoke_arn                     = "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:***:function:UpdatePhotoMetadata/invocations"
+        kms_key_arn                    = null
+      ~ last_modified                  = "2026-07-24T05:35:27.000+0000" -> (known after apply)
+        layers                         = [
+            "arn:aws:lambda:us-east-1:770693421928:layer:Klayers-p312-pillow:2",
+        ]
+        memory_size                    = 256
+        package_type                   = "Zip"
+      + publish                        = false
+        qualified_arn                  = "arn:aws:lambda:us-east-1:***:function:UpdatePhotoMetadata:$LATEST"
+        qualified_invoke_arn           = "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:***:function:UpdatePhotoMetadata:$LATEST/invocations"
+        region                         = "us-east-1"
+        reserved_concurrent_executions = -1
+        response_streaming_invoke_arn  = "arn:aws:apigateway:us-east-1:lambda:path/2021-11-15/functions/arn:aws:lambda:us-east-1:***:function:UpdatePhotoMetadata/response-streaming-invocations"
+        role                           = "arn:aws:iam::***:role/service-role/Lambda_UpdatePhotoMetadata"
+        runtime                        = "python3.12"
+        signing_job_arn                = null
+        signing_profile_version_arn    = null
+        skip_destroy                   = false
+      + source_code_hash               = "3cMmwK476XudwmyVz9RdMNum6sI58fPfgoS0SauAuI8="
+        source_code_size               = 17558571
+        source_kms_key_arn             = null
+      ~ tags                           = {
+          - "lambda-console:blueprint" = "s3-get-object-python" -> null
+        }
+      ~ tags_all                       = {
+          + "ManagedBy"                = "terraform"
+          - "lambda-console:blueprint" = "s3-get-object-python" -> null
+        }
+        timeout                        = 30
+        version                        = "$LATEST"
+
+      - environment {
+          - variables = {} -> null
+        }
+
+        ephemeral_storage {
+            size = 512
+        }
+
+        logging_config {
+            application_log_level = null
+            log_format            = "Text"
+            log_group             = "/aws/lambda/UpdatePhotoMetadata"
+            system_log_level      = null
+        }
+
+        tracing_config {
+            mode = "PassThrough"
+        }
+    }
+
+Plan: 4 to import, 14 to add, 4 to change, 0 to destroy. Actions: 1 to invoke.
+
+─────────────────────────────────────────────────────────────────────────────
+
+Note: You didn't use the -out option to save this plan, so Terraform can't
+guarantee to take exactly these actions if you run "terraform apply" now.
