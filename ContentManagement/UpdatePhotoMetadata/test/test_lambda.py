@@ -1,3 +1,4 @@
+import copy
 import unittest
 from unittest.mock import MagicMock
 import test.sample_events as sample_events
@@ -19,6 +20,15 @@ class TestLambda(unittest.TestCase):
 
         result = lambda_function.lambda_handler(event, None)
         assert 'Birds' in result
+
+    def test_lambda_skips_folder_placeholder(self):
+        event = copy.deepcopy(sample_events.UploadTreeSwallowPhoto)
+        event['Records'][0]['s3']['object']['key'] = '2025%2F05%2F17%2F'
+        self.mock_aws.get_s3_object = MagicMock()
+
+        result = lambda_function.lambda_handler(event, None)
+        assert result == []
+        self.mock_aws.get_s3_object.assert_not_called()
 
     def test_date_from_key(self):
         key = '2025/05/17/2025-05-17 095156 - Tree Swallow.jpg'

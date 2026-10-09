@@ -73,3 +73,53 @@ change involved.
 
 To change the admin password later, re-run the generator script and update
 just the `AdminPasswordHash` parameter.
+
+## Admin photo uploads setup (one-time, AWS-side)
+
+The admin page's photo uploader (`/admin/photos/folders` and
+`/admin/photos/upload-url`, in `src/handlers/admin.py`) browses the
+`spark.wiki.photos` bucket and creates `YYYY/MM/DD/` folders in it, but
+photos themselves go from the browser straight to S3 through presigned PUT
+URLs -- full-size photos are bigger than API Gateway and Lambda accept in a
+request. `UpdatePhotoMetadata`'s existing S3 trigger processes each upload,
+exactly as it would one made in the console. Neither the bucket nor
+`ContentAPI`'s role is managed by Terraform yet, so:
+
+1. Grant the `ContentAPI` lambda's execution role
+   (`ContentAPI-role-rab0br82`) `s3:ListBucket` on
+   `arn:aws:s3:::spark.wiki.photos`, and `s3:PutObject` on
+   `arn:aws:s3:::spark.wiki.photos/*` -- creating folders is a `PutObject`
+   too, and presigned URLs only carry the permissions of the role that
+   signed them. (If the bucket's default encryption is SSE-KMS with your own
+   key, the role also needs `kms:GenerateDataKey` on it.)
+2. Allow the site to upload to the bucket cross-origin. `put-bucket-cors`
+   replaces the bucket's whole CORS configuration, so first check it has
+   none (`aws s3api get-bucket-cors --bucket spark.wiki.photos`), or merge
+   this rule into what's there:
+
+   ```json
+   {
+     "CORSRules": [
+       {
+         "AllowedOrigins": ["https://spark.wiki", "https://www.spark.wiki"],
+         "AllowedMethods": ["PUT"],
+         "AllowedHeaders": ["Content-Type"],
+         "MaxAgeSeconds": 3000
+       }
+     ]
+   }
+   ```
+
+   ```
+   aws s3api put-bucket-cors --bucket spark.wiki.photos --cors-configuration file://cors.json
+   ```
+
+   Without it, every upload fails with "network or CORS error".
+3. If `ContentAPI` is wired into API Gateway as explicit per-path resources
+   rather than a `{proxy+}` catch-all, add `/admin/photos/folders` (`GET`,
+   `POST`) and `/admin/photos/upload-url` (`POST`).
+
+Locally, the uploader treats `sample-data/photos/originals` (at the repo
+root) as the bucket, and uploads land there. Nothing processes them automatically: run
+`ContentManagement/UpdatePhotoMetadata/run_local.py` (see its README) to add
+them to the local gallery.

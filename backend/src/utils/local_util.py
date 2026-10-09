@@ -2,21 +2,30 @@ import json
 import os
 from datetime import datetime
 
-LOCAL_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'local_data')
 REPO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..')
 
-BOOKS_DYNAMO_DIR = os.path.join(REPO_ROOT, 'sample-data', 'books', 'dynamo')
-BOOKS_MARKDOWN_DIR = os.path.join(REPO_ROOT, 'sample-data', 'books', 'markdown')
+# Local stand-ins for the site's buckets and tables, all kept together at
+# the repo root (see sample-data/README.md).
+SAMPLE_DATA_DIR = os.path.join(REPO_ROOT, 'sample-data')
+BOOKS_DYNAMO_DIR = os.path.join(SAMPLE_DATA_DIR, 'books', 'dynamo')
+BOOKS_MARKDOWN_DIR = os.path.join(SAMPLE_DATA_DIR, 'books', 'markdown')
+BOOKS_COVERS_DIR = os.path.join(SAMPLE_DATA_DIR, 'books', 'covers')
+PHOTOS_TABLE_FILE = os.path.join(SAMPLE_DATA_DIR, 'photos', 'photos.json')
+PHOTO_ORIGINALS_DIR = os.path.join(SAMPLE_DATA_DIR, 'photos', 'originals')
+PHOTO_THUMBNAILS_DIR = os.path.join(SAMPLE_DATA_DIR, 'photos', 'thumbnails')
+POSTS_DIR = os.path.join(SAMPLE_DATA_DIR, 'posts')
 
 
 class LocalDynamoUtil:
-    def __init__(self):
-        data_file = os.path.join(LOCAL_DATA_DIR, 'photos.json')
-        with open(data_file) as f:
-            self._photos = json.load(f)
+    def _load_photos(self):
+        # Re-read on every request, so photos that
+        # ContentManagement/UpdatePhotoMetadata/run_local.py adds show up
+        # without restarting the server.
+        with open(PHOTOS_TABLE_FILE, encoding='utf-8') as f:
+            return json.load(f)
 
     def get_photos(self, species=None, family=None, order=None, year=None, month=None, day=None, limit=50):
-        photos = self._photos
+        photos = self._load_photos()
         date_prefix = day or month or year
         if species:
             photos = [p for p in photos if p.get('species') == species]
@@ -29,17 +38,17 @@ class LocalDynamoUtil:
         return photos[:limit]
 
     def get_photo_by_id(self, photo_id):
-        for photo in self._photos:
+        for photo in self._load_photos():
             if photo.get('s3_uri') == photo_id:
                 return photo
         return None
 
     def get_all_species(self):
-        return sorted(set(p['species'] for p in self._photos if 'species' in p))
+        return sorted(set(p['species'] for p in self._load_photos() if 'species' in p))
 
     def get_taxonomy(self):
         tree = {}
-        for photo in self._photos:
+        for photo in self._load_photos():
             class_name = photo.get('class') or 'Unknown Class'
             order = photo.get('order') or 'Unknown Order'
             family = photo.get('family') or 'Unknown Family'
@@ -85,15 +94,14 @@ class LocalDynamoUtil:
 class LocalS3Util:
     def list_posts(self):
         from utils.response_util import parse_post_metadata, extract_preview
-        posts_dir = os.path.join(LOCAL_DATA_DIR, 'posts')
         posts = []
-        if os.path.exists(posts_dir):
-            for dirpath, _, filenames in os.walk(posts_dir):
+        if os.path.exists(POSTS_DIR):
+            for dirpath, _, filenames in os.walk(POSTS_DIR):
                 for filename in filenames:
                     if not filename.endswith('.md'):
                         continue
                     filepath = os.path.join(dirpath, filename)
-                    key = os.path.relpath(filepath, posts_dir).replace(os.sep, '/')
+                    key = os.path.relpath(filepath, POSTS_DIR).replace(os.sep, '/')
                     meta = parse_post_metadata(key)
                     meta['key'] = key
                     meta['last_modified'] = datetime.fromtimestamp(os.path.getmtime(filepath)).isoformat()
@@ -104,7 +112,7 @@ class LocalS3Util:
         return posts
 
     def get_post_content(self, key):
-        local_path = os.path.join(LOCAL_DATA_DIR, 'posts', *key.split('/'))
+        local_path = os.path.join(POSTS_DIR, *key.split('/'))
         with open(local_path) as f:
             return f.read()
 
@@ -129,6 +137,44 @@ class LocalBooksAdminUtil:
         item = _payload_to_local_item(title, payload)
         with open(os.path.join(BOOKS_DYNAMO_DIR, f'{title}.json'), 'w', encoding='utf-8') as f:
             json.dump(item, f, indent=2, ensure_ascii=False)
+
+
+# Served by run_local.py, standing in for a presigned S3 PUT URL.
+LOCAL_UPLOAD_ROUTE = 'local-s3/photos'
+
+
+class LocalPhotosAdminUtil:
+    """Local stand-in for PhotosAdminUtil, treating sample-data/photos/originals
+    (what run_local.py's CDN stand-in serves) as the bucket. There's no local S3
+    trigger, so uploads only show up in the gallery once
+    ContentManagement/UpdatePhotoMetadata/run_local.py processes them."""
+
+    def list_folder(self, prefix):
+        folder_dir = os.path.join(PHOTO_ORIGINALS_DIR, *prefix.split('/'))
+        if not os.path.isdir(folder_dir):
+            return [], []
+
+        folders, photos = [], []
+        for name in sorted(os.listdir(folder_dir)):
+            path = os.path.join(folder_dir, name)
+            if os.path.isdir(path):
+                folders.append(name)
+            else:
+                photos.append({
+                    'name': name,
+                    's3_uri': f's3://spark.wiki.photos/{prefix}{name}',
+                    'size': os.path.getsize(path),
+                    'last_modified': datetime.fromtimestamp(os.path.getmtime(path)).isoformat(),
+                })
+        return folders, photos
+
+    def create_folder(self, prefix):
+        os.makedirs(os.path.join(PHOTO_ORIGINALS_DIR, *prefix.split('/')), exist_ok=True)
+
+    def presign_upload(self, key, content_type):
+        from urllib.parse import quote
+        from flask import request
+        return f'{request.host_url}{LOCAL_UPLOAD_ROUTE}/{quote(key)}'
 
 
 def _payload_to_local_item(title, payload):
