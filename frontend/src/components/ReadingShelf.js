@@ -17,7 +17,7 @@ const STANDOUT_MIN = 4.5;
 // Geometry, in px. Each cover is centered horizontally on its exact review
 // date; its vertical position is a deliberately meaningless scatter above
 // or below the axis, kept clear of the axis labels.
-const PX_PER_DAY = 3;
+const MIN_PX_PER_DAY = 3; // stretched further if the shelf has room to spare
 const COVER_W = 36; // base size, for an unrated book
 const COVER_H = 54;
 const GAP_ABOVE = 10; // between the axis and covers above it
@@ -118,17 +118,30 @@ function scatter(dated) {
   return placed;
 }
 
-// Lays the books out on a time axis running from the first month with a
-// review through today.
-function layoutShelf(books) {
+// The time axis runs from the first month with a review through today.
+function shelfRange(books) {
   const withDates = books.filter(book => book.date_reviewed);
   if (!withDates.length) return null;
 
   const days = withDates.map(book => toDay(book.date_reviewed));
   const first = new Date(Math.min(...days) * DAY_MS);
-  const startDay = Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), 1) / DAY_MS;
-  const endDay = Math.max(...days, todayDay());
-  const xOf = day => EDGE_PAD + (day - startDay) * PX_PER_DAY;
+  return {
+    withDates,
+    startDay: Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), 1) / DAY_MS,
+    endDay: Math.max(...days, todayDay()),
+  };
+}
+
+// The scale that stretches the axis across the shelf's full width, unless
+// that's below MIN_PX_PER_DAY -- then the shelf scrolls instead.
+function pxPerDayFor({ startDay, endDay }, shelfWidth) {
+  const stretched = (shelfWidth - 2 * EDGE_PAD) / Math.max(1, endDay - startDay);
+  return Math.max(MIN_PX_PER_DAY, stretched);
+}
+
+// Lays the books out along the axis at the given scale.
+function layoutShelf({ withDates, startDay, endDay }, pxPerDay) {
+  const xOf = day => EDGE_PAD + (day - startDay) * pxPerDay;
 
   const dated = withDates
     .map(book => ({ book, day: toDay(book.date_reviewed) }))
@@ -165,9 +178,25 @@ function layoutShelf(books) {
 }
 
 function ReadingShelf({ books }) {
-  const layout = useMemo(() => layoutShelf(books), [books]);
+  const range = useMemo(() => shelfRange(books), [books]);
+  const [shelfWidth, setShelfWidth] = useState(0);
+  // Memoized on the scale rather than the width, so resizing while it's
+  // pinned at MIN_PX_PER_DAY doesn't redo the layout or reset the scroll.
+  const pxPerDay = range ? pxPerDayFor(range, shelfWidth) : MIN_PX_PER_DAY;
+  const layout = useMemo(() => range && layoutShelf(range, pxPerDay), [range, pxPerDay]);
   const scrollRef = useRef(null);
   const [activeTitle, setActiveTitle] = useState(null);
+
+  // Track the shelf's width, so the axis can stretch to fill it.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return undefined;
+    const measure = () => setShelfWidth(el.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [range]);
 
   // Open scrolled to the newest end of the shelf.
   useLayoutEffect(() => {
