@@ -1,5 +1,6 @@
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
+from botocore.config import Config
 from itertools import groupby
 from operator import itemgetter
 
@@ -227,5 +228,56 @@ class BooksAdminUtil:
             Key=f'{title}.md',
             Body=markdown.encode('utf-8'),
             ContentType='text/markdown; charset=utf-8',
+        )
+
+
+PHOTOS_BUCKET = 'spark.wiki.photos'
+UPLOAD_URL_TTL_SECONDS = 15 * 60
+
+
+class PhotosAdminUtil:
+    """Browses spark.wiki.photos' folders and hands out presigned PUT URLs,
+    so the admin page uploads photos straight to S3 -- full-size photos are
+    bigger than API Gateway and Lambda will accept in a request. The
+    existing UpdatePhotoMetadata lambda's S3 trigger takes it from there
+    (taxonomy, date, thumbnail, and the DynamoDB write)."""
+
+    def __init__(self):
+        # SigV4 rather than boto3's legacy SigV2 default for presigned URLs.
+        # The bucket's dotted name gets a path-style URL either way, since
+        # virtual-hosted ones would fail TLS validation in the browser.
+        self.s3 = boto3.client('s3', config=Config(signature_version='s3v4'))
+
+    def list_folder(self, prefix):
+        """The subfolder names and photos directly inside `prefix`."""
+        folders, photos = [], []
+        paginator = self.s3.get_paginator('list_objects_v2')
+        for page in paginator.paginate(Bucket=PHOTOS_BUCKET, Prefix=prefix, Delimiter='/'):
+            folders.extend(p['Prefix'][len(prefix):-1] for p in page.get('CommonPrefixes', []))
+            for obj in page.get('Contents', []):
+                # The folder's own placeholder object, if it has one.
+                if obj['Key'] == prefix:
+                    continue
+                photos.append({
+                    'name': obj['Key'][len(prefix):],
+                    's3_uri': f's3://{PHOTOS_BUCKET}/{obj["Key"]}',
+                    'size': obj['Size'],
+                    'last_modified': obj['LastModified'].isoformat(),
+                })
+        return folders, photos
+
+    def create_folder(self, prefix):
+        """S3 has no real folders, just key prefixes; this makes the same
+        empty placeholder object the S3 console's "Create folder" does, so
+        the folder exists before anything is uploaded into it."""
+        self.s3.put_object(Bucket=PHOTOS_BUCKET, Key=prefix, Body=b'')
+
+    def presign_upload(self, key, content_type):
+        """A URL the browser can PUT the photo to directly, sending
+        `content_type` as its Content-Type header."""
+        return self.s3.generate_presigned_url(
+            'put_object',
+            Params={'Bucket': PHOTOS_BUCKET, 'Key': key, 'ContentType': content_type},
+            ExpiresIn=UPLOAD_URL_TTL_SECONDS,
         )
 

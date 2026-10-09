@@ -32,6 +32,12 @@ def lambda_handler(event, context):
     try:
         print(f'There was a {event_type} event for S3 object: {bucket}/{key}')
 
+        # An empty "folder" placeholder, like the ones the admin page's (or
+        # the S3 console's) "create folder" makes -- not a photo.
+        if key.endswith('/'):
+            print('Skipping folder placeholder')
+            return []
+
         response = aws.get_s3_object(bucket, key)
         photo_bytes = response['Body'].read()
         photo_keywords = img.get_lightroom_keywords(io.BytesIO(photo_bytes))

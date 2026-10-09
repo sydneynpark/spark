@@ -1760,7 +1760,8 @@ footer {
 }
 
 /* Admin book review form */
-.admin-book-review-page .back-link {
+.admin-book-review-page .back-link,
+.admin-photo-upload-page .back-link {
   display: inline-block;
   margin-bottom: 1rem;
   color: var(--color-text-primary);
@@ -1907,7 +1908,202 @@ footer {
   background: rgba(43, 49, 63, 0.08);
 }
 
+/* Admin photo upload */
+.admin-photo-upload-page > .admin-form-hint {
+  margin-bottom: 1rem;
+}
+
+.admin-photo-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.admin-photo-breadcrumb button {
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--color-accent-dark);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.admin-photo-breadcrumb button:disabled {
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.admin-photo-breadcrumb-separator {
+  margin: 0 0.5rem;
+  color: var(--color-accent-medium);
+}
+
+.admin-photo-folders {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: 0.6rem;
+}
+
+.admin-photo-folder {
+  padding: 0.75rem 1rem;
+  background: var(--color-white);
+  border: 1px solid #c7d0e0;
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  font-weight: 600;
+  text-align: left;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.admin-photo-folder::before {
+  content: '📁';
+  margin-right: 0.5rem;
+}
+
+.admin-photo-folder:hover:not(:disabled) {
+  border-color: var(--color-accent-dark);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.admin-photo-folder:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-photo-new-folder {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.admin-photo-new-folder label {
+  flex: 1;
+  max-width: 14rem;
+}
+
+.admin-photo-new-folder .admin-add-button {
+  padding: 0.6rem 1rem;
+}
+
+.admin-photo-existing,
+.admin-photo-queue {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-photo-existing li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-photo-existing img {
+  width: 3rem;
+  height: 3rem;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+/* A styled label stands in for the native file input's button. */
+.admin-photo-picker {
+  align-self: flex-start;
+  padding: 0.6rem 1.2rem;
+  border: 1px dashed var(--color-accent-dark);
+  border-radius: 6px;
+  color: var(--color-accent-dark);
+  cursor: pointer;
+}
+
+.admin-photo-picker:hover:not(.is-disabled) {
+  background: rgba(95, 106, 96, 0.1);
+}
+
+.admin-photo-picker.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-photo-picker input {
+  display: none;
+}
+
+.admin-photo-queue-item {
+  padding: 0.6rem 0.75rem;
+  background: var(--color-white);
+  border: 1px solid #e1e8ed;
+  border-radius: 6px;
+}
+
+.admin-photo-queue-item.is-done {
+  opacity: 0.7;
+}
+
+.admin-photo-queue-row {
+  display: grid;
+  grid-template-columns: 1fr auto 5rem auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.admin-photo-queue-name {
+  overflow-wrap: anywhere;
+}
+
+.admin-photo-queue-size,
+.admin-photo-queue-status {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.admin-photo-queue-status {
+  font-weight: 600;
+}
+
+.admin-photo-queue-item.is-done .admin-photo-queue-status {
+  color: var(--color-accent-dark);
+}
+
+.admin-photo-queue-item.is-error .admin-photo-queue-status,
+.admin-photo-queue-error {
+  color: #b3261e;
+}
+
+.admin-photo-queue-item progress {
+  width: 100%;
+  margin-top: 0.4rem;
+  accent-color: var(--color-accent-dark);
+}
+
+.admin-photo-queue-error,
+.admin-photo-queue-warning {
+  margin-top: 0.3rem;
+  font-size: 0.85rem;
+}
+
+.admin-photo-queue-warning {
+  color: #8a5a00;
+}
+
 @media (max-width: 640px) {
+  .admin-photo-queue-row {
+    grid-template-columns: 1fr auto;
+  }
+
+  .admin-photo-queue-name {
+    grid-column: 1 / -1;
+  }
+
+  .admin-photo-queue-size {
+    display: none;
+  }
+
   .admin-form-row {
     grid-template-columns: 1fr;
   }

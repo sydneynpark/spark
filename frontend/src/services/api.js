@@ -168,23 +168,76 @@ class ApiService {
     }
   }
 
-  async submitBookReview(payload) {
-    const response = await fetch(`${API_BASE_URL}/admin/book-reviews`, {
-      method: 'POST',
+  // An authenticated admin API call, returning its JSON body. A 401 means
+  // the session expired, so the stored token is dropped too.
+  async adminRequest(path, { method = 'GET', body, failureMessage } = {}) {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method,
       headers: {
-        'Content-Type': 'application/json',
+        ...(body !== undefined && { 'Content-Type': 'application/json' }),
         'Authorization': `Bearer ${this.getAdminToken()}`,
       },
-      body: JSON.stringify(payload),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     const data = await response.json().catch(() => ({}));
     if (response.status === 401) {
       this.clearAdminToken();
     }
     if (!response.ok) {
-      throw new Error(data.error || 'Failed to submit book review');
+      throw new Error(data.error || failureMessage);
     }
     return data;
+  }
+
+  async submitBookReview(payload) {
+    return this.adminRequest('/admin/book-reviews', {
+      method: 'POST',
+      body: payload,
+      failureMessage: 'Failed to submit book review',
+    });
+  }
+
+  // prefix is a folder in the photos bucket: '' for its root, else e.g.
+  // '2025/05/17/'.
+  async fetchPhotoFolder(prefix) {
+    return this.adminRequest(`/admin/photos/folders?prefix=${encodeURIComponent(prefix)}`, {
+      failureMessage: 'Failed to load folder',
+    });
+  }
+
+  async createPhotoFolder(parent, name) {
+    return this.adminRequest('/admin/photos/folders', {
+      method: 'POST',
+      body: { parent, name },
+      failureMessage: 'Failed to create folder',
+    });
+  }
+
+  // Uploads straight to S3 through a presigned URL from the API (photos are
+  // too big to send through it), reporting progress from 0 to 1.
+  async uploadPhoto(folder, file, onProgress) {
+    const { url, headers } = await this.adminRequest('/admin/photos/upload-url', {
+      method: 'POST',
+      body: { folder, filename: file.name },
+      failureMessage: 'Failed to start upload',
+    });
+
+    // XMLHttpRequest rather than fetch, which can't report upload progress.
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', url);
+      Object.entries(headers).forEach(([name, value]) => xhr.setRequestHeader(name, value));
+      xhr.upload.onprogress = e => {
+        if (e.lengthComputable) onProgress(e.loaded / e.total);
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error(`Upload failed (HTTP ${xhr.status})`));
+      };
+      // Also what a missing S3 CORS rule looks like from here.
+      xhr.onerror = () => reject(new Error('Upload failed (network or CORS error)'));
+      xhr.send(file);
+    });
   }
 }
 

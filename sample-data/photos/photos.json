@@ -43,5 +43,14 @@
     "order": "PASSERIFORMES",
     "scientific_name": "Xanthocephalus xanthocephalus",
     "date": "2025-05-17"
+  },
+  {
+    "s3_uri": "s3://spark.wiki.photos/2025/05/28/2025-05-28-064204 - Yellow Warbler 01.jpg",
+    "species": "Yellow Warbler",
+    "class": "Birds",
+    "order": "PASSERIFORMES",
+    "family": "New World Warblers",
+    "scientific_name": "Setophaga petechia",
+    "date": "2025-05-28"
   }
 ]

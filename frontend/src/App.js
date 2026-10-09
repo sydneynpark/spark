@@ -15,6 +15,7 @@ import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
 import AdminRoute from './components/admin/AdminRoute';
 import BookReviewForm from './components/admin/BookReviewForm';
+import PhotoUploader from './components/admin/PhotoUploader';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/books/new" element={<AdminRoute><BookReviewForm /></AdminRoute>} />
+            <Route path="/admin/photos/upload" element={<AdminRoute><PhotoUploader /></AdminRoute>} />
           </Routes>
         </main>
         <Footer />

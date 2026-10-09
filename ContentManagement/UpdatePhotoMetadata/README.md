@@ -24,6 +24,26 @@ $env:PYTHONPATH = ".\src"
 python -m unittest test\test_lambda.py
 ```
 
+## Running locally
+
+`run_local.py` runs the lambda on the photos in `sample-data/photos/originals`
+-- the local stand-in for the photos bucket, where the admin page's uploader
+puts photos when the backend runs locally -- as if each had just been
+uploaded. It writes their thumbnails to `sample-data/photos/thumbnails` and
+their metadata to `sample-data/photos/photos.json`, which the local backend
+re-reads on every request, so they show up in the gallery without a restart.
+No AWS access is needed.
+
+```ps
+python run_local.py                 # photos not in photos.json yet
+python run_local.py 2026\10\08      # ...just in this folder
+python run_local.py 2026\10 --all   # every photo in it, even ones already processed
+```
+
+Use `--all` after changing a photo's keywords. It isn't the default because
+regenerating the committed sample photos' thumbnails changes their bytes,
+though not how they look.
+
 ## Dependencies
 
 `src/requirements.in` lists the direct dependencies. `src/requirements.txt` is
