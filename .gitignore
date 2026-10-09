@@ -1,3 +1,10 @@
 .DS_Store
 backend/local_data/covers
 *.pyc
+
+# Terraform. (Each stack's .terraform.lock.hcl is committed.)
+.terraform/
+*.tfstate
+*.tfstate.*
+tfplan
+crash.log

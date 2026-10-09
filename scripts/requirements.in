@@ -1,0 +1,2 @@
+# Dependencies of the refresh*.py scripts, which the refresh workflows run too.
+boto3

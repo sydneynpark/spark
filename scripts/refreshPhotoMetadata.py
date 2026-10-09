@@ -10,8 +10,7 @@ Usage:
     python refreshPhotoMetadata.py s3://spark.wiki.photos/2024/  # full s3:// URI
 
 Credentials:
-    The AWS access key and secret access key are read from local files
-    (.accesskey and .secretaccesskey) and used for all S3 and Lambda calls.
+    See s3_lambda_refresh.py.
 
 "Private" Lambda just means it's your own function — you invoke it through the
 normal AWS API with credentials that have lambda:InvokeFunction permission.
@@ -68,7 +67,7 @@ def main():
 
     session = make_session(region=AWS_REGION)
 
-    refresh_bucket(
+    _, _, failed = refresh_bucket(
         session,
         bucket_name=BUCKET_NAME,
         bucket_arn=BUCKET_ARN,
@@ -78,6 +77,11 @@ def main():
         prefix=prefix,
         should_process=should_process,
     )
+
+    # Fails the workflow run that ran this (.github/workflows/refresh-*.yml),
+    # so failures aren't missed.
+    if failed:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

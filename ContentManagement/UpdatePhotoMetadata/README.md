@@ -24,26 +24,25 @@ $env:PYTHONPATH = ".\src"
 python -m unittest test\test_lambda.py
 ```
 
-## Zipping for upload to Lambda
+## Dependencies
 
+`src/requirements.in` lists the direct dependencies. `src/requirements.txt` is
+generated from it, pinning every package (including transitive ones) to an
+exact version and hash; local installs and the deployed Lambda both use it.
+After editing `requirements.in`, regenerate it from this directory:
 
 ```
-rm -r .build
-mkdir .build/packages
-pip install --target .build/packages -r src/requirements.txt
-cp src/*.py .build/packages
-cp "src/Bird keywords.txt" .build/packages
-
-$compress = @{
-  Path = ".build/packages/*"
-  CompressionLevel = "Fastest"
-  DestinationPath = ".build/lambda.zip"
-}
-Compress-Archive @compress -Force
+uv pip compile src/requirements.in --universal --python-version 3.12 --generate-hashes -o src/requirements.txt
 ```
 
-Upload the resulting `lambda.zip` file to Lambda.
+Add `--upgrade` to also move everything to the latest versions.
 
-This Lambda relies on [the Klayers lambda layer](https://github.com/keithrozario/Klayers) for Pillow. 
+## Deploying
+
+Every push builds this Lambda and plans deploying it, for you to approve -- see [terraform/README.md](../../terraform/README.md).
+
+## Pillow
+
+This Lambda relies on [the Klayers lambda layer](https://github.com/keithrozario/Klayers) for Pillow, attached in [terraform/content_lambdas.tf](../../terraform/content_lambdas.tf).
 
 Lambda layer ARN for Pillow 11.0.0, built for Python 3.12 in us-east-1, is `arn:aws:lambda:us-east-1:770693421928:layer:Klayers-p312-pillow:2`
