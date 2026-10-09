@@ -1,5 +1,10 @@
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
+from itertools import groupby
+from operator import itemgetter
+
+def review_date(book):
+    return book.get('date', 0)
 
 class DynamoUtil:
     def __init__(self):
@@ -136,12 +141,19 @@ class DynamoUtil:
             raise e
 
     def get_books(self, limit=50):
-        """List all book reviews, most recently reviewed first"""
+        """List all book reviews, most recently reviewed first. Like
+        get_book_by_title, a title reviewed more than once is listed once,
+        with its most recent review."""
         try:
             response = self.books_table.scan(Limit=limit)
-            books = response.get('Items', [])
-            books.sort(key=lambda b: b.get('date', 0), reverse=True)
-            return books
+            # The table's key is (title, date), so reprocessing a review whose
+            # date_reviewed changed (or went missing, giving date 0) adds a
+            # second item rather than replacing the first. The frontend keys
+            # books by title, so duplicates break its list rendering.
+            # groupby only groups adjacent items, hence sorting by title first.
+            by_title = sorted(response.get('Items', []), key=itemgetter('title'))
+            latest = [max(reviews, key=review_date) for _, reviews in groupby(by_title, key=itemgetter('title'))]
+            return sorted(latest, key=review_date, reverse=True)
 
         except Exception as e:
             print(f'Error getting books: {str(e)}')
