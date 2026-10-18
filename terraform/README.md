@@ -82,11 +82,15 @@ approve it, or revert the change and push.
 - **After changing anything Terraform manages in the console**, copy the
   change into its configuration: the next deploy reverts whatever the
   configuration doesn't match.
-- **A Lambda's permissions**: the `policy` in its `module` block. The module
-  adds writing to its own log group, and removes any permission granted any
-  other way (e.g. a policy attached in the console). Each role also carries
-  the [permissions boundary](#bootstrap): a permission the boundary doesn't
+- **A Lambda's permissions**: the `policy` in its `module` block, which
+  becomes a managed policy named after the function, under the IAM path
+  `/site-workload/`. The module adds writing to its own log group, and
+  removes any permission granted any other way (e.g. a policy attached in
+  the console). Each role also carries the
+  [permissions boundary](#bootstrap): a permission the boundary doesn't
   allow has no effect until it's added there too.
+- **No inline policies**, anywhere: every policy is a managed one, with a
+  name.
 - **A Lambda's dependencies**: see its project's README.
 - **A Lambda's Python version**: edit the project's `.python-version`; the
   build and the function's runtime both follow it. `UpdatePhotoMetadata`'s
@@ -95,10 +99,13 @@ approve it, or revert the change and push.
 - **A new frontend file type**: plans fail on extensions missing from
   `content_types` in [site_frontend.tf](site_frontend.tf); add it there.
 - **A new Lambda**: create it in the console first, with an execution role
-  (the deploy role can create neither). Add both to the
-  [deploy role's policy](bootstrap/deploy-role-policy.json)
-  (`ManageFunctions`, `PassLambdaRoles`, `ManageWorkloadRolePolicies`,
-  `UpdateWorkloadRoles`, `ManageLogGroups`), and apply the bootstrap. Then
+  (the deploy role can create neither). Add both to the deploy role's
+  policies: `ManageFunctions` and `PassLambdaRoles` in
+  [deploy-core.json](bootstrap/deploy-core.json),
+  `ManageWorkloadRolePolicies`, `AttachWorkloadPolicies`, and
+  `UpdateWorkloadRoles` in [deploy-iam.json](bootstrap/deploy-iam.json), and
+  `ManageLogGroups` in [deploy-storage.json](bootstrap/deploy-storage.json).
+  Then apply the bootstrap. Then
   add a `module` block; `import` blocks for the function, role, and log
   group; and a build step to [deploy.yml](../.github/workflows/deploy.yml).
 - **Anything else new** (a bucket, a table, a parameter): add it to the deploy
@@ -138,8 +145,9 @@ deliberate changes below. To adopt them:
    - **Log retention**: 3 days for `UpdateBookReview`'s logs and the API's
      execution logs, which never expired. (Their older logs get deleted.)
    - **IAM**: each Lambda's role, and API Gateway's logging role, gets the
-     permissions boundary and a new inline policy granting what its code
-     uses, and has its console-made policies detached. That drops access the
+     permissions boundary and a new managed policy (under `/site-workload/`)
+     granting what its code uses, and has its console-made policies
+     detached. That drops access the
      functions had but didn't use: `UpdatePhotoMetadata` and
      `UpdateBlogPostMetadata` could read every bucket in the account,
      Terraform's state included. It also adds what was missing:
@@ -214,7 +222,9 @@ deliberate changes below. To adopt them:
 What gives CI its access lives in [bootstrap/](bootstrap), and you apply it
 by hand with [bootstrap/apply.sh](bootstrap/apply.sh), signed in as an
 administrator, from CloudShell or Git Bash. The script fills in the account
-ID and makes the account match the files, so it's safe to re-run:
+ID and makes the account match the files, so it's safe to re-run. Every
+policy is a managed one, and the script removes any other policy (inline
+ones included) from the CI roles:
 
 - **[workload-boundary.json](bootstrap/workload-boundary.json)**: the
   permissions boundary, `SiteWorkloadBoundary`. Every role Terraform manages
@@ -223,20 +233,27 @@ ID and makes the account match the files, so it's safe to re-run:
   permissions only while the role carries the boundary, and it can't change
   the boundary itself. Without that, managing IAM would let a deploy grant
   itself anything.
-- **[deploy-role-policy.json](bootstrap/deploy-role-policy.json)** and
+- **[deploy-core.json](bootstrap/deploy-core.json),
+  [deploy-iam.json](bootstrap/deploy-iam.json),
+  [deploy-storage.json](bootstrap/deploy-storage.json),
+  [deploy-edge.json](bootstrap/deploy-edge.json)**, and
   **[deploy-role-trust.json](bootstrap/deploy-role-trust.json)**: the
   deploy role, `GithubDeployProduction`, which Deploy's apply job and the
-  Refresh workflows use. It can manage what this configuration manages, and
-  nothing else. It can't create or delete buckets, tables, distributions, or
-  functions, or change the CI roles. It trusts only jobs in the `production`
+  Refresh workflows use, with the policies `SiteDeployCore`,
+  `SiteDeployIAM`, `SiteDeployStorage`, and `SiteDeployEdge`. (Split up
+  because a managed policy can be at most 6,144 characters.) It can manage
+  what this configuration manages, and nothing else. It can't create or
+  delete buckets, tables, distributions, or functions, change the CI roles,
+  or create, change, or attach any policy outside `/site-workload/`. It trusts only jobs in the `production`
   environment. (The `sub` has to name the environment, not a branch: jobs
   that declare an environment get a token identifying the environment
-  instead of their branch.) The script removes any other policy from it.
+  instead of their branch.)
 - **[plan-role-trust.json](bootstrap/plan-role-trust.json)** and
   **[plan-role-deny-secrets.json](bootstrap/plan-role-deny-secrets.json)**:
   the plan role, `GithubPlanProduction`, which Deploy's plan job uses. It has
   the AWS managed policy `ReadOnlyAccess`, so it can plan whatever this
-  configuration grows to manage, minus reading parameter values and logs. It
+  configuration grows to manage, and `SitePlanDenySecrets`, which takes away
+  reading parameter values and logs. It
   trusts pushes to any branch.
 - **[state-bucket-policy.json](bootstrap/state-bucket-policy.json)**: the
   Terraform state bucket's policy.

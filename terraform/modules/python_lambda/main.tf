@@ -71,23 +71,23 @@ data "aws_iam_policy_document" "this" {
   }
 }
 
-resource "aws_iam_role_policy" "this" {
-  name   = var.function_name
-  role   = aws_iam_role.this.id
-  policy = data.aws_iam_policy_document.this.json
+# Under /site-workload/: the only path whose policies the deploy role can
+# create, change, or attach.
+resource "aws_iam_policy" "this" {
+  name        = var.function_name
+  path        = "/site-workload/"
+  description = "What the ${var.function_name} Lambda function can do."
+  policy      = data.aws_iam_policy_document.this.json
 }
 
-# The role's permissions are exactly the policy above: any other inline
-# policy is deleted, and any managed policy detached.
-resource "aws_iam_role_policies_exclusive" "this" {
-  role_name    = aws_iam_role.this.name
-  policy_names = [aws_iam_role_policy.this.name]
-}
-
+# The role's permissions are exactly the policy above: it's attached, any
+# other managed policy is detached, and any inline policy deleted.
 resource "aws_iam_role_policy_attachments_exclusive" "this" {
   role_name   = aws_iam_role.this.name
-  policy_arns = []
+  policy_arns = [aws_iam_policy.this.arn]
+}
 
-  # Detach the old policies only once the new one is in place.
-  depends_on = [aws_iam_role_policy.this]
+resource "aws_iam_role_policies_exclusive" "this" {
+  role_name    = aws_iam_role.this.name
+  policy_names = []
 }

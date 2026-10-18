@@ -25,39 +25,59 @@ for f in *.json; do
 done
 doc() { echo "file://$filled/$1"; }
 
-echo "Permissions boundary for the roles Terraform manages"
-boundary="arn:aws:iam::$account:policy/SiteWorkloadBoundary"
-if aws iam get-policy --policy-arn "$boundary" > /dev/null 2>&1; then
-  # A policy keeps at most 5 versions: make room by deleting the oldest.
-  old=$(aws iam list-policy-versions --policy-arn "$boundary" \
-          --query 'Versions[?!IsDefaultVersion].VersionId' --output text)
-  if [ "$(wc -w <<< "$old")" -ge 4 ]; then
-    aws iam delete-policy-version --policy-arn "$boundary" --version-id "$(tr -s '\t ' '\n' <<< "$old" | tail -1)"
+# policy NAME FILE DESCRIPTION: makes the managed policy NAME's document FILE.
+policy() {
+  local arn="arn:aws:iam::$account:policy/$1"
+  if aws iam get-policy --policy-arn "$arn" > /dev/null 2>&1; then
+    # A policy keeps at most 5 versions: make room by deleting the oldest.
+    local old
+    old=$(aws iam list-policy-versions --policy-arn "$arn" \
+            --query 'Versions[?!IsDefaultVersion].VersionId' --output text)
+    if [ "$(wc -w <<< "$old")" -ge 4 ]; then
+      aws iam delete-policy-version --policy-arn "$arn" --version-id "$(tr -s '\t ' '\n' <<< "$old" | tail -1)"
+    fi
+    aws iam create-policy-version --policy-arn "$arn" --policy-document "$(doc "$2")" --set-as-default > /dev/null
+  else
+    aws iam create-policy --policy-name "$1" --description "$3" --policy-document "$(doc "$2")" > /dev/null
   fi
-  aws iam create-policy-version --policy-arn "$boundary" \
-    --policy-document "$(doc workload-boundary.json)" --set-as-default > /dev/null
-else
-  aws iam create-policy --policy-name SiteWorkloadBoundary \
-    --description "Caps the roles the site's Terraform configuration manages." \
-    --policy-document "$(doc workload-boundary.json)" > /dev/null
-fi
+}
 
-echo "Deploy role: exactly one inline policy, Deploy"
-role=GithubDeployProduction
-aws iam update-assume-role-policy --role-name "$role" --policy-document "$(doc deploy-role-trust.json)"
-aws iam put-role-policy --role-name "$role" --policy-name Deploy --policy-document "$(doc deploy-role-policy.json)"
-for name in $(aws iam list-role-policies --role-name "$role" --query 'PolicyNames' --output text); do
-  [ "$name" = Deploy ] || aws iam delete-role-policy --role-name "$role" --policy-name "$name"
-done
-for arn in $(aws iam list-attached-role-policies --role-name "$role" --query 'AttachedPolicies[].PolicyArn' --output text); do
-  aws iam detach-role-policy --role-name "$role" --policy-arn "$arn"
-done
+# role_policies ROLE ARN...: makes exactly these managed policies ROLE's
+# permissions, attaching them before removing anything else (inline policies
+# included).
+role_policies() {
+  local role="$1"; shift
+  local arn name
+  for arn in "$@"; do
+    aws iam attach-role-policy --role-name "$role" --policy-arn "$arn"
+  done
+  for name in $(aws iam list-role-policies --role-name "$role" --query 'PolicyNames' --output text); do
+    aws iam delete-role-policy --role-name "$role" --policy-name "$name"
+  done
+  for arn in $(aws iam list-attached-role-policies --role-name "$role" --query 'AttachedPolicies[].PolicyArn' --output text); do
+    [[ " $* " == *" $arn "* ]] || aws iam detach-role-policy --role-name "$role" --policy-arn "$arn"
+  done
+}
 
-echo "Plan role: ReadOnlyAccess, except secrets and logs"
-role=GithubPlanProduction
-aws iam update-assume-role-policy --role-name "$role" --policy-document "$(doc plan-role-trust.json)"
-aws iam attach-role-policy --role-name "$role" --policy-arn arn:aws:iam::aws:policy/ReadOnlyAccess
-aws iam put-role-policy --role-name "$role" --policy-name DenyReadingSecrets --policy-document "$(doc plan-role-deny-secrets.json)"
+ours="arn:aws:iam::$account:policy"
+
+echo "Permissions boundary for the roles Terraform manages"
+policy SiteWorkloadBoundary workload-boundary.json "Caps the roles the site's Terraform configuration manages."
+
+echo "Deploy role"
+policy SiteDeployCore deploy-core.json "Deploy role: Terraform state, Lambda functions, and content refreshes."
+policy SiteDeployIAM deploy-iam.json "Deploy role: the workload roles and their policies, within the boundary."
+policy SiteDeployStorage deploy-storage.json "Deploy role: buckets, frontend files, tables, and log groups."
+policy SiteDeployEdge deploy-edge.json "Deploy role: API Gateway, CloudFront, WAF, certificates, and DNS."
+aws iam update-assume-role-policy --role-name GithubDeployProduction --policy-document "$(doc deploy-role-trust.json)"
+role_policies GithubDeployProduction \
+  "$ours/SiteDeployCore" "$ours/SiteDeployIAM" "$ours/SiteDeployStorage" "$ours/SiteDeployEdge"
+
+echo "Plan role"
+policy SitePlanDenySecrets plan-role-deny-secrets.json "Plan role: no reading parameter values or logs."
+aws iam update-assume-role-policy --role-name GithubPlanProduction --policy-document "$(doc plan-role-trust.json)"
+role_policies GithubPlanProduction \
+  arn:aws:iam::aws:policy/ReadOnlyAccess "$ours/SitePlanDenySecrets"
 
 echo "State bucket policy"
 aws s3api put-bucket-policy --bucket spark-wiki-terraform-state --policy "$(doc state-bucket-policy.json)"
