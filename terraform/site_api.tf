@@ -171,6 +171,39 @@ resource "aws_api_gateway_integration" "admin_proxy" {
   timeout_milliseconds    = 29000
 }
 
+# Signing in has a resource of its own, so that it can be throttled
+# (aws_api_gateway_method_settings.admin_login): method settings can't name
+# one with a greedy path, like {all+}. POST, and OPTIONS for the CORS
+# preflight, since a request for /admin/login never falls back to
+# /admin/{all+}.
+resource "aws_api_gateway_resource" "admin_login" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  parent_id   = aws_api_gateway_resource.admin.id
+  path_part   = "login"
+}
+
+resource "aws_api_gateway_method" "admin_login" {
+  for_each = toset(["POST", "OPTIONS"])
+
+  rest_api_id   = aws_api_gateway_rest_api.api.id
+  resource_id   = aws_api_gateway_resource.admin_login.id
+  http_method   = each.key
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "admin_login" {
+  for_each = aws_api_gateway_method.admin_login
+
+  rest_api_id             = aws_api_gateway_rest_api.api.id
+  resource_id             = aws_api_gateway_resource.admin_login.id
+  http_method             = each.value.http_method
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = module.admin_api.invoke_arn
+  content_handling        = "CONVERT_TO_TEXT"
+  timeout_milliseconds    = 29000
+}
+
 resource "aws_lambda_permission" "admin_api" {
   statement_id  = "APIGatewayAdmin"
   action        = "lambda:InvokeFunction"
@@ -211,6 +244,9 @@ resource "aws_api_gateway_deployment" "api" {
       aws_api_gateway_resource.admin_proxy,
       aws_api_gateway_method.admin_proxy,
       aws_api_gateway_integration.admin_proxy,
+      aws_api_gateway_resource.admin_login,
+      aws_api_gateway_method.admin_login,
+      aws_api_gateway_integration.admin_login,
       aws_api_gateway_gateway_response.errors,
     ]))
   }
@@ -253,10 +289,35 @@ resource "aws_api_gateway_method_settings" "live" {
   }
 }
 
-# Two tries at throttling /admin/* more tightly, with method settings for
-# admin/{all+}'s ANY method, whose paths API Gateway rejected. They may be in
-# the state, but they don't exist, and destroying them would fail on the same
-# paths, so they're only forgotten. Delete these once that's applied.
+# Signing in, far below the stage's limits: it's only for one person, and
+# each attempt deliberately takes a lot of CPU (password hashing). A flood of
+# them would otherwise run up AdminAPI's bill, and take up the account's few
+# concurrent Lambda executions, which the public API needs too. (The rest of
+# /admin/* turns away requests without a valid token in milliseconds.) Method
+# settings name a resource by its path with each / escaped as ~1.
+resource "aws_api_gateway_method_settings" "admin_login" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  stage_name  = aws_api_gateway_stage.live.stage_name
+  method_path = "${replace(aws_api_gateway_resource.admin_login.path, "/", "~1")}/${aws_api_gateway_method.admin_login["POST"].http_method}"
+
+  settings {
+    # As for */*, above.
+    logging_level      = "ERROR"
+    data_trace_enabled = false
+    metrics_enabled    = false
+
+    throttling_burst_limit = 3
+    throttling_rate_limit  = 1
+  }
+
+  # Both update the stage, which fails if they do it at the same time.
+  depends_on = [aws_api_gateway_method_settings.live]
+}
+
+# Two tries at throttling all of /admin/{all+}, whose paths API Gateway
+# rejected. They may be in the state, but they don't exist, and destroying
+# them would fail on the same paths, so they're only forgotten. Delete these
+# once that's applied.
 removed {
   from = aws_api_gateway_method_settings.admin
 
