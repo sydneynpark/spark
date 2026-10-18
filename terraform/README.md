@@ -233,7 +233,9 @@ ones included) from the CI roles:
   tables, parameters, and logs. Of the content, it can delete only what
   the Lambdas derive from the rest (book covers, and thumbnails), so no
   deployed code can delete a photo, review, or post -- though it could
-  still overwrite one, since the buckets aren't versioned. The deploy role
+  still overwrite one, since the buckets aren't versioned. Logs it allows
+  everywhere: API Gateway refuses a logging role that can't use any log
+  group. The deploy role
   can change a role's permissions only while the role carries the
   boundary, and it can't change
   the boundary itself. Without that, managing IAM would let a deploy grant

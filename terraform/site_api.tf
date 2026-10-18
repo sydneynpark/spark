@@ -257,11 +257,12 @@ resource "aws_api_gateway_method_settings" "live" {
 # The admin API, far below the stage's limits: its routes are only for one
 # person, and each login attempt deliberately takes a lot of CPU (password
 # hashing), so a flood of them would run up AdminAPI's bill. Method settings
-# name a nested path with each / escaped as ~1.
-resource "aws_api_gateway_method_settings" "admin" {
+# name a resource by its path without the leading /, and the rest escaped as
+# ~1: admin~1{all+}/ANY.
+resource "aws_api_gateway_method_settings" "admin_proxy" {
   rest_api_id = aws_api_gateway_rest_api.api.id
   stage_name  = aws_api_gateway_stage.live.stage_name
-  method_path = "${replace(aws_api_gateway_resource.admin_proxy.path, "/", "~1")}/${aws_api_gateway_method.admin_proxy.http_method}"
+  method_path = "${replace(trimprefix(aws_api_gateway_resource.admin_proxy.path, "/"), "/", "~1")}/${aws_api_gateway_method.admin_proxy.http_method}"
 
   settings {
     # As for */*, above.
@@ -275,6 +276,17 @@ resource "aws_api_gateway_method_settings" "admin" {
 
   # Both update the stage, which fails if they do it at the same time.
   depends_on = [aws_api_gateway_method_settings.live]
+}
+
+# A first try at the above, with a path API Gateway rejected. It may be in
+# the state, but it doesn't exist, and destroying it would fail on the same
+# path, so it's only forgotten. Delete this block once that's applied.
+removed {
+  from = aws_api_gateway_method_settings.admin
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 # Where the stage's execution logs go, which API Gateway creates itself.

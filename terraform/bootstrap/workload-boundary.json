@@ -77,23 +77,17 @@
       }
     },
     {
-      "Sid": "WriteLogs",
+      "Sid": "Logs",
       "Effect": "Allow",
       "Action": [
         "logs:CreateLogGroup",
         "logs:CreateLogStream",
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams",
         "logs:PutLogEvents",
-        "logs:DescribeLogStreams"
+        "logs:GetLogEvents",
+        "logs:FilterLogEvents"
       ],
-      "Resource": [
-        "arn:aws:logs:us-east-1:ACCOUNT_ID:log-group:/aws/lambda/*",
-        "arn:aws:logs:us-east-1:ACCOUNT_ID:log-group:API-Gateway-Execution-Logs_*"
-      ]
-    },
-    {
-      "Sid": "DescribeLogGroups",
-      "Effect": "Allow",
-      "Action": "logs:DescribeLogGroups",
       "Resource": "*"
     }
   ]
