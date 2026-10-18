@@ -9,4 +9,6 @@ backend/local_data/covers
 *.tfstate
 *.tfstate.*
 tfplan
+# bootstrap/apply.sh's copies of the policies, with the account ID filled in.
+terraform/bootstrap/.filled.*/
 crash.log
