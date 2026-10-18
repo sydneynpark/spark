@@ -120,6 +120,16 @@ deliberate changes below. To adopt them:
    as an administrator). The deploy role needs its new permissions before a
    deploy can manage anything new.
 
+   **Delete the API's integration response.** The console gave the `ANY`
+   method's integration a 200 response with a null template, which the
+   provider fails to read (`GetMethod ... deserialization failed, expected
+   string, got null`). Proxy integrations ignore it, and the live stage
+   isn't affected until Terraform's new deployment, which won't have it:
+
+   ```
+   aws apigateway delete-integration-response --rest-api-id f9e1sa8azj --resource-id vcaujl --http-method ANY --status-code 200
+   ```
+
 2. **Push**, and read the Deploy run's plan. Besides the imports, expect:
    - **API Gateway**: a new deployment, with the `LIVE` stage switched to it,
      and the stage's logging changed from `INFO` with full request and

@@ -90,8 +90,9 @@ resource "aws_api_gateway_method" "proxy" {
   }
 }
 
-# (The method and integration responses the console made aren't managed
-# here: proxy integrations ignore them.)
+# Proxy integrations ignore method and integration responses, so there are
+# none. (The console made a 200 integration response with a null template,
+# which the provider fails to read; see README.md.)
 resource "aws_api_gateway_integration" "proxy" {
   rest_api_id             = aws_api_gateway_rest_api.api.id
   resource_id             = aws_api_gateway_resource.proxy.id

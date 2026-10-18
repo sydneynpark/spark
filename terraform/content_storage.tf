@@ -103,17 +103,24 @@ resource "aws_dynamodb_table" "photos" {
     type = "S"
   }
 
-  # The API's browse-by-taxonomy queries. (hash_key and range_key are
-  # deprecated for key_schema blocks, but switching may rebuild the indexes:
-  # do it in a change of its own, and check its plan.)
+  # The API's browse-by-taxonomy queries.
   dynamic "global_secondary_index" {
     for_each = ["species", "family", "order"]
 
     content {
       name            = "taxonomy-${global_secondary_index.value}"
-      hash_key        = global_secondary_index.value
-      range_key       = "s3_uri"
       projection_type = "ALL"
+
+      # In the order AWS lists them, HASH first.
+      key_schema {
+        attribute_name = global_secondary_index.value
+        key_type       = "HASH"
+      }
+
+      key_schema {
+        attribute_name = "s3_uri"
+        key_type       = "RANGE"
+      }
     }
   }
 
