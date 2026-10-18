@@ -15,6 +15,9 @@ locals {
 
 # --- Lambda execution roles and log groups (one module each) --------------
 
+# The roles are imported only to be replaced, by ones under /site-workload/
+# (see modules/python_lambda), so that Terraform deletes them.
+
 import {
   to = module.content_api.aws_iam_role.this
   id = local.lambda_roles.content_api
@@ -173,6 +176,7 @@ import {
   id = "api-gateway-account"
 }
 
+# Also replaced, like the Lambdas' roles.
 import {
   to = aws_iam_role.api_gateway_logs
   id = "APIGateway_api.spark.wiki"

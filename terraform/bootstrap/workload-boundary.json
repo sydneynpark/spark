@@ -15,11 +15,20 @@
     {
       "Sid": "ContentObjects",
       "Effect": "Allow",
-      "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+      "Action": ["s3:GetObject", "s3:PutObject"],
       "Resource": [
         "arn:aws:s3:::spark.wiki.blog/*",
         "arn:aws:s3:::spark.wiki.books/*",
         "arn:aws:s3:::spark.wiki.photos/*",
+        "arn:aws:s3:::spark.wiki.thumbnails/*"
+      ]
+    },
+    {
+      "Sid": "DeleteDerivedContent",
+      "Effect": "Allow",
+      "Action": "s3:DeleteObject",
+      "Resource": [
+        "arn:aws:s3:::spark.wiki.books/covers/*",
         "arn:aws:s3:::spark.wiki.thumbnails/*"
       ]
     },

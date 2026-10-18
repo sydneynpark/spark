@@ -1,0 +1,106 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "NeverChangeCIRoles",
+      "Effect": "Deny",
+      "NotAction": [
+        "iam:Get*",
+        "iam:List*"
+      ],
+      "Resource": [
+        "arn:aws:iam::ACCOUNT_ID:role/GithubDeployProduction",
+        "arn:aws:iam::ACCOUNT_ID:role/GithubPlanProduction"
+      ]
+    },
+    {
+      "Sid": "NeverChangeOtherPolicies",
+      "Effect": "Deny",
+      "Action": [
+        "iam:CreatePolicy",
+        "iam:CreatePolicyVersion",
+        "iam:SetDefaultPolicyVersion",
+        "iam:DeletePolicyVersion",
+        "iam:DeletePolicy",
+        "iam:TagPolicy",
+        "iam:UntagPolicy"
+      ],
+      "NotResource": "arn:aws:iam::ACCOUNT_ID:policy/site-workload/*"
+    },
+    {
+      "Sid": "NeverRemoveBoundaries",
+      "Effect": "Deny",
+      "Action": "iam:DeleteRolePermissionsBoundary",
+      "Resource": "*"
+    },
+    {
+      "Sid": "NeverManageSignIn",
+      "Effect": "Deny",
+      "Action": [
+        "iam:*User*",
+        "iam:*Group*",
+        "iam:*AccessKey*",
+        "iam:*LoginProfile*",
+        "iam:*MFADevice*",
+        "iam:*OpenIDConnectProvider*",
+        "iam:*SAMLProvider*",
+        "iam:*Account*",
+        "iam:*SecurityTokenServicePreferences*",
+        "organizations:*",
+        "account:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "NeverChangeTerraformState",
+      "Effect": "Deny",
+      "Action": [
+        "s3:DeleteBucket*",
+        "s3:PutBucket*",
+        "s3:PutLifecycleConfiguration",
+        "s3:PutEncryptionConfiguration",
+        "s3:DeleteObjectVersion"
+      ],
+      "Resource": [
+        "arn:aws:s3:::spark-wiki-terraform-state",
+        "arn:aws:s3:::spark-wiki-terraform-state/*"
+      ]
+    },
+    {
+      "Sid": "NeverWriteContent",
+      "Effect": "Deny",
+      "Action": [
+        "s3:DeleteBucket",
+        "s3:PutLifecycleConfiguration",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:DeleteObjectVersion"
+      ],
+      "Resource": [
+        "arn:aws:s3:::spark.wiki.blog",
+        "arn:aws:s3:::spark.wiki.blog/*",
+        "arn:aws:s3:::spark.wiki.books",
+        "arn:aws:s3:::spark.wiki.books/*",
+        "arn:aws:s3:::spark.wiki.photos",
+        "arn:aws:s3:::spark.wiki.photos/*",
+        "arn:aws:s3:::spark.wiki.thumbnails",
+        "arn:aws:s3:::spark.wiki.thumbnails/*"
+      ]
+    },
+    {
+      "Sid": "NeverDeleteTables",
+      "Effect": "Deny",
+      "Action": "dynamodb:DeleteTable",
+      "Resource": [
+        "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.books",
+        "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.photos"
+      ]
+    },
+    {
+      "Sid": "NeverDeleteZone",
+      "Effect": "Deny",
+      "Action": "route53:DeleteHostedZone",
+      "Resource": "arn:aws:route53:::hostedzone/Z06879821CJYLNK8MINIR"
+    }
+  ]
+}

@@ -1,5 +1,7 @@
-# The site's API, https://api.spark.wiki: the backend's ContentAPI Lambda,
-# behind an API Gateway REST API that proxies every request to it.
+# The site's API, https://api.spark.wiki: the backend's Lambdas, behind an
+# API Gateway REST API that proxies every request to one of them. ContentAPI
+# serves the public site, and can only read; AdminAPI serves /admin/*, the
+# admin page, and is the only one that can write.
 
 module "content_api" {
   source = "./modules/python_lambda"
@@ -9,15 +11,11 @@ module "content_api" {
   memory_size   = 128
   timeout       = 45
 
-  role_name            = "ContentAPI-role-rab0br82"
-  role_path            = "/service-role/"
   permissions_boundary = local.workload_boundary_arn
   policy               = data.aws_iam_policy_document.content_api.json
 }
 
 data "aws_iam_policy_document" "content_api" {
-  source_policy_documents = [data.aws_iam_policy_document.decrypt_parameters.json]
-
   statement {
     sid     = "ReadTables"
     actions = ["dynamodb:GetItem", "dynamodb:Query", "dynamodb:Scan"]
@@ -29,9 +27,9 @@ data "aws_iam_policy_document" "content_api" {
   }
 
   statement {
-    sid       = "ListPostsAndPhotos"
+    sid       = "ListPosts"
     actions   = ["s3:ListBucket"]
-    resources = [aws_s3_bucket.content["blog"].arn, aws_s3_bucket.content["photos"].arn]
+    resources = [aws_s3_bucket.content["blog"].arn]
   }
 
   statement {
@@ -39,17 +37,26 @@ data "aws_iam_policy_document" "content_api" {
     actions   = ["s3:GetObject"]
     resources = ["${aws_s3_bucket.content["blog"].arn}/*"]
   }
+}
 
-  # The admin page's review publishing, and photo uploads (whose presigned
-  # URLs carry this role's permissions) and folders.
-  statement {
-    sid     = "AdminUploads"
-    actions = ["s3:PutObject"]
-    resources = [
-      "${aws_s3_bucket.content["books"].arn}/*",
-      "${aws_s3_bucket.content["photos"].arn}/*",
-    ]
-  }
+# The same package as ContentAPI, with the admin app's entry point.
+# Throttled more tightly (aws_api_gateway_method_settings.admin).
+module "admin_api" {
+  source = "./modules/python_lambda"
+
+  function_name = "AdminAPI"
+  project_dir   = "${path.root}/../backend"
+  handler       = "admin_lambda_function.lambda_handler"
+  memory_size   = 128
+  # API Gateway gives up after 29 seconds anyway.
+  timeout = 30
+
+  permissions_boundary = local.workload_boundary_arn
+  policy               = data.aws_iam_policy_document.admin_api.json
+}
+
+data "aws_iam_policy_document" "admin_api" {
+  source_policy_documents = [data.aws_iam_policy_document.decrypt_parameters.json]
 
   statement {
     sid     = "ReadAdminLogin"
@@ -58,6 +65,24 @@ data "aws_iam_policy_document" "content_api" {
       "${local.ssm_parameter_arn_prefix}/AdminUsername",
       "${local.ssm_parameter_arn_prefix}/AdminPasswordHash",
       "${local.ssm_parameter_arn_prefix}/AdminTokenSecret",
+    ]
+  }
+
+  # The photo uploader's folder browser.
+  statement {
+    sid       = "ListPhotos"
+    actions   = ["s3:ListBucket"]
+    resources = [aws_s3_bucket.content["photos"].arn]
+  }
+
+  # Review publishing, and photo uploads (whose presigned URLs carry this
+  # role's permissions) and folders.
+  statement {
+    sid     = "Uploads"
+    actions = ["s3:PutObject"]
+    resources = [
+      "${aws_s3_bucket.content["books"].arn}/*",
+      "${aws_s3_bucket.content["photos"].arn}/*",
     ]
   }
 }
@@ -115,6 +140,46 @@ resource "aws_lambda_permission" "api" {
   source_arn    = "${aws_api_gateway_rest_api.api.execution_arn}/*/*/*"
 }
 
+# /admin/* goes to AdminAPI instead: API Gateway prefers the more specific
+# path. (/admin itself has no method, so it's a 403.)
+resource "aws_api_gateway_resource" "admin" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
+  path_part   = "admin"
+}
+
+resource "aws_api_gateway_resource" "admin_proxy" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  parent_id   = aws_api_gateway_resource.admin.id
+  path_part   = "{all+}"
+}
+
+resource "aws_api_gateway_method" "admin_proxy" {
+  rest_api_id   = aws_api_gateway_rest_api.api.id
+  resource_id   = aws_api_gateway_resource.admin_proxy.id
+  http_method   = "ANY"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "admin_proxy" {
+  rest_api_id             = aws_api_gateway_rest_api.api.id
+  resource_id             = aws_api_gateway_resource.admin_proxy.id
+  http_method             = aws_api_gateway_method.admin_proxy.http_method
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = module.admin_api.invoke_arn
+  content_handling        = "CONVERT_TO_TEXT"
+  timeout_milliseconds    = 29000
+}
+
+resource "aws_lambda_permission" "admin_api" {
+  statement_id  = "APIGatewayAdmin"
+  action        = "lambda:InvokeFunction"
+  function_name = module.admin_api.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.api.execution_arn}/*/*/admin/*"
+}
+
 # Errors API Gateway returns itself (e.g. the Lambda timing out), with CORS
 # headers so the browser lets the frontend read them.
 resource "aws_api_gateway_gateway_response" "errors" {
@@ -143,6 +208,10 @@ resource "aws_api_gateway_deployment" "api" {
       aws_api_gateway_resource.proxy,
       aws_api_gateway_method.proxy,
       aws_api_gateway_integration.proxy,
+      aws_api_gateway_resource.admin,
+      aws_api_gateway_resource.admin_proxy,
+      aws_api_gateway_method.admin_proxy,
+      aws_api_gateway_integration.admin_proxy,
       aws_api_gateway_gateway_response.errors,
     ]))
   }
@@ -185,6 +254,29 @@ resource "aws_api_gateway_method_settings" "live" {
   }
 }
 
+# The admin API, far below the stage's limits: its routes are only for one
+# person, and each login attempt deliberately takes a lot of CPU (password
+# hashing), so a flood of them would run up AdminAPI's bill. Method settings
+# name a nested path with each / escaped as ~1.
+resource "aws_api_gateway_method_settings" "admin" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  stage_name  = aws_api_gateway_stage.live.stage_name
+  method_path = "${replace(aws_api_gateway_resource.admin_proxy.path, "/", "~1")}/${aws_api_gateway_method.admin_proxy.http_method}"
+
+  settings {
+    # As for */*, above.
+    logging_level      = "ERROR"
+    data_trace_enabled = false
+    metrics_enabled    = false
+
+    throttling_burst_limit = 20
+    throttling_rate_limit  = 10
+  }
+
+  # Both update the stage, which fails if they do it at the same time.
+  depends_on = [aws_api_gateway_method_settings.live]
+}
+
 # Where the stage's execution logs go, which API Gateway creates itself.
 resource "aws_cloudwatch_log_group" "api_execution" {
   name              = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.api.id}/${aws_api_gateway_stage.live.stage_name}"
@@ -212,12 +304,19 @@ resource "aws_api_gateway_base_path_mapping" "api" {
 # with (for every API in the account and region; this is the only one).
 resource "aws_api_gateway_account" "this" {
   cloudwatch_role_arn = aws_iam_role.api_gateway_logs.arn
+
+  # API Gateway checks the role can write logs.
+  depends_on = [aws_iam_role_policy_attachments_exclusive.api_gateway_logs]
 }
 
+# Under /site-workload/, like the Lambdas' roles (see
+# modules/python_lambda).
 resource "aws_iam_role" "api_gateway_logs" {
-  name                 = "APIGateway_api.spark.wiki"
-  description          = "Allows API Gateway to write execution logs."
-  permissions_boundary = local.workload_boundary_arn
+  name                  = "APIGatewayLogs"
+  path                  = "/site-workload/"
+  description           = "Allows API Gateway to write execution logs."
+  permissions_boundary  = local.workload_boundary_arn
+  force_detach_policies = true
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -227,6 +326,10 @@ resource "aws_iam_role" "api_gateway_logs" {
       Action    = "sts:AssumeRole"
     }]
   })
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # Exactly this one: it doesn't need to invoke the Lambda, which allows API

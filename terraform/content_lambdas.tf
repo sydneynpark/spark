@@ -15,8 +15,6 @@ module "update_photo_metadata" {
   # Python 3.12). It has to match the project's .python-version.
   layers = ["arn:aws:lambda:us-east-1:770693421928:layer:Klayers-p312-pillow:2"]
 
-  role_name            = "Lambda_UpdatePhotoMetadata"
-  role_path            = "/service-role/"
   permissions_boundary = local.workload_boundary_arn
   policy               = data.aws_iam_policy_document.update_photo_metadata.json
 }
@@ -49,7 +47,6 @@ module "update_blog_post_metadata" {
   memory_size   = 128
   timeout       = 3
 
-  role_name            = "Lambda_UpdateBlogPostMetadata"
   role_description     = "Allows the UpdateBlogPostMetadata Lambda function to read blog posts."
   permissions_boundary = local.workload_boundary_arn
   policy               = data.aws_iam_policy_document.update_blog_post_metadata.json
@@ -72,8 +69,6 @@ module "update_book_review" {
   # Google Books and Gemini lookups for each review.
   timeout = 300
 
-  role_name            = "UpdateBookReview-role-qcl2ltqh"
-  role_path            = "/service-role/"
   permissions_boundary = local.workload_boundary_arn
   policy               = data.aws_iam_policy_document.update_book_review.json
 }
