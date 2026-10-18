@@ -1,6 +1,7 @@
 # A Python Lambda function deployed from one of this repo's Lambda projects:
 # a directory with a .python-version, and the .build/lambda.zip that
-# scripts/build_lambda.py packages from it.
+# scripts/build_lambda.py packages from it. Along with its log group, and an
+# execution role allowed to write to it, plus whatever `policy` grants.
 
 terraform {
   required_providers {
@@ -18,7 +19,7 @@ locals {
 resource "aws_lambda_function" "this" {
   function_name = var.function_name
   description   = var.description
-  role          = var.role_arn
+  role          = aws_iam_role.this.arn
 
   # The Python version build_lambda.py installed the dependencies for.
   runtime = "python${local.python_version}"
@@ -32,4 +33,61 @@ resource "aws_lambda_function" "this" {
 
   filename         = local.package
   source_code_hash = filebase64sha256(local.package)
+
+  # Lambda would otherwise create the log group itself, with no retention.
+  depends_on = [aws_cloudwatch_log_group.this]
+}
+
+resource "aws_cloudwatch_log_group" "this" {
+  name              = "/aws/lambda/${var.function_name}"
+  retention_in_days = var.log_retention_days
+}
+
+resource "aws_iam_role" "this" {
+  name        = var.role_name
+  path        = var.role_path
+  description = var.role_description
+
+  # The deploy role can only create or change roles that carry this.
+  permissions_boundary = var.permissions_boundary
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "lambda.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+data "aws_iam_policy_document" "this" {
+  source_policy_documents = [var.policy]
+
+  statement {
+    sid       = "Logs"
+    actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
+    resources = ["${aws_cloudwatch_log_group.this.arn}:*"]
+  }
+}
+
+# Under /site-workload/: the only path whose policies the deploy role can
+# create, change, or attach.
+resource "aws_iam_policy" "this" {
+  name        = var.function_name
+  path        = "/site-workload/"
+  description = "What the ${var.function_name} Lambda function can do."
+  policy      = data.aws_iam_policy_document.this.json
+}
+
+# The role's permissions are exactly the policy above: it's attached, any
+# other managed policy is detached, and any inline policy deleted.
+resource "aws_iam_role_policy_attachments_exclusive" "this" {
+  role_name   = aws_iam_role.this.name
+  policy_arns = [aws_iam_policy.this.arn]
+}
+
+resource "aws_iam_role_policies_exclusive" "this" {
+  role_name    = aws_iam_role.this.name
+  policy_names = []
 }

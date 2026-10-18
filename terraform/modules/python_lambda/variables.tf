@@ -7,8 +7,28 @@ variable "project_dir" {
   type        = string
 }
 
-variable "role_arn" {
-  description = "ARN of the function's execution role."
+variable "role_name" {
+  description = "Name of the function's execution role."
+  type        = string
+}
+
+variable "role_path" {
+  type    = string
+  default = "/"
+}
+
+variable "role_description" {
+  type    = string
+  default = null
+}
+
+variable "permissions_boundary" {
+  description = "ARN of the execution role's permissions boundary."
+  type        = string
+}
+
+variable "policy" {
+  description = "JSON policy document: what the function can do, besides writing its logs."
   type        = string
 }
 
@@ -36,4 +56,9 @@ variable "timeout" {
 variable "layers" {
   type    = list(string)
   default = []
+}
+
+variable "log_retention_days" {
+  type    = number
+  default = 3
 }

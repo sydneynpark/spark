@@ -2,9 +2,13 @@
 backend/local_data/covers
 *.pyc
 
+.nogit
+
 # Terraform. (Each stack's .terraform.lock.hcl is committed.)
 .terraform/
 *.tfstate
 *.tfstate.*
 tfplan
+# bootstrap/apply.sh's copies of the policies, with the account ID filled in.
+terraform/bootstrap/.filled.*/
 crash.log

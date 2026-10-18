@@ -1,0 +1,91 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ContentBuckets",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": [
+        "arn:aws:s3:::spark.wiki.blog",
+        "arn:aws:s3:::spark.wiki.books",
+        "arn:aws:s3:::spark.wiki.photos",
+        "arn:aws:s3:::spark.wiki.thumbnails"
+      ]
+    },
+    {
+      "Sid": "ContentObjects",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+      "Resource": [
+        "arn:aws:s3:::spark.wiki.blog/*",
+        "arn:aws:s3:::spark.wiki.books/*",
+        "arn:aws:s3:::spark.wiki.photos/*",
+        "arn:aws:s3:::spark.wiki.thumbnails/*"
+      ]
+    },
+    {
+      "Sid": "ContentTables",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:DescribeTable",
+        "dynamodb:GetItem",
+        "dynamodb:BatchGetItem",
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:ConditionCheckItem"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.books",
+        "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.books/index/*",
+        "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.photos",
+        "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.photos/index/*"
+      ]
+    },
+    {
+      "Sid": "Parameters",
+      "Effect": "Allow",
+      "Action": "ssm:GetParameter",
+      "Resource": [
+        "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/AdminUsername",
+        "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/AdminPasswordHash",
+        "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/AdminTokenSecret",
+        "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/GoogleBooksAPIKey",
+        "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/GeminiAPIKey",
+        "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/GeminiProjectNumber"
+      ]
+    },
+    {
+      "Sid": "DecryptParameters",
+      "Effect": "Allow",
+      "Action": "kms:Decrypt",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": { "kms:ViaService": "ssm.us-east-1.amazonaws.com" }
+      }
+    },
+    {
+      "Sid": "WriteLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogStreams"
+      ],
+      "Resource": [
+        "arn:aws:logs:us-east-1:ACCOUNT_ID:log-group:/aws/lambda/*",
+        "arn:aws:logs:us-east-1:ACCOUNT_ID:log-group:API-Gateway-Execution-Logs_*"
+      ]
+    },
+    {
+      "Sid": "DescribeLogGroups",
+      "Effect": "Allow",
+      "Action": "logs:DescribeLogGroups",
+      "Resource": "*"
+    }
+  ]
+}
