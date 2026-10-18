@@ -314,26 +314,6 @@ resource "aws_api_gateway_method_settings" "admin_login" {
   depends_on = [aws_api_gateway_method_settings.live]
 }
 
-# Two tries at throttling all of /admin/{all+}, whose paths API Gateway
-# rejected. They may be in the state, but they don't exist, and destroying
-# them would fail on the same paths, so they're only forgotten. Delete these
-# once that's applied.
-removed {
-  from = aws_api_gateway_method_settings.admin
-
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = aws_api_gateway_method_settings.admin_proxy
-
-  lifecycle {
-    destroy = false
-  }
-}
-
 # Where the stage's execution logs go, which API Gateway creates itself.
 resource "aws_cloudwatch_log_group" "api_execution" {
   name              = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.api.id}/${aws_api_gateway_stage.live.stage_name}"

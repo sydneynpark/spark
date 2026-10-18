@@ -68,22 +68,6 @@
         "iam:UntagPolicy"
       ],
       "Resource": "arn:aws:iam::ACCOUNT_ID:policy/site-workload/*"
-    },
-    {
-      "Sid": "DeleteRolesFromBeforeSiteWorkload",
-      "Effect": "Allow",
-      "Action": [
-        "iam:DeleteRolePolicy",
-        "iam:DetachRolePolicy",
-        "iam:DeleteRole"
-      ],
-      "Resource": [
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/ContentAPI-role-rab0br82",
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/Lambda_UpdatePhotoMetadata",
-        "arn:aws:iam::ACCOUNT_ID:role/Lambda_UpdateBlogPostMetadata",
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/UpdateBookReview-role-qcl2ltqh",
-        "arn:aws:iam::ACCOUNT_ID:role/APIGateway_api.spark.wiki"
-      ]
     }
   ]
 }
