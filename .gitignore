@@ -2,6 +2,8 @@
 backend/local_data/covers
 *.pyc
 
+.nogit
+
 # Terraform. (Each stack's .terraform.lock.hcl is committed.)
 .terraform/
 *.tfstate

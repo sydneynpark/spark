@@ -1,14 +1,25 @@
 # Infrastructure and deploys
 
-Everything in AWS is on its way to being managed here, by Terraform, in one
-configuration that only GitHub Actions applies. Today that's the four Lambda
-functions and the frontend's files; the rest was made by hand in the console,
-and is being brought in incrementally ([below](#bringing-the-rest-under-terraform)).
+Everything in AWS that the site runs on is managed here, by Terraform, in
+one configuration that only GitHub Actions applies -- except what gives
+GitHub Actions its access, the [bootstrap](#bootstrap), which you apply by
+hand.
 
-Files prefixed `site_` are the site (the frontend, and the API behind it),
-`content_` the content-management pipeline (the Lambdas that process uploaded
-photos, posts, and reviews). `modules/python_lambda` deploys one of this
-repo's Lambda projects.
+- `site_frontend.tf`: https://spark.wiki -- the frontend's bucket, its files,
+  and the CloudFront distribution serving them.
+- `site_api.tf`: https://api.spark.wiki -- the `ContentAPI` Lambda (the
+  backend), and the API Gateway REST API and custom domain in front of it.
+- `site_cdn.tf`: https://photos.spark.wiki and https://books.spark.wiki --
+  the CloudFront distributions serving photos, thumbnails, and book covers
+  from their private buckets, and their WAF web ACLs.
+- `site_dns.tf`: the `spark.wiki` Route 53 zone, and the TLS certificates.
+- `content_storage.tf`: the content buckets (photos, thumbnails, book reviews
+  and covers, blog posts) and DynamoDB tables.
+- `content_lambdas.tf`: the Lambdas that process uploaded content, and the
+  S3 triggers that invoke them.
+- `modules/python_lambda`: one of this repo's Lambda projects, deployed as a
+  function, with its log group and its execution role.
+- `imports.tf`: adoption of what was made in the console.
 
 ## How changes reach AWS
 
@@ -51,48 +62,14 @@ They reprocess every existing photo or review, as if each were uploaded
 again -- e.g. after changing what metadata the Lambda stores.
 
 The workflows authenticate to AWS through GitHub's OIDC provider, so there
-are no AWS credentials stored anywhere. The plan role trusts runs on any of
-this repo's branches (which only people with write access can push to); the
+are no AWS credentials stored anywhere. The plan role trusts pushes to any
+of this repo's branches (which only people with write access can make), and
+can read the configuration of everything, but not secrets or logs. The
 deploy role trusts only jobs in the `production` environment, which can't
 start without your approval.
 
 To roll back, re-run `master`'s latest Deploy run (Re-run all jobs) and
 approve it, or revert the change and push.
-
-## One-time setup
-
-1. **Create the bootstrap resources** in the console -- the state bucket,
-   OIDC provider, deploy role, and plan role -- as described
-   [below](#bootstrap-resources).
-
-2. **Configure the repo** in GitHub's Settings:
-   - Environments > New environment `production`: check Required reviewers,
-     and add yourself. Leave Deployment branches and tags at *No
-     restriction*.
-   - Secrets and variables > Actions > Variables: add two repository
-     variables, `AWS_DEPLOY_ROLE_ARN` = the deploy role's ARN, and
-     `AWS_PLAN_ROLE_ARN` = the plan role's ARN.
-
-3. **Push**, and read the Deploy run's plan. The functions were created in
-   the console, so this first deploy imports them ([imports.tf](imports.tf)).
-   Expect:
-   - per function: an import, a code update, and a new `ManagedBy` tag
-   - every frontend file uploaded, and one CloudFront invalidation
-
-   Anything else is a console setting the configuration doesn't match yet:
-   add it to the function's `module` block, and push again. Once the plan
-   looks right, approve it.
-
-4. **Delete the previous build's leftovers** from `spark.wiki.frontend`, if
-   you like: files from before Terraform managed the bucket aren't in its
-   state, so it won't remove them. They're the ones without a `ManagedBy`
-   tag (old `static/` files with different hashes in their names).
-
-5. **Retire the old access keys**: in IAM, delete the access keys of the
-   `deploy` user and of the user the refresh scripts used (and the users
-   themselves, if nothing else uses them). Then delete the local copies:
-   `scripts/.accessKey`, `scripts/.secretAccessKey`, `scripts/deploy.user/`,
-   and `scripts/script.user/`.
 
 ## Day to day
 
@@ -105,6 +82,11 @@ approve it, or revert the change and push.
 - **After changing anything Terraform manages in the console**, copy the
   change into its configuration: the next deploy reverts whatever the
   configuration doesn't match.
+- **A Lambda's permissions**: the `policy` in its `module` block. The module
+  adds writing to its own log group, and removes any permission granted any
+  other way (e.g. a policy attached in the console). Each role also carries
+  the [permissions boundary](#bootstrap): a permission the boundary doesn't
+  allow has no effect until it's added there too.
 - **A Lambda's dependencies**: see its project's README.
 - **A Lambda's Python version**: edit the project's `.python-version`; the
   build and the function's runtime both follow it. `UpdatePhotoMetadata`'s
@@ -112,267 +94,159 @@ approve it, or revert the change and push.
   as does the deploy role's `PillowLayer` statement.
 - **A new frontend file type**: plans fail on extensions missing from
   `content_types` in [site_frontend.tf](site_frontend.tf); add it there.
-- **A new Lambda**: create it in the console first (the deploy role can't
-  create functions), with its execution role. Add both to the deploy role's
-  policy (`ManageFunctions`, `PassExecutionRoles`), and update the copy
-  below. Then add a `module` block and an `import` block for it, and a
-  build step to [deploy.yml](../.github/workflows/deploy.yml).
+- **A new Lambda**: create it in the console first, with an execution role
+  (the deploy role can create neither). Add both to the
+  [deploy role's policy](bootstrap/deploy-role-policy.json)
+  (`ManageFunctions`, `PassLambdaRoles`, `ManageWorkloadRolePolicies`,
+  `UpdateWorkloadRoles`, `ManageLogGroups`), and apply the bootstrap. Then
+  add a `module` block; `import` blocks for the function, role, and log
+  group; and a build step to [deploy.yml](../.github/workflows/deploy.yml).
+- **Anything else new** (a bucket, a table, a parameter): add it to the deploy
+  role's policy, and to the boundary if a Lambda will use it, and apply the
+  bootstrap. Then add it here.
+- **Secrets** (the SSM parameters): set them in the console, or with
+  `aws ssm put-parameter`. They aren't managed here: Terraform would store
+  their values in its state, which the plan role can read, as can anyone who
+  can download a Deploy run's `tfplan` artifact. The Lambdas' policies grant
+  access to them by name.
 
-## Bringing the rest under Terraform
+## Adopting what was made in the console
 
-One area per branch:
+[imports.tf](imports.tf) imports every resource the console made. The
+configuration matches each one's settings as they were, apart from the
+deliberate changes below. To adopt them:
 
-1. Add its configuration, and an `import` block for each existing resource
-   to [imports.tf](imports.tf). Write the configuration from the resource's
-   current settings (e.g. the output of the AWS CLI's `get`/`describe`
-   commands for it), so that importing it changes nothing.
-2. Push it. Its plan should show each resource imported, with no changes.
-   Any change means the configuration doesn't match what exists yet, and
-   approving would apply that change to the live resource.
-3. Extend the deploy role's policy to manage the new resources (the plan
-   role can already read everything). Then approve.
-4. Replace the hardcoded names and IDs that now have resources with
-   references to them (e.g. the distribution ID in
-   [site_frontend.tf](site_frontend.tf)).
+1. **Apply the bootstrap** (`bash terraform/bootstrap/apply.sh`, signed in
+   as an administrator). The deploy role needs its new permissions before a
+   deploy can manage anything new.
 
-A suggested order, least risky first:
+2. **Push**, and read the Deploy run's plan. Besides the imports, expect:
+   - **API Gateway**: a new deployment, with the `LIVE` stage switched to it,
+     and the stage's logging changed from `INFO` with full request and
+     response bodies (`dataTraceEnabled`) to `ERROR` only. Those bodies
+     include admin passwords and tokens.
+   - **Log retention**: 3 days for `UpdateBookReview`'s logs and the API's
+     execution logs, which never expired. (Their older logs get deleted.)
+   - **IAM**: each Lambda's role, and API Gateway's logging role, gets the
+     permissions boundary and a new inline policy granting what its code
+     uses, and has its console-made policies detached. That drops access the
+     functions had but didn't use: `UpdatePhotoMetadata` and
+     `UpdateBlogPostMetadata` could read every bucket in the account,
+     Terraform's state included. It also adds what was missing:
+     `UpdateBlogPostMetadata` couldn't write its logs, and `UpdateBookReview`
+     couldn't delete a deleted review's cover.
+   - **Public access blocks** turned on for `spark.wiki.photos` and
+     `spark.wiki.thumbnails`, which only CloudFront reads anyway.
+   - Two IAM role descriptions, corrected.
+   - Possibly, the content buckets' S3 triggers rewritten in place: the same
+     triggers, with new IDs.
+   - The frontend files and CloudFront invalidation, if the build changed.
 
-- **DynamoDB tables**, with `lifecycle { prevent_destroy = true }`.
-- **S3 buckets** and their settings, also with `prevent_destroy`; then the
-  content triggers (each bucket's notification configuration, and the
-  permission it has to invoke its Lambda).
-- **CloudFront** distributions, their ACM certificates, and DNS (Route 53).
-- **API Gateway**.
-- **SSM parameters**: their names and types only. Their values stay out of
-  Terraform, whose state stores everything in plain text.
-- **IAM**: the Lambdas' execution roles. First, give the deploy role IAM
-  access limited by a permissions boundary: a policy you write by hand,
-  capping what any role it manages can do (e.g. only this site's buckets,
-  tables, logs, and parameters). Let the deploy role create or change roles
-  only if they carry that boundary, and never change the boundary or its own
-  role. Without that, managing IAM would let a deploy grant itself anything.
+   Anything else is a setting the configuration doesn't match yet: fix the
+   configuration, and push again. Once the plan looks right, approve it.
 
-What stays out of this configuration is the bootstrap: the resources that
-give CI its access ([below](#bootstrap-resources), plus the permissions
-boundary, once there is one). A configuration CI applies can't safely manage
-the role CI applies it with. They can become a separate Terraform
-configuration later, applied by hand -- e.g. from AWS CloudShell, which needs
-no local setup.
+3. **Once it's applied**, empty [imports.tf](imports.tf), keeping its header.
 
-## Bootstrap resources
+4. **Clean up** the leftovers in the console. Nothing uses them, and
+   Terraform doesn't manage them:
+   - **IAM policies**, by then detached from every role: `DeployBackend`,
+     `DeployFrontend`, `DeployMetadataHandlers`, `ManageTerraformState`,
+     `GetBlogPosts`, `GetBookReviews`, `GetPhotos`, `InvokeContentAPILambda`,
+     `PutBookReviewDocuments`, `ReadAdminLogin`, `ReadGoogleDeveloperSecrets`,
+     `ReadThumbnails`, `ReadWriteBookReviews`, `ReadWritePhotoDetails`,
+     `SaveBookCovers`, `SaveThumbnails`, `UploadPhotosToS3`, and the
+     `service-role/AWSLambda*ExecutionRole-*` ones. (The first three, and
+     `ReadGoogleBooksAPIKey`, are also attached to the `deploy` user.)
+   - **The `deploy` and `script` IAM users**, and their access keys, which
+     the workflows replaced. Then delete the local copies:
+     `scripts/.accessKey`, `scripts/.secretAccessKey`, `scripts/deploy.user/`,
+     and `scripts/script.user/`.
+   - **The `UpdateBlogPostMetadata-role-wpza4kb8` role**: an unused
+     duplicate of `Lambda_UpdateBlogPostMetadata`.
+   - **ContentAPI's stale invoke permissions**: its resource policy still
+     allows an API Gateway API that no longer exists (`4vs4x6dse4`), and has
+     redundant grants for this one. Terraform manages only the statement
+     `d7be9d2e-a636-51e7-bb87-00c1c55fc32b`. Remove each of the rest with
+     `aws lambda remove-permission --function-name ContentAPI --statement-id <id>`:
+     `9b0032c3-05dd-5b6d-9659-1ef98d4e2340`,
+     `31184592-0cb9-5691-8189-643a16c01f0f`,
+     `43953cb5-42de-55e1-8c5c-c79b6eb916c2`, `APIGatewayCanInvoke`, and
+     `0d507450-e3cf-5433-917e-9b5d254b600c`.
+   - **Two unused certificates**, which can't renew, and expire in January
+     and February 2027: `spark.wiki, photos.spark.wiki` (`a5b8b419-...`) and
+     `spark.wiki, books.spark.wiki` (`713d4f16-...`). Then their validation
+     records, `_b597e6bc...photos.spark.wiki` and
+     `_de743a0e...books.spark.wiki`. (The wildcard certificate covers both
+     subdomains.)
+   - **The `/aws/apigateway/welcome` log group**, and the API's old
+     deployments (the stage only uses its current one).
+   - **Files from before Terraform managed the frontend bucket**, which
+     aren't in its state, so it won't remove them: the ones without a
+     `ManagedBy` tag.
 
-Made by hand in the console. `ACCOUNT_ID` below stands for the AWS account's
-ID.
+## Not managed here
 
-### Terraform state bucket
+- **The [bootstrap](#bootstrap)**: a configuration CI applies can't safely
+  manage the roles CI applies it with.
+- **SSM parameters**: see *Secrets*, above.
+- **Defaults AWS makes in every account**: the default VPC (and its subnets,
+  internet gateway, route table, network ACL, and security group -- nothing
+  here runs in a VPC), service-linked roles, AWS managed KMS keys, and the
+  default EventBridge bus, Athena workgroup, X-Ray sampling rule, and
+  MemoryDB and ElastiCache users and parameter groups.
+- **Account settings**: the budget, cost anomaly detection, Resource
+  Explorer, and MFA devices.
+- **The domain's registration**: `spark.wiki` is registered outside this
+  account, and delegated to the zone's name servers.
 
-`spark-wiki-terraform-state`, in `us-east-1` (the `backend "s3"` block in
-[main.tf](main.tf) expects exactly this). Block all public access, versioning
-enabled, default SSE-S3 encryption, and optionally a lifecycle rule
-permanently deleting noncurrent versions after 90 days. Bucket policy:
+## Bootstrap
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "DenyInsecureTransport",
-      "Effect": "Deny",
-      "Principal": "*",
-      "Action": "s3:*",
-      "Resource": [
-        "arn:aws:s3:::spark-wiki-terraform-state",
-        "arn:aws:s3:::spark-wiki-terraform-state/*"
-      ],
-      "Condition": {
-        "Bool": {
-          "aws:SecureTransport": "false"
-        }
-      }
-    }
-  ]
-}
-```
+What gives CI its access lives in [bootstrap/](bootstrap), and you apply it
+by hand with [bootstrap/apply.sh](bootstrap/apply.sh), signed in as an
+administrator, from CloudShell or Git Bash. The script fills in the account
+ID and makes the account match the files, so it's safe to re-run:
 
-### GitHub OIDC provider
+- **[workload-boundary.json](bootstrap/workload-boundary.json)**: the
+  permissions boundary, `SiteWorkloadBoundary`. Every role Terraform manages
+  carries it, which caps what any of them can do at the site's buckets,
+  tables, parameters, and logs. The deploy role can change a role's
+  permissions only while the role carries the boundary, and it can't change
+  the boundary itself. Without that, managing IAM would let a deploy grant
+  itself anything.
+- **[deploy-role-policy.json](bootstrap/deploy-role-policy.json)** and
+  **[deploy-role-trust.json](bootstrap/deploy-role-trust.json)**: the
+  deploy role, `GithubDeployProduction`, which Deploy's apply job and the
+  Refresh workflows use. It can manage what this configuration manages, and
+  nothing else. It can't create or delete buckets, tables, distributions, or
+  functions, or change the CI roles. It trusts only jobs in the `production`
+  environment. (The `sub` has to name the environment, not a branch: jobs
+  that declare an environment get a token identifying the environment
+  instead of their branch.) The script removes any other policy from it.
+- **[plan-role-trust.json](bootstrap/plan-role-trust.json)** and
+  **[plan-role-deny-secrets.json](bootstrap/plan-role-deny-secrets.json)**:
+  the plan role, `GithubPlanProduction`, which Deploy's plan job uses. It has
+  the AWS managed policy `ReadOnlyAccess`, so it can plan whatever this
+  configuration grows to manage, minus reading parameter values and logs. It
+  trusts pushes to any branch.
+- **[state-bucket-policy.json](bootstrap/state-bucket-policy.json)**: the
+  Terraform state bucket's policy.
 
-An IAM identity provider of type OpenID Connect, with provider URL
-`https://token.actions.githubusercontent.com` and audience
-`sts.amazonaws.com`.
+Made once by hand, before the first run:
 
-### Deploy role
-
-Used by Deploy's apply job and the Refresh workflows. Trust policy,
-accepting only jobs in the `production` environment (the `sub` has to name
-the environment, not a branch: jobs that declare an environment get a token
-identifying it instead of their branch):
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
-      },
-      "Action": "sts:AssumeRoleWithWebIdentity",
-      "Condition": {
-        "StringEquals": {
-          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": "repo:sydneynpark/spark:environment:production"
-        }
-      }
-    }
-  ]
-}
-```
-
-Permissions, as a single inline policy (and nothing else attached):
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "TerraformStateList",
-      "Effect": "Allow",
-      "Action": "s3:ListBucket",
-      "Resource": "arn:aws:s3:::spark-wiki-terraform-state"
-    },
-    {
-      "Sid": "TerraformStateObjects",
-      "Effect": "Allow",
-      "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
-      "Resource": "arn:aws:s3:::spark-wiki-terraform-state/terraform.tfstate*"
-    },
-    {
-      "Sid": "ManageFunctions",
-      "Effect": "Allow",
-      "Action": [
-        "lambda:Get*",
-        "lambda:List*",
-        "lambda:UpdateFunctionCode",
-        "lambda:UpdateFunctionConfiguration",
-        "lambda:TagResource",
-        "lambda:UntagResource"
-      ],
-      "Resource": [
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:ContentAPI",
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:ContentAPI:*",
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:UpdatePhotoMetadata",
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:UpdatePhotoMetadata:*",
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:UpdateBlogPostMetadata",
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:UpdateBlogPostMetadata:*",
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:UpdateBookReview",
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:UpdateBookReview:*"
-      ]
-    },
-    {
-      "Sid": "PassExecutionRoles",
-      "Effect": "Allow",
-      "Action": "iam:PassRole",
-      "Resource": [
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/ContentAPI-role-rab0br82",
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/Lambda_UpdatePhotoMetadata",
-        "arn:aws:iam::ACCOUNT_ID:role/Lambda_UpdateBlogPostMetadata",
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/UpdateBookReview-role-qcl2ltqh"
-      ],
-      "Condition": {
-        "StringEquals": { "iam:PassedToService": "lambda.amazonaws.com" }
-      }
-    },
-    {
-      "Sid": "PillowLayer",
-      "Effect": "Allow",
-      "Action": "lambda:GetLayerVersion",
-      "Resource": "arn:aws:lambda:us-east-1:770693421928:layer:Klayers-p312-pillow:*"
-    },
-    {
-      "Sid": "FrontendList",
-      "Effect": "Allow",
-      "Action": ["s3:ListBucket", "s3:ListBucketVersions"],
-      "Resource": "arn:aws:s3:::spark.wiki.frontend"
-    },
-    {
-      "Sid": "FrontendObjects",
-      "Effect": "Allow",
-      "Action": [
-        "s3:GetObject",
-        "s3:GetObjectTagging",
-        "s3:PutObject",
-        "s3:PutObjectTagging",
-        "s3:DeleteObject",
-        "s3:DeleteObjectVersion"
-      ],
-      "Resource": "arn:aws:s3:::spark.wiki.frontend/*"
-    },
-    {
-      "Sid": "FrontendInvalidation",
-      "Effect": "Allow",
-      "Action": [
-        "cloudfront:GetDistribution",
-        "cloudfront:CreateInvalidation",
-        "cloudfront:GetInvalidation"
-      ],
-      "Resource": "arn:aws:cloudfront::ACCOUNT_ID:distribution/E2JO5BSJ5WRP9P"
-    },
-    {
-      "Sid": "BooksInvalidation",
-      "Effect": "Allow",
-      "Action": "cloudfront:CreateInvalidation",
-      "Resource": "arn:aws:cloudfront::ACCOUNT_ID:distribution/E2Y8FRIT378S9Y"
-    },
-    {
-      "Sid": "ContentRefreshList",
-      "Effect": "Allow",
-      "Action": "s3:ListBucket",
-      "Resource": ["arn:aws:s3:::spark.wiki.photos", "arn:aws:s3:::spark.wiki.books"]
-    },
-    {
-      "Sid": "ContentRefreshInvoke",
-      "Effect": "Allow",
-      "Action": "lambda:InvokeFunction",
-      "Resource": [
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:UpdatePhotoMetadata",
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:UpdateBookReview"
-      ]
-    }
-  ]
-}
-```
-
-`E2JO5BSJ5WRP9P` serves the frontend, and `E2Y8FRIT378S9Y` the
-`spark.wiki.books` bucket (reviews and covers).
-
-### Plan role
-
-Used by Deploy's plan job. Trust policy, accepting runs on any branch:
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
-      },
-      "Action": "sts:AssumeRoleWithWebIdentity",
-      "Condition": {
-        "StringEquals": {
-          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-        },
-        "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:sydneynpark/spark:ref:refs/heads/*"
-        }
-      }
-    }
-  ]
-}
-```
-
-Permissions: the AWS managed policy `ReadOnlyAccess`, so it can plan
-whatever this configuration grows to manage. (That includes reading data,
-like S3 objects and DynamoDB items, but not decrypting SecureString
-parameters.)
+- **The Terraform state bucket**, `spark-wiki-terraform-state`, in
+  `us-east-1` (the `backend "s3"` block in [main.tf](main.tf) expects
+  exactly this): block all public access, versioning enabled, default SSE-S3
+  encryption, and a lifecycle rule permanently deleting noncurrent versions
+  after 5 days.
+- **The GitHub OIDC provider**: an IAM identity provider of type OpenID
+  Connect, with provider URL `https://token.actions.githubusercontent.com`
+  and audience `sts.amazonaws.com`.
+- **The two roles**, `GithubDeployProduction` and `GithubPlanProduction`,
+  with any trust policy (the script replaces it). Then run the script, and
+  in the repo's Settings on GitHub:
+  - Environments > New environment `production`: check Required reviewers,
+    and add yourself. Leave Deployment branches and tags at *No
+    restriction*.
+  - Secrets and variables > Actions > Variables: add two repository
+    variables, `AWS_DEPLOY_ROLE_ARN` = the deploy role's ARN, and
+    `AWS_PLAN_ROLE_ARN` = the plan role's ARN.
