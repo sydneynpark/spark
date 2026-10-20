@@ -1,14 +1,10 @@
 # The site's API, https://api.spark.wiki: the backend's ContentAPI Lambda,
 # behind an API Gateway REST API that proxies every request to it.
 
-locals {
-  content_api_function_name = "ContentAPI"
-}
-
 module "content_api" {
   source = "./modules/python_lambda"
 
-  function_name = local.content_api_function_name
+  function_name = "ContentAPI"
   project_dir   = "${path.root}/../backend"
   memory_size   = 128
   timeout       = 45
@@ -103,12 +99,7 @@ resource "aws_api_gateway_integration" "proxy" {
   http_method             = aws_api_gateway_method.proxy.http_method
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  # module.content_api.invoke_arn, spelled out. Referencing the module would
-  # make the deployment below depend on the Lambda and its role, and then a
-  # deploy that updates them (as any backend change does) can fail with a
-  # dependency cycle against a deployment an earlier, failed apply left
-  # deposed.
-  uri = "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:${local.account_id}:function:${local.content_api_function_name}/invocations"
+  uri                     = module.content_api.invoke_arn
   passthrough_behavior    = "WHEN_NO_MATCH"
   content_handling        = "CONVERT_TO_TEXT"
   timeout_milliseconds    = 29000
