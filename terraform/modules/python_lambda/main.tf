@@ -1,7 +1,9 @@
 # A Python Lambda function deployed from one of this repo's Lambda projects:
 # a directory with a .python-version, and the .build/lambda.zip that
 # scripts/build_lambda.py packages from it. Along with its log group, and an
-# execution role allowed to write to it, plus whatever `policy` grants.
+# execution role allowed to write to it, plus whatever `policy` grants. The
+# role is named after the function, under /site-workload/: the only path
+# whose roles the deploy role can create, change, or pass to Lambda.
 
 terraform {
   required_providers {
@@ -35,7 +37,8 @@ resource "aws_lambda_function" "this" {
   source_code_hash = filebase64sha256(local.package)
 
   # Lambda would otherwise create the log group itself, with no retention.
-  depends_on = [aws_cloudwatch_log_group.this]
+  # And a new role should have its permissions before the function uses it.
+  depends_on = [aws_cloudwatch_log_group.this, aws_iam_role_policy_attachments_exclusive.this]
 }
 
 resource "aws_cloudwatch_log_group" "this" {
@@ -44,12 +47,16 @@ resource "aws_cloudwatch_log_group" "this" {
 }
 
 resource "aws_iam_role" "this" {
-  name        = var.role_name
-  path        = var.role_path
+  name        = var.function_name
+  path        = "/site-workload/"
   description = var.role_description
 
   # The deploy role can only create or change roles that carry this.
   permissions_boundary = var.permissions_boundary
+
+  # Deleting a role fails while policies are attached, and the exclusive
+  # attachments below leave them attached when they're destroyed.
+  force_detach_policies = true
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -59,6 +66,12 @@ resource "aws_iam_role" "this" {
       Action    = "sts:AssumeRole"
     }]
   })
+
+  # When a role is renamed, the function switches to the new one before the
+  # old one is deleted.
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 data "aws_iam_policy_document" "this" {

@@ -7,7 +7,13 @@ os.environ['LOCAL_MODE'] = 'true'
 from flask import abort, request, send_from_directory
 from werkzeug.security import safe_join
 from lambda_function import app
+from handlers.admin import admin_bp
 from utils.local_util import BOOKS_COVERS_DIR, LOCAL_UPLOAD_ROUTE, PHOTO_ORIGINALS_DIR, PHOTO_THUMBNAILS_DIR
+
+# In AWS, api.spark.wiki sends /admin/* to the AdminAPI Lambda
+# (admin_lambda_function.py) and everything else to ContentAPI. Locally, this
+# one server stands in for both.
+app.register_blueprint(admin_bp)
 
 # Stand-in for the photos.spark.wiki CDN, mirroring its URL structure
 # (/<key> for full-size, /thumbnail/<key> for thumbnails) against local files.

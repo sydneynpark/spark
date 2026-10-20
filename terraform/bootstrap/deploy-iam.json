@@ -14,17 +14,12 @@
       "Sid": "ManageWorkloadRolePolicies",
       "Effect": "Allow",
       "Action": [
+        "iam:CreateRole",
         "iam:PutRolePermissionsBoundary",
         "iam:DeleteRolePolicy",
         "iam:DetachRolePolicy"
       ],
-      "Resource": [
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/ContentAPI-role-rab0br82",
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/Lambda_UpdatePhotoMetadata",
-        "arn:aws:iam::ACCOUNT_ID:role/Lambda_UpdateBlogPostMetadata",
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/UpdateBookReview-role-qcl2ltqh",
-        "arn:aws:iam::ACCOUNT_ID:role/APIGateway_api.spark.wiki"
-      ],
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/site-workload/*",
       "Condition": {
         "StringEquals": {
           "iam:PermissionsBoundary": "arn:aws:iam::ACCOUNT_ID:policy/SiteWorkloadBoundary"
@@ -35,13 +30,7 @@
       "Sid": "AttachWorkloadPolicies",
       "Effect": "Allow",
       "Action": "iam:AttachRolePolicy",
-      "Resource": [
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/ContentAPI-role-rab0br82",
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/Lambda_UpdatePhotoMetadata",
-        "arn:aws:iam::ACCOUNT_ID:role/Lambda_UpdateBlogPostMetadata",
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/UpdateBookReview-role-qcl2ltqh",
-        "arn:aws:iam::ACCOUNT_ID:role/APIGateway_api.spark.wiki"
-      ],
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/site-workload/*",
       "Condition": {
         "StringEquals": {
           "iam:PermissionsBoundary": "arn:aws:iam::ACCOUNT_ID:policy/SiteWorkloadBoundary"
@@ -62,15 +51,10 @@
         "iam:UpdateRoleDescription",
         "iam:UpdateAssumeRolePolicy",
         "iam:TagRole",
-        "iam:UntagRole"
+        "iam:UntagRole",
+        "iam:DeleteRole"
       ],
-      "Resource": [
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/ContentAPI-role-rab0br82",
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/Lambda_UpdatePhotoMetadata",
-        "arn:aws:iam::ACCOUNT_ID:role/Lambda_UpdateBlogPostMetadata",
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/UpdateBookReview-role-qcl2ltqh",
-        "arn:aws:iam::ACCOUNT_ID:role/APIGateway_api.spark.wiki"
-      ]
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/site-workload/*"
     },
     {
       "Sid": "ManageWorkloadPolicies",
@@ -84,38 +68,6 @@
         "iam:UntagPolicy"
       ],
       "Resource": "arn:aws:iam::ACCOUNT_ID:policy/site-workload/*"
-    },
-    {
-      "Sid": "NeverChangeOtherPolicies",
-      "Effect": "Deny",
-      "Action": [
-        "iam:CreatePolicy",
-        "iam:CreatePolicyVersion",
-        "iam:SetDefaultPolicyVersion",
-        "iam:DeletePolicyVersion",
-        "iam:DeletePolicy",
-        "iam:TagPolicy",
-        "iam:UntagPolicy"
-      ],
-      "NotResource": "arn:aws:iam::ACCOUNT_ID:policy/site-workload/*"
-    },
-    {
-      "Sid": "NeverRemoveBoundaries",
-      "Effect": "Deny",
-      "Action": "iam:DeleteRolePermissionsBoundary",
-      "Resource": "*"
-    },
-    {
-      "Sid": "NeverChangeCIRoles",
-      "Effect": "Deny",
-      "NotAction": [
-        "iam:Get*",
-        "iam:List*"
-      ],
-      "Resource": [
-        "arn:aws:iam::ACCOUNT_ID:role/GithubDeployProduction",
-        "arn:aws:iam::ACCOUNT_ID:role/GithubPlanProduction"
-      ]
     }
   ]
 }

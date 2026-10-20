@@ -20,74 +20,33 @@
     {
       "Sid": "ManageFunctions",
       "Effect": "Allow",
+      "Action": "lambda:*",
+      "Resource": [
+        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:*"
+      ]
+    },
+    {
+      "Sid": "ReadLambda",
+      "Effect": "Allow",
       "Action": [
         "lambda:Get*",
-        "lambda:List*",
-        "lambda:UpdateFunctionCode",
-        "lambda:UpdateFunctionConfiguration",
-        "lambda:AddPermission",
-        "lambda:RemovePermission",
-        "lambda:TagResource",
-        "lambda:UntagResource"
+        "lambda:List*"
       ],
-      "Resource": [
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:ContentAPI",
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:ContentAPI:*",
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:UpdatePhotoMetadata",
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:UpdatePhotoMetadata:*",
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:UpdateBlogPostMetadata",
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:UpdateBlogPostMetadata:*",
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:UpdateBookReview",
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:UpdateBookReview:*"
-      ]
+      "Resource": "*"
     },
     {
-      "Sid": "PillowLayer",
-      "Effect": "Allow",
-      "Action": "lambda:GetLayerVersion",
-      "Resource": "arn:aws:lambda:us-east-1:770693421928:layer:Klayers-p312-pillow:*"
-    },
-    {
-      "Sid": "PassLambdaRoles",
+      "Sid": "PassWorkloadRoles",
       "Effect": "Allow",
       "Action": "iam:PassRole",
-      "Resource": [
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/ContentAPI-role-rab0br82",
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/Lambda_UpdatePhotoMetadata",
-        "arn:aws:iam::ACCOUNT_ID:role/Lambda_UpdateBlogPostMetadata",
-        "arn:aws:iam::ACCOUNT_ID:role/service-role/UpdateBookReview-role-qcl2ltqh"
-      ],
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/site-workload/*",
       "Condition": {
         "StringEquals": {
-          "iam:PassedToService": "lambda.amazonaws.com"
+          "iam:PassedToService": [
+            "lambda.amazonaws.com",
+            "apigateway.amazonaws.com"
+          ]
         }
       }
-    },
-    {
-      "Sid": "PassAPIGatewayRole",
-      "Effect": "Allow",
-      "Action": "iam:PassRole",
-      "Resource": "arn:aws:iam::ACCOUNT_ID:role/APIGateway_api.spark.wiki",
-      "Condition": {
-        "StringEquals": {
-          "iam:PassedToService": "apigateway.amazonaws.com"
-        }
-      }
-    },
-    {
-      "Sid": "ContentRefresh",
-      "Effect": "Allow",
-      "Action": "lambda:InvokeFunction",
-      "Resource": [
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:UpdatePhotoMetadata",
-        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:UpdateBookReview"
-      ]
-    },
-    {
-      "Sid": "ContentRefreshMissingOnly",
-      "Effect": "Allow",
-      "Action": "dynamodb:Scan",
-      "Resource": "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.books"
     }
   ]
 }

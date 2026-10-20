@@ -65,13 +65,15 @@ echo "Permissions boundary for the roles Terraform manages"
 policy SiteWorkloadBoundary workload-boundary.json "Caps the roles the site's Terraform configuration manages."
 
 echo "Deploy role"
-policy SiteDeployCore deploy-core.json "Deploy role: Terraform state, Lambda functions, and content refreshes."
+policy SiteDeployCore deploy-core.json "Deploy role: Terraform state, Lambda functions, and the roles they run as."
 policy SiteDeployIAM deploy-iam.json "Deploy role: the workload roles and their policies, within the boundary."
 policy SiteDeployStorage deploy-storage.json "Deploy role: buckets, frontend files, tables, and log groups."
 policy SiteDeployEdge deploy-edge.json "Deploy role: API Gateway, CloudFront, WAF, certificates, and DNS."
+policy SiteDeployGuardrails deploy-guardrails.json "Deploy role: what it can never do, whatever the others allow."
 aws iam update-assume-role-policy --role-name GithubDeployProduction --policy-document "$(doc deploy-role-trust.json)"
 role_policies GithubDeployProduction \
-  "$ours/SiteDeployCore" "$ours/SiteDeployIAM" "$ours/SiteDeployStorage" "$ours/SiteDeployEdge"
+  "$ours/SiteDeployCore" "$ours/SiteDeployIAM" "$ours/SiteDeployStorage" "$ours/SiteDeployEdge" \
+  "$ours/SiteDeployGuardrails"
 
 echo "Plan role"
 policy SitePlanDenySecrets plan-role-deny-secrets.json "Plan role: no reading parameter values or logs."
