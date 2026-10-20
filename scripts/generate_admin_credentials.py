@@ -37,8 +37,7 @@ def main():
 
     print(
         '\nStore these as SecureString parameters in AWS Systems Manager Parameter Store\n'
-        "(same region as the ContentAPI lambda), then grant ContentAPI's execution role\n"
-        'ssm:GetParameter + kms:Decrypt on all three -- see backend/README.md.\n'
+        '(us-east-1, alongside the AdminAPI lambda that reads them) -- see backend/README.md.\n'
     )
     for name, value in [
         ('AdminUsername', username),

@@ -2,116 +2,31 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "ManageAPI",
+      "Sid": "ManageAPIs",
       "Effect": "Allow",
-      "Action": [
-        "apigateway:GET",
-        "apigateway:POST",
-        "apigateway:PUT",
-        "apigateway:PATCH",
-        "apigateway:DELETE"
-      ],
-      "Resource": [
-        "arn:aws:apigateway:us-east-1::/restapis/f9e1sa8azj/*",
-        "arn:aws:apigateway:us-east-1::/domainnames/api.spark.wiki/*",
-        "arn:aws:apigateway:us-east-1::/tags/*"
-      ]
+      "Action": "apigateway:*",
+      "Resource": "arn:aws:apigateway:us-east-1::/*"
     },
     {
-      "Sid": "UpdateAPI",
+      "Sid": "ManageCDNs",
       "Effect": "Allow",
       "Action": [
-        "apigateway:GET",
-        "apigateway:PATCH"
+        "cloudfront:*",
+        "wafv2:*"
       ],
-      "Resource": [
-        "arn:aws:apigateway:us-east-1::/restapis/f9e1sa8azj",
-        "arn:aws:apigateway:us-east-1::/domainnames/api.spark.wiki",
-        "arn:aws:apigateway:us-east-1::/account"
-      ]
-    },
-    {
-      "Sid": "ManageDistributions",
-      "Effect": "Allow",
-      "Action": [
-        "cloudfront:GetDistribution",
-        "cloudfront:GetDistributionConfig",
-        "cloudfront:UpdateDistribution",
-        "cloudfront:ListTagsForResource",
-        "cloudfront:TagResource",
-        "cloudfront:UntagResource",
-        "cloudfront:CreateInvalidation",
-        "cloudfront:GetInvalidation"
-      ],
-      "Resource": [
-        "arn:aws:cloudfront::ACCOUNT_ID:distribution/E2JO5BSJ5WRP9P",
-        "arn:aws:cloudfront::ACCOUNT_ID:distribution/E2Y8FRIT378S9Y",
-        "arn:aws:cloudfront::ACCOUNT_ID:distribution/E36I1WVQPNH4HH"
-      ]
-    },
-    {
-      "Sid": "ManageOriginAccessControls",
-      "Effect": "Allow",
-      "Action": [
-        "cloudfront:GetOriginAccessControl",
-        "cloudfront:GetOriginAccessControlConfig",
-        "cloudfront:UpdateOriginAccessControl"
-      ],
-      "Resource": [
-        "arn:aws:cloudfront::ACCOUNT_ID:origin-access-control/E19M97ILNFAK9W",
-        "arn:aws:cloudfront::ACCOUNT_ID:origin-access-control/E2TQ4ICD2J986O",
-        "arn:aws:cloudfront::ACCOUNT_ID:origin-access-control/E7MZSHXZJOE22"
-      ]
-    },
-    {
-      "Sid": "ManageWebACLs",
-      "Effect": "Allow",
-      "Action": [
-        "wafv2:GetWebACL",
-        "wafv2:UpdateWebACL",
-        "wafv2:ListTagsForResource",
-        "wafv2:TagResource",
-        "wafv2:UntagResource"
-      ],
-      "Resource": [
-        "arn:aws:wafv2:us-east-1:ACCOUNT_ID:global/webacl/CreatedByCloudFront-8dfd0590/a63601b9-8685-486d-a01c-80e14b7ff1ce",
-        "arn:aws:wafv2:us-east-1:ACCOUNT_ID:global/webacl/CreatedByCloudFront-9decd9c5/373cc68c-fb1c-4fc2-a436-86d207b77e57",
-        "arn:aws:wafv2:us-east-1:*:global/managedruleset/*/*"
-      ]
+      "Resource": "*"
     },
     {
       "Sid": "ManageCertificates",
       "Effect": "Allow",
-      "Action": [
-        "acm:DescribeCertificate",
-        "acm:ListTagsForCertificate",
-        "acm:AddTagsToCertificate",
-        "acm:RemoveTagsFromCertificate",
-        "acm:UpdateCertificateOptions"
-      ],
-      "Resource": [
-        "arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/373a1646-804c-45ce-9aef-ff9fe055e0f4",
-        "arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/b0cd0675-e400-4819-8fa5-312c62ee7edd"
-      ]
+      "Action": "acm:*",
+      "Resource": "*"
     },
     {
       "Sid": "ManageDNS",
       "Effect": "Allow",
-      "Action": [
-        "route53:GetHostedZone",
-        "route53:ListResourceRecordSets",
-        "route53:ChangeResourceRecordSets",
-        "route53:ListTagsForResource",
-        "route53:ChangeTagsForResource",
-        "route53:UpdateHostedZoneComment"
-      ],
-      "Resource": "arn:aws:route53:::hostedzone/Z06879821CJYLNK8MINIR"
-    },
-    {
-      "Sid": "DNSChanges",
-      "Effect": "Allow",
-      "Action": "route53:GetChange",
-      "Resource": "arn:aws:route53:::change/*"
+      "Action": "route53:*",
+      "Resource": "*"
     }
   ]
 }

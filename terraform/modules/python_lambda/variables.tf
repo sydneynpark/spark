@@ -7,16 +7,6 @@ variable "project_dir" {
   type        = string
 }
 
-variable "role_name" {
-  description = "Name of the function's execution role."
-  type        = string
-}
-
-variable "role_path" {
-  type    = string
-  default = "/"
-}
-
 variable "role_description" {
   type    = string
   default = null

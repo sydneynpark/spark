@@ -7,8 +7,10 @@ hand.
 
 - `site_frontend.tf`: https://spark.wiki -- the frontend's bucket, its files,
   and the CloudFront distribution serving them.
-- `site_api.tf`: https://api.spark.wiki -- the `ContentAPI` Lambda (the
-  backend), and the API Gateway REST API and custom domain in front of it.
+- `site_api.tf`: https://api.spark.wiki -- the backend's Lambdas,
+  `ContentAPI` (the public, read-only API) and `AdminAPI` (`/admin/*`, the
+  only one that can write), and the API Gateway REST API and custom domain
+  in front of them.
 - `site_cdn.tf`: https://photos.spark.wiki and https://books.spark.wiki --
   the CloudFront distributions serving photos, thumbnails, and book covers
   from their private buckets, and their WAF web ACLs.
@@ -19,7 +21,6 @@ hand.
   S3 triggers that invoke them.
 - `modules/python_lambda`: one of this repo's Lambda projects, deployed as a
   function, with its log group and its execution role.
-- `imports.tf`: adoption of what was made in the console.
 
 ## How changes reach AWS
 
@@ -84,7 +85,8 @@ approve it, or revert the change and push.
   configuration doesn't match.
 - **A Lambda's permissions**: the `policy` in its `module` block, which
   becomes a managed policy named after the function, under the IAM path
-  `/site-workload/`. The module adds writing to its own log group, and
+  `/site-workload/`, attached to a role also named after the function, under
+  the same path. The module adds writing to its own log group, and
   removes any permission granted any other way (e.g. a policy attached in
   the console). Each role also carries the
   [permissions boundary](#bootstrap): a permission the boundary doesn't
@@ -94,113 +96,24 @@ approve it, or revert the change and push.
 - **A Lambda's dependencies**: see its project's README.
 - **A Lambda's Python version**: edit the project's `.python-version`; the
   build and the function's runtime both follow it. `UpdatePhotoMetadata`'s
-  Pillow layer is built for Python 3.12, so it has to change along with it,
-  as does the deploy role's `PillowLayer` statement.
+  Pillow layer is built for Python 3.12, so it has to change along with it.
 - **A new frontend file type**: plans fail on extensions missing from
   `content_types` in [site_frontend.tf](site_frontend.tf); add it there.
-- **A new Lambda**: create it in the console first, with an execution role
-  (the deploy role can create neither). Add both to the deploy role's
-  policies: `ManageFunctions` and `PassLambdaRoles` in
-  [deploy-core.json](bootstrap/deploy-core.json),
-  `ManageWorkloadRolePolicies`, `AttachWorkloadPolicies`, and
-  `UpdateWorkloadRoles` in [deploy-iam.json](bootstrap/deploy-iam.json), and
-  `ManageLogGroups` in [deploy-storage.json](bootstrap/deploy-storage.json).
-  Then apply the bootstrap. Then
-  add a `module` block; `import` blocks for the function, role, and log
-  group; and a build step to [deploy.yml](../.github/workflows/deploy.yml).
-- **Anything else new** (a bucket, a table, a parameter): add it to the deploy
-  role's policy, and to the boundary if a Lambda will use it, and apply the
-  bootstrap. Then add it here.
+- **A new Lambda**: add a `module` block, and a build step to
+  [deploy.yml](../.github/workflows/deploy.yml). Terraform creates the
+  function, its role, and its log group.
+- **Anything else new**: just add it here, as long as the deploy role can
+  manage it (see [Bootstrap](#bootstrap)): any Lambda function, API Gateway
+  API, CloudFront distribution, WAF web ACL, certificate, or DNS record, and
+  any bucket or table named `spark.wiki.*`. If a Lambda will use a new
+  bucket, table, or parameter, add it to the
+  [boundary](bootstrap/workload-boundary.json) too, and apply the bootstrap
+  first. Anything else needs the deploy role's policies changed.
 - **Secrets** (the SSM parameters): set them in the console, or with
   `aws ssm put-parameter`. They aren't managed here: Terraform would store
   their values in its state, which the plan role can read, as can anyone who
   can download a Deploy run's `tfplan` artifact. The Lambdas' policies grant
   access to them by name.
-
-## Adopting what was made in the console
-
-[imports.tf](imports.tf) imports every resource the console made. The
-configuration matches each one's settings as they were, apart from the
-deliberate changes below. To adopt them:
-
-1. **Apply the bootstrap** (`bash terraform/bootstrap/apply.sh`, signed in
-   as an administrator). The deploy role needs its new permissions before a
-   deploy can manage anything new.
-
-   **Delete the API's integration response.** The console gave the `ANY`
-   method's integration a 200 response with a null template, which the
-   provider fails to read (`GetMethod ... deserialization failed, expected
-   string, got null`). Proxy integrations ignore it, and the live stage
-   isn't affected until Terraform's new deployment, which won't have it:
-
-   ```
-   aws apigateway delete-integration-response --rest-api-id f9e1sa8azj --resource-id vcaujl --http-method ANY --status-code 200
-   ```
-
-2. **Push**, and read the Deploy run's plan. Besides the imports, expect:
-   - **API Gateway**: a new deployment, with the `LIVE` stage switched to it,
-     and the stage's logging changed from `INFO` with full request and
-     response bodies (`dataTraceEnabled`) to `ERROR` only. Those bodies
-     include admin passwords and tokens.
-   - **Log retention**: 3 days for `UpdateBookReview`'s logs and the API's
-     execution logs, which never expired. (Their older logs get deleted.)
-   - **IAM**: each Lambda's role, and API Gateway's logging role, gets the
-     permissions boundary and a new managed policy (under `/site-workload/`)
-     granting what its code uses, and has its console-made policies
-     detached. That drops access the
-     functions had but didn't use: `UpdatePhotoMetadata` and
-     `UpdateBlogPostMetadata` could read every bucket in the account,
-     Terraform's state included. It also adds what was missing:
-     `UpdateBlogPostMetadata` couldn't write its logs, and `UpdateBookReview`
-     couldn't delete a deleted review's cover.
-   - **Public access blocks** turned on for `spark.wiki.photos` and
-     `spark.wiki.thumbnails`, which only CloudFront reads anyway.
-   - Two IAM role descriptions, corrected.
-   - Possibly, the content buckets' S3 triggers rewritten in place: the same
-     triggers, with new IDs.
-   - The frontend files and CloudFront invalidation, if the build changed.
-
-   Anything else is a setting the configuration doesn't match yet: fix the
-   configuration, and push again. Once the plan looks right, approve it.
-
-3. **Once it's applied**, empty [imports.tf](imports.tf), keeping its header.
-
-4. **Clean up** the leftovers in the console. Nothing uses them, and
-   Terraform doesn't manage them:
-   - **IAM policies**, by then detached from every role: `DeployBackend`,
-     `DeployFrontend`, `DeployMetadataHandlers`, `ManageTerraformState`,
-     `GetBlogPosts`, `GetBookReviews`, `GetPhotos`, `InvokeContentAPILambda`,
-     `PutBookReviewDocuments`, `ReadAdminLogin`, `ReadGoogleDeveloperSecrets`,
-     `ReadThumbnails`, `ReadWriteBookReviews`, `ReadWritePhotoDetails`,
-     `SaveBookCovers`, `SaveThumbnails`, `UploadPhotosToS3`, and the
-     `service-role/AWSLambda*ExecutionRole-*` ones. (The first three, and
-     `ReadGoogleBooksAPIKey`, are also attached to the `deploy` user.)
-   - **The `deploy` and `script` IAM users**, and their access keys, which
-     the workflows replaced. Then delete the local copies:
-     `scripts/.accessKey`, `scripts/.secretAccessKey`, `scripts/deploy.user/`,
-     and `scripts/script.user/`.
-   - **The `UpdateBlogPostMetadata-role-wpza4kb8` role**: an unused
-     duplicate of `Lambda_UpdateBlogPostMetadata`.
-   - **ContentAPI's stale invoke permissions**: its resource policy still
-     allows an API Gateway API that no longer exists (`4vs4x6dse4`), and has
-     redundant grants for this one. Terraform manages only the statement
-     `d7be9d2e-a636-51e7-bb87-00c1c55fc32b`. Remove each of the rest with
-     `aws lambda remove-permission --function-name ContentAPI --statement-id <id>`:
-     `9b0032c3-05dd-5b6d-9659-1ef98d4e2340`,
-     `31184592-0cb9-5691-8189-643a16c01f0f`,
-     `43953cb5-42de-55e1-8c5c-c79b6eb916c2`, `APIGatewayCanInvoke`, and
-     `0d507450-e3cf-5433-917e-9b5d254b600c`.
-   - **Two unused certificates**, which can't renew, and expire in January
-     and February 2027: `spark.wiki, photos.spark.wiki` (`a5b8b419-...`) and
-     `spark.wiki, books.spark.wiki` (`713d4f16-...`). Then their validation
-     records, `_b597e6bc...photos.spark.wiki` and
-     `_de743a0e...books.spark.wiki`. (The wildcard certificate covers both
-     subdomains.)
-   - **The `/aws/apigateway/welcome` log group**, and the API's old
-     deployments (the stage only uses its current one).
-   - **Files from before Terraform managed the frontend bucket**, which
-     aren't in its state, so it won't remove them: the ones without a
-     `ManagedBy` tag.
 
 ## Not managed here
 
@@ -229,8 +142,14 @@ ones included) from the CI roles:
 - **[workload-boundary.json](bootstrap/workload-boundary.json)**: the
   permissions boundary, `SiteWorkloadBoundary`. Every role Terraform manages
   carries it, which caps what any of them can do at the site's buckets,
-  tables, parameters, and logs. The deploy role can change a role's
-  permissions only while the role carries the boundary, and it can't change
+  tables, parameters, and logs. Of the content, it can delete only what
+  the Lambdas derive from the rest (book covers, and thumbnails), so no
+  deployed code can delete a photo, review, or post -- though it could
+  still overwrite one, since the buckets aren't versioned. Logs it allows
+  everywhere: API Gateway refuses a logging role that can't use any log
+  group. The deploy role
+  can change a role's permissions only while the role carries the
+  boundary, and it can't change
   the boundary itself. Without that, managing IAM would let a deploy grant
   itself anything.
 - **[deploy-core.json](bootstrap/deploy-core.json),
@@ -240,14 +159,35 @@ ones included) from the CI roles:
   **[deploy-role-trust.json](bootstrap/deploy-role-trust.json)**: the
   deploy role, `GithubDeployProduction`, which Deploy's apply job and the
   Refresh workflows use, with the policies `SiteDeployCore`,
-  `SiteDeployIAM`, `SiteDeployStorage`, and `SiteDeployEdge`. (Split up
-  because a managed policy can be at most 6,144 characters.) It can manage
-  what this configuration manages, and nothing else. It can't create or
-  delete buckets, tables, distributions, or functions, change the CI roles,
-  or create, change, or attach any policy outside `/site-workload/`. It trusts only jobs in the `production`
+  `SiteDeployIAM`, `SiteDeployStorage`, `SiteDeployEdge`, and
+  `SiteDeployGuardrails`. It trusts only jobs in the `production`
   environment. (The `sub` has to name the environment, not a branch: jobs
   that declare an environment get a token identifying the environment
-  instead of their branch.)
+  instead of their branch.) The account holds only the site, so what it can do is
+  scoped by convention rather than resource by resource, and adding
+  something rarely needs the bootstrap changed:
+  - **Everything in the services the site uses**: Lambda, API Gateway,
+    CloudFront, WAF, ACM, and Route 53, plus buckets and tables named
+    `spark.wiki.*`, and the Lambdas' and API Gateway's log groups.
+  - **Roles, only under `/site-workload/`**, and only carrying the
+    boundary. Those are the only roles it can pass to Lambda or API Gateway,
+    so nothing it deploys can run with more than the boundary allows. It can
+    attach only policies under `/site-workload/` (which it can create) and
+    API Gateway's AWS managed logging policy.
+  - **Never** ([deploy-guardrails.json](bootstrap/deploy-guardrails.json),
+    whose denies override every allow): change the CI roles, any policy
+    outside `/site-workload/` (the boundary included), or any IAM user,
+    group, access key, identity provider, or account setting; remove a
+    role's boundary; change the Terraform state bucket, or delete old
+    versions of the state; delete the content buckets, or write or delete
+    anything in them; delete the tables or the hosted zone. These are what
+    a mistaken deploy couldn't undo. (`prevent_destroy` guards some of
+    them too, but a branch can delete that line; it can't change these.)
+    Replacing one of them on purpose means lifting its deny for that
+    deploy.
+
+  The policies are split up because a managed policy can be at most 6,144
+  characters.
 - **[plan-role-trust.json](bootstrap/plan-role-trust.json)** and
   **[plan-role-deny-secrets.json](bootstrap/plan-role-deny-secrets.json)**:
   the plan role, `GithubPlanProduction`, which Deploy's plan job uses. It has
