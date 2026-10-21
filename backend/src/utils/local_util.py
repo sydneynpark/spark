@@ -93,7 +93,7 @@ class LocalDynamoUtil:
 
 class LocalS3Util:
     def list_posts(self):
-        from utils.response_util import parse_post_metadata, extract_preview
+        from utils.post_util import parse_post
         posts = []
         if os.path.exists(POSTS_DIR):
             for dirpath, _, filenames in os.walk(POSTS_DIR):
@@ -102,19 +102,12 @@ class LocalS3Util:
                         continue
                     filepath = os.path.join(dirpath, filename)
                     key = os.path.relpath(filepath, POSTS_DIR).replace(os.sep, '/')
-                    meta = parse_post_metadata(key)
-                    meta['key'] = key
-                    meta['last_modified'] = datetime.fromtimestamp(os.path.getmtime(filepath)).isoformat()
                     with open(filepath, encoding='utf-8') as f:
-                        meta['preview'] = extract_preview(f.read(600))
-                    posts.append(meta)
+                        post = parse_post(key, f.read())
+                    post['last_modified'] = datetime.fromtimestamp(os.path.getmtime(filepath)).isoformat()
+                    posts.append(post)
         posts.sort(key=lambda p: (p['date'] or ''), reverse=True)
         return posts
-
-    def get_post_content(self, key):
-        local_path = os.path.join(POSTS_DIR, *key.split('/'))
-        with open(local_path) as f:
-            return f.read()
 
 
 class LocalBooksAdminUtil:

@@ -1,3 +1,10 @@
+---
+title: "May 17 Field Notes: Reservoir Morning"
+slug: reservoir-morning
+preview: "Pelicans, purple martins and a very loud yellow-headed blackbird at the reservoir."
+photo: "photo://2025/05/17/2025-05-17 123115 - Yellow-headed Blackbird.jpg"
+---
+
 # May 17 Field Notes
 
 A productive morning at the reservoir. Five species photographed before 1:30 pm.
