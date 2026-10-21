@@ -691,6 +691,12 @@ footer {
   height: 80px;
 }
 
+/* Photos are letterboxed rather than cropped, like the gallery's tiles. */
+.thumbnail-list-thumb--landscape:not(.thumbnail-list-thumb--placeholder) {
+  object-fit: contain;
+  background: var(--color-background);
+}
+
 .thumbnail-list-thumb--placeholder {
   object-fit: contain;
   box-sizing: border-box;
