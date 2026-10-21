@@ -685,14 +685,14 @@ footer {
   height: 84px;
 }
 
-.thumbnail-list-thumb--landscape {
-  flex: 0 0 120px;
-  width: 120px;
-  height: 80px;
+.thumbnail-list-thumb--square {
+  flex: 0 0 96px;
+  width: 96px;
+  height: 96px;
 }
 
 /* Photos are letterboxed rather than cropped, like the gallery's tiles. */
-.thumbnail-list-thumb--landscape:not(.thumbnail-list-thumb--placeholder) {
+.thumbnail-list-thumb--square:not(.thumbnail-list-thumb--placeholder) {
   object-fit: contain;
   background: var(--color-background);
 }
@@ -1583,10 +1583,10 @@ footer {
     padding: 1.25rem;
   }
 
-  .thumbnail-list-thumb--landscape {
-    flex-basis: 84px;
-    width: 84px;
-    height: 56px;
+  .thumbnail-list-thumb--square {
+    flex-basis: 72px;
+    width: 72px;
+    height: 72px;
   }
 
   .thumb-stack {

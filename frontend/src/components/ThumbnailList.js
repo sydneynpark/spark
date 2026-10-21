@@ -7,9 +7,9 @@ function ThumbnailList({ children }) {
   return <ul className="thumbnail-list">{children}</ul>;
 }
 
-// `shape` sizes the thumbnail: 'portrait' for book covers, 'landscape' for
+// `shape` sizes the thumbnail: 'portrait' for book covers, 'square' for
 // photos. A missing or broken `src` shows `placeholderSrc` instead.
-export function ThumbnailListItem({ to, src, placeholderSrc, alt, shape = 'landscape', children }) {
+export function ThumbnailListItem({ to, src, placeholderSrc, alt, shape = 'square', children }) {
   const thumbClass = `thumbnail-list-thumb thumbnail-list-thumb--${shape}`;
   return (
     <li className="thumbnail-list-item">
