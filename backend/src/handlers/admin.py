@@ -1,4 +1,3 @@
-import os
 
 from flask import Blueprint, jsonify, request
 
@@ -10,10 +9,7 @@ from utils.photo_upload_util import (
 )
 from utils.response_util import handle_error
 
-if os.getenv('LOCAL_MODE') == 'true':
-    from utils.local_util import LocalBooksAdminUtil as BooksAdminUtil, LocalPhotosAdminUtil as PhotosAdminUtil
-else:
-    from utils.aws_util import BooksAdminUtil, PhotosAdminUtil
+from utils.aws_util import BooksAdminUtil, PhotosAdminUtil
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 books_admin = BooksAdminUtil()

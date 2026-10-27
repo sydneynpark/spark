@@ -50,7 +50,8 @@ This project deploys as two Lambda functions, from the same package
   one that can read the admin login parameters, or write content.
 
 API Gateway sends `/admin/*` to `AdminAPI` and everything else to
-`ContentAPI`. Locally, `run_local.py` serves both from one server.
+`ContentAPI`. Locally (see the [README](../README.md)), each is its own
+container, and the stack's edge proxy routes between them the same way.
 
 The admin page publishes a book review by uploading it to the
 `spark.wiki.books` bucket as `<title>.md`, in the exact format a manual
@@ -60,12 +61,12 @@ through presigned PUT URLs (full-size photos are bigger than API Gateway and
 Lambda accept in a request), and `UpdatePhotoMetadata`'s S3 trigger
 processes each one, as it would one uploaded in the console.
 
-Locally, the uploader treats `sample-data/photos/originals` (at the repo
-root) as the bucket, and uploads land there. Nothing processes them automatically: run
-`ContentManagement/UpdatePhotoMetadata/run_local.py` (see its README) to add
-them to the local gallery.
+Locally, both go to the emulated buckets, whose triggers run the same
+Lambdas, so they show up on the local site the same way.
 
 ### Admin login (one-time, AWS-side)
+
+(Locally, the stack sets up its own: `admin` / `admin`.)
 
 `AdminAPI` reads the admin credentials and token signing secret from SSM
 Parameter Store, which Terraform doesn't manage (see

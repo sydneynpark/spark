@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+# Runs the site locally, in Docker, along with stand-ins for the AWS services
+# it uses (see README.md). Each checkout -- the main one, or any worktree --
+# gets its own stack: its own containers, emulated AWS data, and port.
+#
+#   ./dev up              Start (or update) this checkout's stack, and print its URL
+#   ./dev url             Print its URL
+#   ./dev logs [service]  Follow its logs (services: compose.yaml)
+#   ./dev ps              List its containers
+#   ./dev reseed          Start the emulated AWS over, from sample-data/
+#   ./dev aws <args>      The AWS CLI, against this stack's emulated AWS only
+#   ./dev snapshot-books  Copy the book reviews live on spark.wiki into sample-data/
+#   ./dev snapshot-photos Copy a selection of the photos live on spark.wiki into sample-data/
+#   ./dev down            Stop it, keeping its frontend dependencies
+#   ./dev destroy         Stop it, and delete its volumes and images
+#   ./dev compose <args>  Any other docker compose command, for this stack
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Derived from the checkout's path, so they stay the same across restarts,
+# and differ between worktrees. SPARK_PORT can be set to pick another port.
+path_hash=$(printf '%s' "$ROOT" | cksum | awk '{print $1}')
+checkout_name=$(printf '%s' "$(basename "$ROOT")" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9_-' '-')
+export COMPOSE_PROJECT_NAME="spark-${checkout_name}-$(printf '%04x' $((path_hash % 65536)))"
+export SPARK_PORT="${SPARK_PORT:-$((20000 + path_hash % 10000))}"
+URL="http://localhost:$SPARK_PORT"
+
+compose() {
+    docker compose --project-directory "$ROOT" -f "$ROOT/compose.yaml" "$@"
+}
+
+lan_url() {
+    local iface lan_ip
+    iface=$(route -n get default 2>/dev/null | awk '/interface: /{print $2}')
+    lan_ip=$(ipconfig getifaddr "$iface" 2>/dev/null || true)
+    if [ -n "$lan_ip" ]; then
+        echo "http://$lan_ip:$SPARK_PORT"
+    fi
+}
+
+wait_until_up() {
+    local deadline=$((SECONDS + 600))
+    # The first start in a checkout installs the frontend's dependencies.
+    printf 'Waiting for %s ' "$URL"
+    until curl -fsS -o /dev/null "$URL/api/health" && curl -fsS -o /dev/null "$URL/"; do
+        if [ $SECONDS -ge $deadline ]; then
+            echo
+            echo "It isn't up yet. See ./dev logs." >&2
+            exit 1
+        fi
+        printf '.'
+        sleep 2
+    done
+    echo
+}
+
+port_taken_by_something_else() {
+    lsof -nP -iTCP:"$SPARK_PORT" -sTCP:LISTEN >/dev/null 2>&1 \
+        && [ -z "$(compose ps -q edge 2>/dev/null)" ]
+}
+
+command="${1:-}"
+shift || true
+
+case "$command" in
+    up)
+        if port_taken_by_something_else; then
+            echo "Port $SPARK_PORT is already in use. Pick another with SPARK_PORT=<port> ./dev up." >&2
+            exit 1
+        fi
+        docker volume create spark-npm-cache >/dev/null
+        # Fails if seed does, since the lambdas service waits on it.
+        if ! compose up --detach --build --remove-orphans "$@"; then
+            echo "Starting failed. See ./dev logs <service> (seed sets up the emulated AWS)." >&2
+            exit 1
+        fi
+        wait_until_up
+        echo "Up at $URL"
+        lan=$(lan_url)
+        if [ -n "$lan" ]; then
+            echo "  (and on this network, at $lan)"
+        fi
+        echo "Admin login: admin / admin. The sample content is still being processed: see ./dev logs lambdas."
+        ;;
+    url)
+        echo "$URL"
+        ;;
+    logs)
+        compose logs --follow "$@"
+        ;;
+    ps)
+        compose ps "$@"
+        ;;
+    reseed)
+        # The lambdas service waits for seed to finish.
+        compose up --detach --force-recreate aws seed lambdas
+        compose logs --no-log-prefix seed
+        ;;
+    aws)
+        # Pinned to the emulator, with placeholder credentials and none of
+        # this machine's AWS configuration, so it can't reach real AWS.
+        env -u AWS_PROFILE -u AWS_SESSION_TOKEN -u AWS_DEFAULT_PROFILE \
+            AWS_CONFIG_FILE=/dev/null \
+            AWS_SHARED_CREDENTIALS_FILE=/dev/null \
+            AWS_ACCESS_KEY_ID=test \
+            AWS_SECRET_ACCESS_KEY=test \
+            AWS_DEFAULT_REGION=us-east-1 \
+            AWS_ENDPOINT_URL="$URL/aws" \
+            aws "$@"
+        ;;
+    snapshot-books)
+        # The one thing that writes to the checkout, so it gets its own
+        # writable mount of just where it writes.
+        compose run --rm --no-deps --build \
+            --volume "$ROOT/sample-data/books:/repo/sample-data/books" \
+            lambdas /lambdas/UpdateBookReview/bin/python /repo/devstack/snapshot_live_books.py
+        echo "Run ./dev reseed to load it."
+        ;;
+    snapshot-photos)
+        compose run --rm --no-deps --build \
+            --volume "$ROOT/sample-data/photos:/repo/sample-data/photos" \
+            lambdas /lambdas/UpdatePhotoMetadata/bin/python /repo/devstack/snapshot_live_photos.py
+        echo "Run ./dev reseed to load it."
+        ;;
+    down)
+        compose down --remove-orphans "$@"
+        ;;
+    destroy)
+        compose down --remove-orphans --volumes --rmi local "$@"
+        ;;
+    compose)
+        compose "$@"
+        ;;
+    *)
+        sed -n '2,/^set /{/^set /d;s/^# \{0,1\}//;p;}' "$0"
+        [ -z "$command" ] || exit 1
+        ;;
+esac
