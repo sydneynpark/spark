@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import ApiService from '../services/api';
 import { DATE_FILTER_TYPES, formatDateFilterLabel } from '../utils/photoDate';
+import { usePageTitle } from '../utils/pageTitle';
 
 const LABEL_BY_TYPE = {
   species: 'Species', family: 'Family', order: 'Order', class: 'Class',
@@ -20,6 +21,8 @@ const Gallery = () => {
   const type = searchParams.get('type');
   const value = searchParams.get('value');
   const selectedPhoto = selectedIndex !== null ? photos[selectedIndex] : null;
+
+  usePageTitle('Gallery');
 
   useEffect(() => {
     loadPhotos();

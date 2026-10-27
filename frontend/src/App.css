@@ -58,6 +58,23 @@ nav h1 {
   font-weight: bold;
 }
 
+.site-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* The favicon's line art (set as --logo-url in Header.js, since it lives in
+   public/), used as a stencil so it takes the title's colour. */
+.site-logo {
+  width: 2.6rem;
+  height: 2.6rem;
+  flex-shrink: 0;
+  background-color: currentColor;
+  -webkit-mask: var(--logo-url) center / contain no-repeat;
+  mask: var(--logo-url) center / contain no-repeat;
+}
+
 nav ul {
   display: flex;
   list-style: none;
@@ -1539,6 +1556,15 @@ footer {
   nav {
     flex-direction: column;
     gap: 1rem;
+  }
+
+  nav h1 {
+    font-size: 1.5rem;
+  }
+
+  .site-logo {
+    width: 2.1rem;
+    height: 2.1rem;
   }
 
   nav ul {

@@ -4,6 +4,7 @@ import ApiService from '../services/api';
 import RatingChart from './RatingChart';
 import StarRating from './StarRating';
 import CommentaryTimeline from './CommentaryTimeline';
+import { usePageTitle } from '../utils/pageTitle';
 
 function formatDate(dateStr) {
   const [year, month, day] = dateStr.split('-').map(Number);
@@ -24,6 +25,8 @@ function BookReview() {
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, [title]);
+
+  usePageTitle(book?.title || 'Books');
 
   if (loading) return <div className="book-review-page"><p>Loading...</p></div>;
   if (error) return <div className="book-review-page"><p className="error">Error loading book review: {error}</p></div>;

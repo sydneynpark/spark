@@ -8,6 +8,7 @@ import {
   dayValue,
   formatDayLabel,
 } from '../utils/photoDate';
+import { usePageTitle } from '../utils/pageTitle';
 
 const ThumbnailStack = ({ photos }) => (
   <div className="thumb-stack">
@@ -32,6 +33,8 @@ const Photos = () => {
 
   const activeTab = searchParams.get('tab') === 'date' ? 'date' : 'taxonomy';
   const selectTab = (tab) => setSearchParams(tab === 'date' ? { tab: 'date' } : {});
+
+  usePageTitle('Photos');
 
   useEffect(() => {
     loadPhotos();
