@@ -1,11 +1,7 @@
-import os
 from flask import Blueprint, jsonify, request
 from utils.response_util import handle_error
 
-if os.getenv('LOCAL_MODE') == 'true':
-    from utils.local_util import LocalDynamoUtil as DynamoUtil, LocalS3Util as S3Util
-else:
-    from utils.aws_util import DynamoUtil, S3Util
+from utils.aws_util import DynamoUtil, S3Util
 
 photos_bp = Blueprint('photos', __name__)
 dynamo = DynamoUtil()

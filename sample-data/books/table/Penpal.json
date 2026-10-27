@@ -1,0 +1,46 @@
+{
+  "author": "Dathan Auerbach",
+  "commentary": [
+    {
+      "text": "The immersion into the tense, murky atmosphere of memories being pieced together after the fact was addictive. I finished the book in a day, hence the grade of 10 on intrigue. My heart raced in moments of danger and I was nearly sent into a panic. In a way, it was even more torturous that the danger was never realized onscreen. \n\nWhen the dots started to connect, I found myself underwhelmed. There were pieces that seemed nonsensical. The entire saga of the sister simply didn't fit with the villain's motives. And what's the deal with the final reveal? I wouldn't think an obsessive stalker would be satisfied with a proxy. \n\nWas it a literary masterpiece? Certainly not. But I think I'll remember this book and the feelings it gave me for a long time."
+    }
+  ],
+  "cover_key": "covers/Penpal.jpg",
+  "date": 20261015,
+  "date_reviewed": "2026-10-15",
+  "genres": [
+    "Horror",
+    "General",
+    "Mystery & Detective"
+  ],
+  "rating_elements": [
+    {
+      "name": "Atmosphere",
+      "rating": 8,
+      "weight": 39
+    },
+    {
+      "name": "Plot and Logic",
+      "rating": 4,
+      "weight": 6
+    },
+    {
+      "name": "Intrigue",
+      "rating": 10,
+      "weight": 43
+    },
+    {
+      "name": "Ending",
+      "rating": 2,
+      "weight": 6
+    },
+    {
+      "name": "Novelty",
+      "rating": 10,
+      "weight": 6
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Penpal.md",
+  "synopsis": "Driven by a need to understand his strange and troubling early years, a man sets out to piece together his forgotten history. What initially seem like ordinary childhood escapades and games slowly get pulled into a much larger, darker narrative, revealing a web of shocking terror he could never have anticipated. With every step of the journey, a new fragment of the mystery falls into place for both the reader and the protagonist, culminating in a grim reality so unsettling that you will wish the narrator had remained entirely in the dark.",
+  "title": "Penpal"
+}

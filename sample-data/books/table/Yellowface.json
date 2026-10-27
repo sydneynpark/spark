@@ -1,0 +1,52 @@
+{
+  "author": "R.F. Kuang",
+  "commentary": [],
+  "cover_key": "covers/Yellowface.jpg",
+  "date": 20260109,
+  "date_reviewed": "2026-01-09",
+  "genres": [
+    "Young Adult Fiction",
+    "Thrillers & Suspense",
+    "General"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 4,
+      "weight": 4
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 6,
+      "weight": 2
+    },
+    {
+      "name": "Writing",
+      "rating": 4,
+      "weight": 3
+    },
+    {
+      "name": "Plot",
+      "rating": 6,
+      "weight": 3
+    },
+    {
+      "name": "Intrigue",
+      "rating": 9,
+      "weight": 4
+    },
+    {
+      "name": "Logic",
+      "rating": 5,
+      "weight": 4
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 8,
+      "weight": 5
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Yellowface.md",
+  "synopsis": "Authors June Hayward and Athena Liu entered the literary scene together, but Athena, who is Asian-American, achieved much greater fame. Meanwhile, June, an ordinary white woman, believed nobody would ever care about her writing. When Athena dies in a freak accident, June seizes the opportunity to steal her late rival's completed manuscript and publish it under her own name. Her publishing house aggressively promotes the novel, cultivating a mysterious new persona for June that includes racially ambiguous author photos. The book becomes an instant blockbuster hit, but June soon finds herself haunted by Athena's memory as mysterious clues begin to surface, threatening to expose her plagiarism. As she desperately scrambles to cover her tracks, June discovers the extreme lengths she is willing to go to protect the life and success she believes she has earned.",
+  "title": "Yellowface"
+}

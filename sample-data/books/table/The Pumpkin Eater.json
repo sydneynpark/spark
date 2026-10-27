@@ -1,0 +1,43 @@
+{
+  "author": "Penelope Mortimer",
+  "commentary": [],
+  "cover_key": "covers/The Pumpkin Eater.jpg",
+  "date": 20260729,
+  "date_reviewed": "2026-07-29",
+  "genres": [
+    "Literary",
+    "Psychological",
+    "Family Life",
+    "General"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 6,
+      "weight": 51
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 6,
+      "weight": 5
+    },
+    {
+      "name": "Writing",
+      "rating": 8,
+      "weight": 27
+    },
+    {
+      "name": "Plot",
+      "rating": 8,
+      "weight": 12
+    },
+    {
+      "name": "Logic",
+      "rating": 3,
+      "weight": 5
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/The Pumpkin Eater.md",
+  "synopsis": "Starting her journey in a psychiatrist's office, an unnamed woman shares her sharp, witty, and deeply engaging perspective on life. Married to a prosperous screenwriter named Jake and mother to a rapidly expanding, also unnamed tribe of kids, she navigates the absurdities of growing up and raising a family. \n\nWhile the couple maintains a city residence, they are also constructing an expansive glass house in the countryside, envisioning a peaceful future there. Yet, this idyllic aspiration might just be a naive fantasy. As ghostly figures of children drift at the periphery of her awareness, our protagonist attempts to process a dizzying array of life's challenges—spanning infidelity, medical professionals, aging relatives, cinematic icons, household chaos, fading youth, and psychological fractures. To figure out how to piece everything back together, she may first have to let herself completely unravel.",
+  "title": "The Pumpkin Eater"
+}

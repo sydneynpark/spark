@@ -1,0 +1,54 @@
+{
+  "author": "Ryū Murakami",
+  "commentary": [
+    {
+      "text": "Awesome atmosphere and tension throughout the book - I definitely got the feeling that Frank was not wired right. Some of the things that he does are so odd that you wonder what kind of brain could even think them up. The baseball scene was a great example - Frank standing there catatonically, in an awkward stance, not noticing the bat had fallen out of his hands, while the pitching machine plonked him repeatedly with balls. I was impressed with the author's ability to invent behavior that is so sideways, you can't even attempt to comprehend it.\n\n> \"Frank's pose had nothing to do with baseball, or any other sport. He squatted there with his head bowed and his fists still locked in the position they were in when the bat flew off -- one on top of the other, both pointing toward left field. It was as if he'd been instantaneously freeze-dried. The second ball grazed his back...\""
+    }
+  ],
+  "cover_key": "covers/In the Miso Soup.jpg",
+  "date": 20260925,
+  "date_reviewed": "2026-09-25",
+  "genres": [
+    "Thrillers",
+    "Psychological",
+    "Horror",
+    "General",
+    "World Literature",
+    "Japan"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 6,
+      "weight": 21
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 9,
+      "weight": 21
+    },
+    {
+      "name": "Intrigue",
+      "rating": 10,
+      "weight": 21
+    },
+    {
+      "name": "Logic",
+      "rating": 6,
+      "weight": 7
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 9,
+      "weight": 21
+    },
+    {
+      "name": "Plot",
+      "rating": 3,
+      "weight": 9
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/In the Miso Soup.md",
+  "synopsis": "Right before the New Year holidays, an American visitor named Frank enlists Kenji to show him around the vibrant nightlife of Tokyo. However, Frank acts so strangely that Kenji soon starts to suspect the tourist might actually be a killer. Even though Kenji has a shady past of his own, he finds himself reluctantly dragged alongside Frank into a dark and wicked underworld, with only his sixteen-year-old partner, Jun, possessing any hope of rescuing him.",
+  "title": "In the Miso Soup"
+}

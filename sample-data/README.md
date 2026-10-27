@@ -1,19 +1,39 @@
 # Sample data
 
-Everything the site uses when run locally (`start_local.ps1`), standing in
-for its S3 buckets and DynamoDB tables. Each folder mirrors the keys of what
-it stands in for.
+The content the local stack (see the [README](../README.md)) starts with.
+Each time its emulated AWS starts, [devstack/seed.py](../devstack/seed.py)
+uploads each folder to the bucket it stands in for, keeping its paths as
+keys, and the buckets' triggers process it as they would in production --
+filling the tables, and making the photos' thumbnails.
 
-| Path | Stands in for | Read by | Written by |
-| --- | --- | --- | --- |
-| `books/markdown/` | `spark.wiki.books` bucket (`<title>.md`) | `UpdateBookReview/run_local.py` | Admin book review form |
-| `books/covers/` | `spark.wiki.books/covers/` | Backend's local covers CDN | `UpdateBookReview/run_local.py` |
-| `books/dynamo/` | `spark.wiki.books` table, one item per file | Backend | `UpdateBookReview/run_local.py`, admin book review form |
-| `photos/originals/` | `spark.wiki.photos` bucket (`YYYY/MM/DD/<photo>.jpg`) | Backend's local photos CDN, `UpdatePhotoMetadata/run_local.py` | Admin photo uploader |
-| `photos/thumbnails/` | `spark.wiki.thumbnails/thumbnail/` | Backend's local photos CDN | `UpdatePhotoMetadata/run_local.py` |
-| `photos/photos.json` | `spark.wiki.photos` table | Backend | `UpdatePhotoMetadata/run_local.py` |
-| `posts/` | `spark.wiki.blog` bucket (`YYYY/MM/DD/<post>.md`) | Backend | -- |
+| Path | Uploaded to | Processed by |
+| --- | --- | --- |
+| `books/markdown/` | `spark.wiki.books` (`<title>.md`) | `UpdateBookReview`, unless in `books/table/` |
+| `photos/originals/` | `spark.wiki.photos` (`YYYY/MM/DD/<photo>.jpg`) | `UpdatePhotoMetadata` |
+| `posts/` | `spark.wiki.blog` (`YYYY/MM/DD/<post>.md`) | `UpdateBlogPostMetadata` |
 
-`books/covers/` and `books/dynamo/` are generated, so they're gitignored.
+The book reviews are a snapshot of the ones live on spark.wiki, already
+processed -- covers, genres, and synopses included -- so they're loaded as they
+are, rather than processed again:
+
+| Path | Loaded into |
+| --- | --- |
+| `books/table/` | `spark.wiki.books` table, one item per file, as the live API serves it |
+| `books/covers/` | `spark.wiki.books/covers/`, from https://books.spark.wiki |
+
+Refresh them from the live site with `./dev snapshot-books`, then
+`./dev reseed` to load them. Review files aren't public, so it writes one from
+the live item, in the admin page's format, for any live review whose file is
+missing or out of date.
+
+The photos are a selection of the ones live on spark.wiki, shrunk to at most
+2048 pixels across, but with the keywords and capture dates
+`UpdatePhotoMetadata` reads still in them. Change the selection in
+[devstack/snapshot_live_photos.py](../devstack/snapshot_live_photos.py), and
+copy it with `./dev snapshot-photos`, then `./dev reseed` to load it.
+
+Content added locally, e.g. through the admin page, goes to the emulated
+buckets, not here, so it's gone once the stack stops.
+
 `photos/selected.csv` is an export of some photo table items, which nothing
 reads.

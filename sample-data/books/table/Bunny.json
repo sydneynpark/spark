@@ -1,0 +1,48 @@
+{
+  "author": "Mona Awad",
+  "commentary": [],
+  "cover_key": "covers/Bunny.jpg",
+  "date": 20260803,
+  "date_reviewed": "2026-08-03",
+  "genres": [
+    "Literary",
+    "Fairy Tales, Folk Tales, Legends & Mythology",
+    "Humorous",
+    "Dark Humor"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 4,
+      "weight": 5
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 10,
+      "weight": 21
+    },
+    {
+      "name": "Writing",
+      "rating": 5,
+      "weight": 5
+    },
+    {
+      "name": "Plot",
+      "rating": 5,
+      "weight": 5
+    },
+    {
+      "name": "Intrigue",
+      "rating": 9,
+      "weight": 19
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 8,
+      "weight": 45
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Bunny.md",
+  "synopsis": "At a prestigious New England university, scholarship student Samantha Heather Mackey feels completely isolated within her elite MFA writing program. While she retreats into her own gloomy daydreams, she is intensely alienated by her wealthy, inseparable female classmates who dress alike, speak in unison, and refer to each other exclusively as \"Bunny.\" \n\nHowever, her isolation shifts when she unexpectedly gets invited to one of their exclusive gatherings, leading her to abandon her sole confidante, Ava. As Samantha becomes more deeply entangled in the Bunnies' hyper-sweet yet deeply unsettling sphere, she joins them at secret off-campus sessions where they physically manifest bizarre, monstrous entities through dark rituals. Soon, the boundaries of the real world begin to dissolve, setting her loyalties to Ava and her new clique on a dangerous, violent crash course.",
+  "title": "Bunny"
+}

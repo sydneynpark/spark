@@ -1,4 +1,4 @@
-# Local-only API keys for running lambdas outside of Parameter Store
-# (see UpdateBookReview/run_local.py) -- never commit these.
+# Local copies of API keys, e.g. for the local stack's book review enrichment
+# (see the README's "Book reviews") -- never commit these.
 .geminiApiKey
 .googleBooksApiKey

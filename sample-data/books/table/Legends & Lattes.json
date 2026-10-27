@@ -1,0 +1,45 @@
+{
+  "author": "Travis Baldree",
+  "commentary": [
+    {
+      "text": "Cute! A very comfortable read - low stakes all the way through, interactions between characters are always positive, and everything works out nicely. This was a nice, light palate cleanser between the high-stress thriller-type books I've been picking up for spooky season."
+    }
+  ],
+  "cover_key": "covers/Legends & Lattes.jpg",
+  "date": 20261014,
+  "date_reviewed": "2026-10-14",
+  "genres": [
+    "Science Fiction",
+    "General"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 8,
+      "weight": 27
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 9,
+      "weight": 27
+    },
+    {
+      "name": "Plot",
+      "rating": 5,
+      "weight": 6
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 8,
+      "weight": 14
+    },
+    {
+      "name": "Coziness",
+      "rating": 10,
+      "weight": 26
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Legends & Lattes.md",
+  "synopsis": "Exhausted by a relentless life of combat and bloodshed, Viv, a battle-hardened orc mercenary, decides to hang up her sword for good. Armed with a strange and wondrous new dream, she sets her sights on the bustling city of Thune to establish something entirely foreign to her trade: the settlement's very first coffee shop. \n\nHowever, realizing this vision is far from straightforward. Viv must navigate unfamiliar terrain, confront the shadows of her violent past that threaten to catch up with her, and rely on the assistance of a diverse and eccentric group of newfound allies. As these unlikely companions come together to help her brew up a fresh start, Viv discovers that building a peaceful life and a warm cup of coffee can be just as challenging—and ultimately rewarding—as any dungeon raid.",
+  "title": "Legends & Lattes"
+}

@@ -10,8 +10,8 @@ does for new reviews, and overwrites just the `genres` attribute. cover_key,
 synopsis, and everything else on the item is left untouched.
 
 Run locally against real AWS credentials for the account/region that holds
-the table (this does not use LocalAWSUtil/sample-data -- there's nothing to
-back-fill in the local sample data, only in the real table):
+the table (there's nothing to back-fill in the local stack's sample data,
+only in the real table):
 
     python backfill_genres.py --dry-run   # preview changes, writes nothing
     python backfill_genres.py             # apply

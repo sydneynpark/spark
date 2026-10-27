@@ -1,0 +1,54 @@
+{
+  "author": "Susanna Clarke",
+  "commentary": [],
+  "cover_key": "covers/Piranesi.jpg",
+  "date": 20260812,
+  "date_reviewed": "2026-08-12",
+  "genres": [
+    "Literary",
+    "Fantasy",
+    "Dark Fantasy",
+    "Magical Realism",
+    "General"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 10,
+      "weight": 1
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 10,
+      "weight": 17
+    },
+    {
+      "name": "Writing",
+      "rating": 8,
+      "weight": 7
+    },
+    {
+      "name": "Plot",
+      "rating": 8,
+      "weight": 29
+    },
+    {
+      "name": "Intrigue",
+      "rating": 10,
+      "weight": 28
+    },
+    {
+      "name": "Logic",
+      "rating": 8,
+      "weight": 1
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 10,
+      "weight": 17
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Piranesi.md",
+  "synopsis": "Piranesi dwells inside the House, a place he may have inhabited his entire life. Through his daily journals, he meticulously chronicles its incredible features: an endless maze of corridors, countless unique statues, roaring tides that flood the staircases, and weather patterns drifting through the higher rooms. Twice a week, on Tuesdays and Fridays, he meets with his companion, the Other. Occasionally, he leaves offerings for the skeletons he finds. Yet, for the most part, solitude defines his existence.\n\nSoon, chalk-written messages start showing up on the floors, indicating the presence of a newcomer within the endless halls. As Piranesi tries to figure out the identity and motives of this mysterious entity, the Other warns that the newcomer is a source of chaos and ruin. \n\nAs forgotten writings are uncovered and hidden truths emerge, the reality Piranesi has always relied upon transforms into a perilous and unfamiliar domain.",
+  "title": "Piranesi"
+}

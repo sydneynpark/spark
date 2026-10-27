@@ -1,0 +1,54 @@
+{
+  "author": "Juneau Black",
+  "commentary": [],
+  "cover_key": "covers/Mirror Lake.jpg",
+  "date": 20260622,
+  "date_reviewed": "2026-06-22",
+  "genres": [
+    "Mystery & Detective",
+    "Cozy",
+    "Animals",
+    "Women Sleuths",
+    "Amateur Sleuth"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 9,
+      "weight": 3
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 10,
+      "weight": 5
+    },
+    {
+      "name": "Writing",
+      "rating": 6,
+      "weight": 1
+    },
+    {
+      "name": "Plot",
+      "rating": 6,
+      "weight": 3
+    },
+    {
+      "name": "Intrigue",
+      "rating": 7,
+      "weight": 3
+    },
+    {
+      "name": "Logic",
+      "rating": 4,
+      "weight": 1
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 10,
+      "weight": 5
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Mirror Lake.md",
+  "synopsis": "An election is heating up in Shady Hollow, pitting veteran Police Chief Theodore Meade against Deputy Orville Braun, the romantic partner of journalist Vera Vixen. However, the political rivalry is soon overshadowed when local eccentric Dorothy Springfield insists that her husband Edward has been murdered and that the rat currently living in her home posing as him is an imposter. \n\nWhile the rest of the community writes off Dorothy's claims as mere madness, Vera isn't so sure. She uncovers several suspicious inconsistencies regarding the Springfield family dynamics. Yet, with Orville preoccupied by his campaign, Vera must proceed with caution as she investigates this baffling situation largely on her own.",
+  "title": "Mirror Lake"
+}

@@ -22,9 +22,6 @@ from functools import wraps
 TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60  # 7 days
 PBKDF2_ITERATIONS = 210_000
 
-LOCAL_MODE = os.getenv('LOCAL_MODE') == 'true'
-
-
 def _fetch_ssm_parameter(name):
     import boto3
     ssm = boto3.client('ssm')
@@ -36,26 +33,17 @@ def _fetch_ssm_parameter(name):
 # life of a warm Lambda container previously meant that rotating the admin
 # password in SSM wouldn't take effect until every warm container happened to
 # recycle -- a confusing "I just changed it and it's still rejecting me" bug.
-if LOCAL_MODE:
-    def _admin_username():
-        return os.getenv('ADMIN_USERNAME', 'admin')
+# (Locally, devstack/seed.py puts a local-only login in the emulator's.)
+def _admin_username():
+    return _fetch_ssm_parameter('AdminUsername')
 
-    def _admin_password_hash():
-        # Local-dev-only default credential: username "admin", password
-        # "admin". Never reachable outside LOCAL_MODE.
-        return os.getenv('ADMIN_PASSWORD_HASH') or hash_password('admin', salt=b'local-dev-salt-0000')
 
-    def _token_secret():
-        return os.getenv('ADMIN_TOKEN_SECRET', 'local-dev-token-secret-do-not-use-in-prod')
-else:
-    def _admin_username():
-        return _fetch_ssm_parameter('AdminUsername')
+def _admin_password_hash():
+    return _fetch_ssm_parameter('AdminPasswordHash')
 
-    def _admin_password_hash():
-        return _fetch_ssm_parameter('AdminPasswordHash')
 
-    def _token_secret():
-        return _fetch_ssm_parameter('AdminTokenSecret')
+def _token_secret():
+    return _fetch_ssm_parameter('AdminTokenSecret')
 
 
 def hash_password(password, salt=None):

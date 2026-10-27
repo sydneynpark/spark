@@ -13,7 +13,7 @@ For each review, the lambda also looks the book up on the Google Books API -- on
 
 (`GeminiProjectNumber` is not currently used -- the Gemini call uses the simple API-key-based Gemini Developer API, not Vertex AI, so no GCP project is needed.)
 
-For a local batch test run against markdown files (without touching real AWS/DynamoDB), see `run_local.py`.
+Locally, the stack in the [README](../../README.md) runs this lambda on each review uploaded to its emulated `spark.wiki.books` bucket. It starts with the live site's reviews already processed (see `sample-data/README.md`), and only enriches new ones when it's given the API keys (see the README's "Book reviews").
 
 
 ## Local development

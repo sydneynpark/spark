@@ -1,11 +1,7 @@
-import os
 from flask import Blueprint, jsonify
 from utils.response_util import handle_error
 
-if os.getenv('LOCAL_MODE') == 'true':
-    from utils.local_util import LocalS3Util as S3Util
-else:
-    from utils.aws_util import S3Util
+from utils.aws_util import S3Util
 
 posts_bp = Blueprint('posts', __name__)
 s3_util = S3Util()

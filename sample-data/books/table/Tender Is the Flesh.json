@@ -1,0 +1,53 @@
+{
+  "author": "Agustina Bazterrica",
+  "commentary": [],
+  "cover_key": "covers/Tender Is the Flesh.jpg",
+  "date": 20260529,
+  "date_reviewed": "2026-05-29",
+  "genres": [
+    "Literary",
+    "Dystopian",
+    "Hispanic & Latino",
+    "General"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 3,
+      "weight": 4
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 8,
+      "weight": 5
+    },
+    {
+      "name": "Writing",
+      "rating": 2,
+      "weight": 5
+    },
+    {
+      "name": "Plot",
+      "rating": 5,
+      "weight": 3
+    },
+    {
+      "name": "Intrigue",
+      "rating": 4,
+      "weight": 3
+    },
+    {
+      "name": "Logic",
+      "rating": 5,
+      "weight": 3
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 4,
+      "weight": 3
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Tender Is the Flesh.md",
+  "synopsis": "At the local processing facility, Marcos works in the trade of butchering people, though the terminology has changed. Dealing with the loss of his wife and watching his father slip into dementia, Marcos attempts to push aside the grim reality of his occupation. The shift occurred almost overnight: first, a contagion rendered all animal flesh lethal to mankind, and authorities subsequently introduced the \"Transition.\" Consumption of human meat—referred to as \"special meat\"—is now entirely lawful. Marcos focuses strictly on statistics, shipments, and the mechanics of the plant.\n\nEverything shifts when he receives an unexpected present: a living human specimen of the highest grade. Fully cognizant that engaging with her personally carries the death penalty, he gradually begins to accord her the dignity of a person. Before long, he is consumed by an agonizing awareness of everything that has vanished and what might yet be rescued.",
+  "title": "Tender Is the Flesh"
+}

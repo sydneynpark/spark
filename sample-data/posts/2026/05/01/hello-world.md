@@ -17,8 +17,8 @@ Here's what I'm planning to write about:
 
 ## A Recent Highlight
 
-Last week I spotted an American White Pelican gliding low over the reservoir at dawn. The light was perfect — golden and soft — and I managed a few frames before it banked away. Those birds are enormous up close, with wingspans over nine feet.
+A while back I found a pair of Wood Ducks perched together on a branch above the creek. The light was soft and even, and they sat still long enough for me to get a few frames. The drake's colors barely look real up close.
 
-`photo://2025/05/17/2025-05-17 074801 - American White Pelican.jpg`
+`photo://2026/02/27/2026-02-27 - 864A3942.jpg`
 
 More soon.
