@@ -1,0 +1,58 @@
+{
+  "author": "Michael Crichton",
+  "commentary": [
+    {
+      "text": "This is my second Michael Crichton book. In both books, I felt they had a little too much technical detail that maybe wasn't important to the story. There were times I simply wished he'd get on with the book. I let him get away with it in *Congo* because the suspense was so high - here, I did not have the same emotional buy-in. Although, in *Airframe*, the technical details were more relevant to the story. Perhaps it simply was not for me.\n\nI will say, I loved what the answer to the mystery ended up being. I did not see it coming but it made total sense. It was a nice little bamboozle."
+    }
+  ],
+  "cover_key": "covers/Airframe.jpg",
+  "date": 20260416,
+  "date_reviewed": "2026-04-16",
+  "genres": [
+    "General",
+    "Action & Adventure",
+    "Psychological",
+    "Thrillers",
+    "Suspense"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 6,
+      "weight": 2
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 5,
+      "weight": 5
+    },
+    {
+      "name": "Writing",
+      "rating": 3,
+      "weight": 3
+    },
+    {
+      "name": "Plot",
+      "rating": 3,
+      "weight": 4
+    },
+    {
+      "name": "Intrigue",
+      "rating": 7,
+      "weight": 5
+    },
+    {
+      "name": "Logic",
+      "rating": 6,
+      "weight": 5
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 3,
+      "weight": 5
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Airframe.md",
+  "synopsis": "A commercial twin-engine jet traveling from Hong Kong to Denver suffers a catastrophic midair emergency that leaves the interior heavily damaged, fifty-six people hurt, and three passengers dead. Despite the disaster, the captain successfully brings the aircraft down safely. In the wake of the tragedy—at a time when aviation security is a major public concern—officials launch an intense, high-stakes investigation to uncover what went wrong in the sky.",
+  "title": "Airframe"
+}

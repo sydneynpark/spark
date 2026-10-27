@@ -1,0 +1,57 @@
+{
+  "author": "V.E. Schwab",
+  "commentary": [
+    {
+      "text": "I had to DNF this. The main character was so absolutely insufferable! And the plot was.... well.... I'm not sure. There wasn't one."
+    }
+  ],
+  "cover_key": "covers/The Invisible Life of Addie LaRue.jpg",
+  "date": 20260326,
+  "date_reviewed": "2026-03-26",
+  "genres": [
+    "Fantasy",
+    "Historical",
+    "Literary",
+    "Multiple Timelines"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 2,
+      "weight": 5
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 5,
+      "weight": 3
+    },
+    {
+      "name": "Writing",
+      "rating": 1,
+      "weight": 4
+    },
+    {
+      "name": "Plot",
+      "rating": 8,
+      "weight": 2
+    },
+    {
+      "name": "Intrigue",
+      "rating": 2,
+      "weight": 4
+    },
+    {
+      "name": "Logic",
+      "rating": 2,
+      "weight": 5
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 2,
+      "weight": 5
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/The Invisible Life of Addie LaRue.md",
+  "synopsis": "Set in France during the year 1714, a young woman facing a desperate situation enters into a pact with a dark entity to gain immortality, only to be punished with a curse that causes anyone she encounters to instantly forget her. \n\nThis sets off an exceptional journey spanning multiple centuries and global locations, weaving through eras of history and artistic movements as the protagonist discovers the extreme measures she must take to carve out a legacy in a world that constantly erases her existence. \n\nHowever, everything shifts dramatically when, following almost three centuries of solitude, Addie crosses paths with a young man inside a concealed bookstore who surprisingly recalls her name.",
+  "title": "The Invisible Life of Addie LaRue"
+}

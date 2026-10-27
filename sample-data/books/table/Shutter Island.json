@@ -1,0 +1,52 @@
+{
+  "author": "Dennis Lehane",
+  "commentary": [],
+  "cover_key": "covers/Shutter Island.jpg",
+  "date": 20260116,
+  "date_reviewed": "2026-01-16",
+  "genres": [
+    "Mystery & Detective",
+    "General",
+    "Thrillers"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 9,
+      "weight": 4
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 10,
+      "weight": 5
+    },
+    {
+      "name": "Writing",
+      "rating": 7,
+      "weight": 3
+    },
+    {
+      "name": "Plot",
+      "rating": 9,
+      "weight": 4
+    },
+    {
+      "name": "Intrigue",
+      "rating": 9,
+      "weight": 5
+    },
+    {
+      "name": "Logic",
+      "rating": 10,
+      "weight": 3
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 9,
+      "weight": 4
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Shutter Island.md",
+  "synopsis": "In 1954, U.S. Marshal Teddy Daniels travels alongside his newly assigned partner, Chuck Aule, to the isolated Shutter Island facility, Ashecliffe Hospital for the Criminally Insane, to look into a patient's vanishing. Inmate Rachel Solando, convicted of multiple murders, has somehow escaped from a secure, heavily monitored cell and is now hiding somewhere across the desolate landscape. A massive storm approaches, worsening the situation as the investigation uncovers disturbing elements involving extreme medical procedures, illicit brain research, and secret intelligence operations. The grim reality of Ashecliffe ensures that nobody will leave unaffected, as appearances prove deceiving for both the institution and Teddy Daniels himself.",
+  "title": "Shutter Island"
+}

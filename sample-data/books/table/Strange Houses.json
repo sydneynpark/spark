@@ -1,0 +1,65 @@
+{
+  "author": "Uketsu",
+  "commentary": [],
+  "cover_key": "covers/Strange Houses.jpg",
+  "date": 20260403,
+  "date_reviewed": "2026-04-03",
+  "genres": [
+    "Horror",
+    "General",
+    "Mystery & Detective",
+    "International Crime & Mystery",
+    "Amateur Sleuth",
+    "Psychological",
+    "Thrillers",
+    "Suspense",
+    "Supernatural",
+    "Domestic",
+    "Crime",
+    "Holidays",
+    "World Literature",
+    "Japan",
+    "Language Arts & Disciplines",
+    "Linguistics"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 4,
+      "weight": 2
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 4,
+      "weight": 4
+    },
+    {
+      "name": "Writing",
+      "rating": 3,
+      "weight": 1
+    },
+    {
+      "name": "Plot",
+      "rating": 3,
+      "weight": 2
+    },
+    {
+      "name": "Intrigue",
+      "rating": 6,
+      "weight": 5
+    },
+    {
+      "name": "Logic",
+      "rating": 2,
+      "weight": 5
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 6,
+      "weight": 5
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Strange Houses.md",
+  "synopsis": "A horror writer with a taste for the bizarre is asked by an acquaintance to look into a strange Tokyo property currently on the market. Initially, the residence appears to be an ideal starter home, boasting an open and bright layout. However, a deeper examination of the blueprints uncovers an unexplained, sealed-off void trapped between the partitions, pulling the author into a puzzling mystery. He brings the architectural drawings to his architect friend, Kurihara, who points out even more disturbing architectural anomalies. \n\nThe two men begin to question the dark intent behind the home's bizarre layout and the mysterious disappearance of its previous occupants. Their investigation takes a dangerous turn when a corpse is discovered and a young woman contacts them regarding another similarly unsettling property, making it apparent they have stumbled into a deeply unnerving situation.",
+  "title": "Strange Houses"
+}

@@ -1,0 +1,50 @@
+{
+  "author": "Franz Kafka",
+  "commentary": [],
+  "cover_key": "covers/The Metamorphosis.jpg",
+  "date": 20260610,
+  "date_reviewed": "2026-06-10",
+  "genres": [
+    "General"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 8,
+      "weight": 4
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 8,
+      "weight": 2
+    },
+    {
+      "name": "Writing",
+      "rating": 10,
+      "weight": 3
+    },
+    {
+      "name": "Plot",
+      "rating": 10,
+      "weight": 2
+    },
+    {
+      "name": "Intrigue",
+      "rating": 8,
+      "weight": 1
+    },
+    {
+      "name": "Logic",
+      "rating": 8,
+      "weight": 2
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 10,
+      "weight": 4
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/The Metamorphosis.md",
+  "synopsis": "Gregor Samsa, a traveling salesman, startles awake one morning to discover he has inexplicably turned into a massive bug. As he grapples with his shocking physical transformation, he must also navigate the daunting challenge of adapting to his bizarre new existence while dealing with the fallout it creates in his daily life.",
+  "title": "The Metamorphosis"
+}

@@ -1,0 +1,47 @@
+{
+  "author": "Albert Camus",
+  "commentary": [],
+  "cover_key": "covers/The Stranger.jpg",
+  "date": 20260628,
+  "date_reviewed": "2026-06-28",
+  "genres": [
+    "Literary",
+    "Psychological",
+    "Classics"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 5,
+      "weight": 10
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 9,
+      "weight": 27
+    },
+    {
+      "name": "Plot",
+      "rating": 8,
+      "weight": 5
+    },
+    {
+      "name": "Intrigue",
+      "rating": 10,
+      "weight": 25
+    },
+    {
+      "name": "Logic",
+      "rating": 4,
+      "weight": 24
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 8,
+      "weight": 9
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/The Stranger.md",
+  "synopsis": "Albert Camus’s debut novel centers on an ordinary man who becomes inadvertently entangled in a motiveless killing along a blazing Algerian coastline, through which the author examines the stark reality of human existence confronting life's inherent meaninglessness.",
+  "title": "The Stranger"
+}

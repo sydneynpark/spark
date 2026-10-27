@@ -1,0 +1,53 @@
+{
+  "author": "Alex Michaelides",
+  "commentary": [],
+  "cover_key": "covers/The Silent Patient.jpg",
+  "date": 20260403,
+  "date_reviewed": "2026-04-03",
+  "genres": [
+    "Thrillers",
+    "Psychological",
+    "Suspense",
+    "Domestic"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 8,
+      "weight": 5
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 7,
+      "weight": 3
+    },
+    {
+      "name": "Writing",
+      "rating": 8,
+      "weight": 2
+    },
+    {
+      "name": "Plot",
+      "rating": 4,
+      "weight": 4
+    },
+    {
+      "name": "Intrigue",
+      "rating": 8,
+      "weight": 5
+    },
+    {
+      "name": "Logic",
+      "rating": 10,
+      "weight": 2
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 8,
+      "weight": 5
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/The Silent Patient.md",
+  "synopsis": "Alicia Berenson appears to have an idyllic existence. As a celebrated artist wedded to a successful fashion photographer, she resides in a luxurious London residence featuring expansive views of a park. Late one night, after Gabriel comes home from a photo shoot, Alicia fires five bullets into his face and subsequently lapses into total silence, never uttering another word.\n\nHer steadfast refusal to speak or justify her actions transforms a private calamity into a massive public obsession, propelling Alicia into infamous celebrity. Consequently, the value of her paintings surges dramatically, while the mute woman herself is tucked away from prying reporters inside the Grove, a high-security psychiatric facility in North London.\n\nTheo Faber, a forensic psychotherapist, has spent years yearning for the chance to treat Alicia. His relentless pursuit to break her silence and solve the puzzle behind the murder leads him on a winding journey that exposes his own hidden drives—an obsessive quest for the truth that risks consuming his entire life.",
+  "title": "The Silent Patient"
+}

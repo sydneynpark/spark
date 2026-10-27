@@ -1,0 +1,44 @@
+{
+  "author": "Pierce Brown",
+  "commentary": [
+    {
+      "text": "I'm not typically into the scifi/fantasy sagas where there's a whole huge political landscape I have to memorize and a massive cast of characters to keep track of. But I enjoyed this more than I thought I would. It never had the pull where I spend all day itching to get back to reading, but when I had the discipline to open it, I was richly rewarded. Red Rising strikes a good balance of politics, action, and interpersonal. I need a refresher with some books that come more naturally to me, but I would come back and pick up the next in the series."
+    }
+  ],
+  "cover_key": "covers/Red Rising.jpg",
+  "date": 20260918,
+  "date_reviewed": "2026-09-18",
+  "genres": [
+    "Action & Adventure"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 8,
+      "weight": 6
+    },
+    {
+      "name": "Worldbuilding",
+      "rating": 9,
+      "weight": 18
+    },
+    {
+      "name": "Plot",
+      "rating": 7,
+      "weight": 26
+    },
+    {
+      "name": "Logic",
+      "rating": 9,
+      "weight": 14
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 6,
+      "weight": 36
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Red Rising.md",
+  "synopsis": "Born into the lowest tier of a heavily stratified, color-coded Martian society, Darrow is a Red—a lowly underground laborer who believes his arduous toil is helping to make the surface planet habitable for future generations. That illusion is shattered when he discovers that humanity has already terraformed Mars and that his caste has been enslaved for centuries by the ruling Gold elite to enrich their own luxurious civilization. Following a devastating personal tragedy, Darrow is recruited by a clandestine rebel network known as the Sons of Ares. To dismantle the oppressive hegemony from within, he undergoes radical physical and psychological modifications to pass as a Gold, infiltrating their elite military academy. As he climbs the ranks of his enemy's society, he navigates lethal betrayals, complex alliances, and grueling warfare, eventually sparking a massive interplanetary revolution. However, the path to overthrowing the old order proves perilous, and even after achieving victory and shifting the balance of power, Darrow and his allies must fight to preserve a fragile new republic against internal corruption, ruthless outer-space warlords, and devastating conflicts that threaten to plunge the solar system into an irreversible dark age.",
+  "title": "Red Rising"
+}

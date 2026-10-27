@@ -1,0 +1,53 @@
+{
+  "author": "Rachel Cusk",
+  "commentary": [],
+  "cover_key": "covers/Second Place.jpg",
+  "date": 20260808,
+  "date_reviewed": "2026-08-08",
+  "genres": [
+    "Literary",
+    "World Literature",
+    "England",
+    "21st Century"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 8,
+      "weight": 15
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 8,
+      "weight": 15
+    },
+    {
+      "name": "Writing",
+      "rating": 5,
+      "weight": 14
+    },
+    {
+      "name": "Plot",
+      "rating": 7,
+      "weight": 14
+    },
+    {
+      "name": "Intrigue",
+      "rating": 8,
+      "weight": 14
+    },
+    {
+      "name": "Logic",
+      "rating": 4,
+      "weight": 14
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 9,
+      "weight": 14
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Second Place.md",
+  "synopsis": "A woman living with her family in an isolated coastal area offers the use of her guesthouse to a renowned painter. Deeply captivated by his artwork, she hopes his unique perspective will help her unlock a profound personal mystery. However, as an unseasonably arid summer wears on, the artist's unsettling demeanor transforms into a puzzle of its own, ultimately shattering the tranquility of her isolated home.",
+  "title": "Second Place"
+}

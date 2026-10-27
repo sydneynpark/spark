@@ -1,0 +1,55 @@
+{
+  "author": "J.O. Morgan",
+  "commentary": [],
+  "cover_key": "covers/Appliance.jpg",
+  "date": 20260104,
+  "date_reviewed": "2026-01-04",
+  "genres": [
+    "Literary",
+    "Science Fiction",
+    "General",
+    "Dystopian",
+    "Science",
+    "Philosophy & Social Aspects"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 7,
+      "weight": 1
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 7,
+      "weight": 5
+    },
+    {
+      "name": "Writing",
+      "rating": 6,
+      "weight": 4
+    },
+    {
+      "name": "Plot",
+      "rating": 4,
+      "weight": 3
+    },
+    {
+      "name": "Intrigue",
+      "rating": 6,
+      "weight": 4
+    },
+    {
+      "name": "Logic",
+      "rating": 9,
+      "weight": 4
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 7,
+      "weight": 4
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Appliance.md",
+  "synopsis": "Spanning multiple generations, this imaginative narrative explores an alternate history centered on the gradual rise of a novel technological device. Told through a rotating ensemble of everyday people, the story illustrates how this invention slowly reshapes and disrupts the lives of everyone who encounters it. As society relentlessly pursues modernization and technological advancement, the novel questions the fate of essential human traits like fear, affection, memory, and death, ultimately asking what is sacrificed in the relentless march toward the future.",
+  "title": "Appliance"
+}
