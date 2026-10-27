@@ -645,26 +645,20 @@ footer {
   color: var(--color-text-primary);
 }
 
-/* Blog list page */
-.blog-page {
-  width: 100%;
-}
-
-.blog-page h2 {
-  margin-bottom: 2rem;
-  color: var(--color-text-primary);
-}
-
-.post-list {
+/* Thumbnail list: clickable cards with a thumbnail beside their text,
+   shared by the blog and book reviews lists (see ThumbnailList.js). */
+.thumbnail-list {
   list-style: none;
 }
 
-.post-item {
+.thumbnail-list-item {
   margin-bottom: 1.25rem;
 }
 
-.post-item a {
-  display: block;
+.thumbnail-list-item a {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
   background: var(--color-card-background);
   padding: 1.5rem 2rem;
   border-radius: 10px;
@@ -674,18 +668,64 @@ footer {
   transition: box-shadow 0.2s;
 }
 
-.post-item a:hover {
+.thumbnail-list-item a:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.post-item h3 {
-  color: var(--color-accent-dark);
-  margin-bottom: 0.4rem;
+.thumbnail-list-thumb {
+  object-fit: cover;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  background: var(--color-accent-medium);
 }
 
-.post-item time {
+.thumbnail-list-thumb--portrait {
+  flex: 0 0 56px;
+  width: 56px;
+  height: 84px;
+}
+
+.thumbnail-list-thumb--square {
+  flex: 0 0 96px;
+  width: 96px;
+  height: 96px;
+}
+
+/* Photos are letterboxed rather than cropped, like the gallery's tiles. */
+.thumbnail-list-thumb--square:not(.thumbnail-list-thumb--placeholder) {
+  object-fit: contain;
+  background: var(--color-background);
+}
+
+.thumbnail-list-thumb--placeholder {
+  object-fit: contain;
+  box-sizing: border-box;
+  padding: 6px;
+}
+
+.thumbnail-list-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.thumbnail-list-item h3 {
+  color: var(--color-accent-dark);
+  margin-bottom: 0.3rem;
+}
+
+.thumbnail-list-item time {
   font-size: 0.9rem;
   color: var(--color-accent-medium);
+}
+
+/* Blog list page */
+.blog-page {
+  width: 100%;
+}
+
+.blog-page h2 {
+  margin-bottom: 2rem;
+  color: var(--color-text-primary);
 }
 
 .post-preview {
@@ -891,57 +931,6 @@ footer {
   color: var(--color-text-primary);
 }
 
-.book-list {
-  list-style: none;
-}
-
-.book-item {
-  margin-bottom: 1.25rem;
-}
-
-.book-item a {
-  display: flex;
-  gap: 1.25rem;
-  align-items: flex-start;
-  background: var(--color-card-background);
-  padding: 1.5rem 2rem;
-  border-radius: 10px;
-  text-decoration: none;
-  color: inherit;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.2s;
-}
-
-.book-item a:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.book-cover-thumb {
-  flex: 0 0 56px;
-  width: 56px;
-  height: 84px;
-  object-fit: cover;
-  border-radius: 4px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-  background: var(--color-accent-medium);
-}
-
-.book-cover-thumb--placeholder {
-  object-fit: contain;
-  box-sizing: border-box;
-  padding: 6px;
-}
-
-.book-item-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.book-item h3 {
-  color: var(--color-accent-dark);
-  margin-bottom: 0.3rem;
-}
-
 .book-author {
   font-size: 0.95rem;
   color: var(--color-text-primary);
@@ -949,12 +938,7 @@ footer {
   margin-bottom: 0.3rem;
 }
 
-.book-item time {
-  font-size: 0.9rem;
-  color: var(--color-accent-medium);
-}
-
-.book-item .star-rating {
+.books-page .thumbnail-list .star-rating {
   display: flex;
   margin-top: 0.35rem;
   font-size: 0.95rem;
@@ -1592,6 +1576,17 @@ footer {
 
   .taxonomy-count {
     padding-left: 0.4rem;
+  }
+
+  .thumbnail-list-item a {
+    gap: 1rem;
+    padding: 1.25rem;
+  }
+
+  .thumbnail-list-thumb--square {
+    flex-basis: 72px;
+    width: 72px;
+    height: 72px;
   }
 
   .thumb-stack {

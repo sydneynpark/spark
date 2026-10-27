@@ -33,7 +33,7 @@ function App() {
             <Route path="/photos" element={<Photos />} />
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/blog" element={<Blog />} />
-            <Route path="/blog/:postId" element={<BlogPost />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/books" element={<Books />} />
             <Route path="/books/:title" element={<BookReview />} />
             <Route path="/admin/login" element={<AdminLogin />} />

@@ -183,31 +183,22 @@ class S3Util:
         self.s3 = boto3.client('s3')
 
     def list_posts(self):
-        """List all markdown blog posts from S3"""
-        from utils.response_util import parse_post_metadata, extract_preview
+        """Parse every markdown blog post in S3, newest first. Each is read
+        in full, since frontmatter and the first photo can be anywhere in
+        it."""
+        from utils.post_util import parse_post
         response = self.s3.list_objects_v2(Bucket=BLOG_BUCKET)
         posts = []
         for obj in response.get('Contents', []):
             key = obj['Key']
             if not key.endswith('.md'):
                 continue
-            meta = parse_post_metadata(key)
-            meta['key'] = key
-            meta['last_modified'] = obj['LastModified'].isoformat()
-            try:
-                preview_response = self.s3.get_object(Bucket=BLOG_BUCKET, Key=key, Range='bytes=0-599')
-                preview_text = preview_response['Body'].read().decode('utf-8', errors='ignore')
-                meta['preview'] = extract_preview(preview_text)
-            except Exception:
-                meta['preview'] = ''
-            posts.append(meta)
+            post_response = self.s3.get_object(Bucket=BLOG_BUCKET, Key=key)
+            post = parse_post(key, post_response['Body'].read().decode('utf-8', errors='ignore'))
+            post['last_modified'] = obj['LastModified'].isoformat()
+            posts.append(post)
         posts.sort(key=lambda p: (p['date'] or ''), reverse=True)
         return posts
-
-    def get_post_content(self, key):
-        """Get blog post markdown content from S3"""
-        response = self.s3.get_object(Bucket=BLOG_BUCKET, Key=key)
-        return response['Body'].read().decode('utf-8')
 
 
 BOOKS_BUCKET = 'spark.wiki.books'
