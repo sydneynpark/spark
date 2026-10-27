@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import ApiService from '../services/api';
 import StarRating from './StarRating';
 import SortBar from './SortBar';
 import ReadingShelf from './ReadingShelf';
+import ThumbnailList, { ThumbnailListItem } from './ThumbnailList';
 import { useSort } from '../utils/sort';
 import { usePageTitle } from '../utils/pageTitle';
 
@@ -48,27 +48,23 @@ function Books() {
         <>
           <ReadingShelf books={books} />
           <SortBar options={SORT_OPTIONS} sortKey={sortKey} sortDirection={sortDirection} onSort={handleSort} />
-          <ul className="book-list">
+          <ThumbnailList>
             {sortedBooks.map(book => (
-              <li key={book.title} className="book-item">
-                <Link to={`/books/${encodeURIComponent(book.title)}`}>
-                  <img
-                    className={`book-cover-thumb${book.cover_key ? '' : ' book-cover-thumb--placeholder'}`}
-                    src={book.cover_key ? ApiService.getBookCoverUrl(book.cover_key) : '/images/placeholder-book.jpg'}
-                    alt={`Cover of ${book.title}`}
-                    loading="lazy"
-                    onError={e => { e.target.src = '/images/placeholder-book.jpg'; e.target.classList.add('book-cover-thumb--placeholder'); }}
-                  />
-                  <div className="book-item-text">
-                    <h3>{book.title}</h3>
-                    {book.author && <p className="book-author">by {book.author}</p>}
-                    {book.date_reviewed && <time>{formatDate(book.date_reviewed)}</time>}
-                    <StarRating rating={book.star_rating} />
-                  </div>
-                </Link>
-              </li>
+              <ThumbnailListItem
+                key={book.title}
+                to={`/books/${encodeURIComponent(book.title)}`}
+                src={ApiService.getBookCoverUrl(book.cover_key)}
+                placeholderSrc="/images/placeholder-book.jpg"
+                alt={`Cover of ${book.title}`}
+                shape="portrait"
+              >
+                <h3>{book.title}</h3>
+                {book.author && <p className="book-author">by {book.author}</p>}
+                {book.date_reviewed && <time>{formatDate(book.date_reviewed)}</time>}
+                <StarRating rating={book.star_rating} />
+              </ThumbnailListItem>
             ))}
-          </ul>
+          </ThumbnailList>
         </>
       )}
     </div>

@@ -77,9 +77,9 @@ class ApiService {
     }
   }
 
-  async fetchPost(postId) {
+  async fetchPost(slug) {
     try {
-      const response = await fetch(`${API_BASE_URL}/posts/${postId}`);
+      const response = await fetch(`${API_BASE_URL}/posts/${encodeURIComponent(slug)}`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.json();
     } catch (error) {

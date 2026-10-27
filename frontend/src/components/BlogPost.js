@@ -14,7 +14,7 @@ function formatDate(dateStr) {
 }
 
 function BlogPost() {
-  const { postId } = useParams();
+  const { slug } = useParams();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -41,11 +41,11 @@ function BlogPost() {
   }, [lightboxUri, closeLightbox]);
 
   useEffect(() => {
-    ApiService.fetchPost(postId)
+    ApiService.fetchPost(slug)
       .then(setPost)
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
-  }, [postId]);
+  }, [slug]);
 
   usePageTitle(post?.title || 'Blog');
 
