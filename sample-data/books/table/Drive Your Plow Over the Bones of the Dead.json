@@ -1,0 +1,52 @@
+{
+  "author": "Olga Tokarczuk",
+  "commentary": [],
+  "cover_key": "covers/Drive Your Plow Over the Bones of the Dead.jpg",
+  "date": 20260726,
+  "date_reviewed": "2026-07-26",
+  "genres": [
+    "Literary",
+    "Cultural Heritage",
+    "General"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 8,
+      "weight": 24
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 9,
+      "weight": 24
+    },
+    {
+      "name": "Writing",
+      "rating": 4,
+      "weight": 8
+    },
+    {
+      "name": "Plot",
+      "rating": 7,
+      "weight": 7
+    },
+    {
+      "name": "Intrigue",
+      "rating": 7,
+      "weight": 25
+    },
+    {
+      "name": "Logic",
+      "rating": 2,
+      "weight": 5
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 7,
+      "weight": 7
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Drive Your Plow Over the Bones of the Dead.md",
+  "synopsis": "Set in a secluded Polish hamlet, the story follows Janina Duszejko, an eccentric sexagenarian who narrates the mystery that unfolds after her beloved dogs vanish. As local hunters turn up dead one by one, she finds herself drawn directly into the police inquiry. A solitary figure who shuns human society in favor of wildlife, Janina marches to the beat of her own drum—she is an avid astrologer and a devoted admirer of William Blake, whose verses inspire the novel's name. Surrounded by a colorful cast of acquaintances including Oddball, Big Foot, Black Coat, Dizzy, and Boros, the narrative tackles themes of sanity, societal prejudice, animal welfare, religious hypocrisy, and fatalism against the backdrop of a baffling murder spree.",
+  "title": "Drive Your Plow Over the Bones of the Dead"
+}

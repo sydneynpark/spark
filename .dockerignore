@@ -1,0 +1,5 @@
+# The images only install dependencies (see devstack/python.Dockerfile), so
+# that's all they're sent.
+*
+!backend/src/requirements.txt
+!ContentManagement/*/src/requirements.txt

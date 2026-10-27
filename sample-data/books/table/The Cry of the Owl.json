@@ -1,0 +1,60 @@
+{
+  "author": "Patricia Highsmith",
+  "commentary": [],
+  "cover_key": "covers/The Cry of the Owl.jpg",
+  "date": 20260109,
+  "date_reviewed": "2026-01-09",
+  "genres": [
+    "General",
+    "Classics",
+    "Literary",
+    "Mystery & Detective",
+    "International Crime & Mystery",
+    "Thrillers",
+    "Suspense",
+    "Crime",
+    "Noir",
+    "Places",
+    "United States"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 6,
+      "weight": 3
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 8,
+      "weight": 4
+    },
+    {
+      "name": "Writing",
+      "rating": 8,
+      "weight": 5
+    },
+    {
+      "name": "Plot",
+      "rating": 7,
+      "weight": 4
+    },
+    {
+      "name": "Intrigue",
+      "rating": 3,
+      "weight": 1
+    },
+    {
+      "name": "Logic",
+      "rating": 6,
+      "weight": 4
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 7,
+      "weight": 5
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/The Cry of the Owl.md",
+  "synopsis": "In a quiet Pennsylvania community, Robert Forrester is trying to heal following a bitter split from his wife and a period of mental health struggles. Late one night on his way home, he catches sight of an attractive young woman illuminated inside her kitchen. Before long, he finds it impossible to stay away from her house. However, once his clandestine observation is uncovered, the dynamics of his fixation completely shift, leaving him trapped with a woman he cannot seem to escape—and making him question whether he even wants to.",
+  "title": "The Cry of the Owl"
+}

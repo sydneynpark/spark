@@ -26,23 +26,14 @@ python -m unittest test\test_lambda.py
 
 ## Running locally
 
-`run_local.py` runs the lambda on the photos in `sample-data/photos/originals`
--- the local stand-in for the photos bucket, where the admin page's uploader
-puts photos when the backend runs locally -- as if each had just been
-uploaded. It writes their thumbnails to `sample-data/photos/thumbnails` and
-their metadata to `sample-data/photos/photos.json`, which the local backend
-re-reads on every request, so they show up in the gallery without a restart.
-No AWS access is needed.
+The stack in the [README](../../README.md) runs this lambda on each photo
+uploaded to its emulated `spark.wiki.photos` bucket, starting with
+`sample-data/photos/originals`. To reprocess a photo, e.g. after changing its
+keywords, upload it again:
 
-```ps
-python run_local.py                 # photos not in photos.json yet
-python run_local.py 2026\10\08      # ...just in this folder
-python run_local.py 2026\10 --all   # every photo in it, even ones already processed
+```sh
+./dev aws s3 cp "photo.jpg" "s3://spark.wiki.photos/2026/10/08/photo.jpg"
 ```
-
-Use `--all` after changing a photo's keywords. It isn't the default because
-regenerating the committed sample photos' thumbnails changes their bytes,
-though not how they look.
 
 ## Dependencies
 

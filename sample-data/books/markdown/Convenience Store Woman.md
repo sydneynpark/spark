@@ -1,29 +1,31 @@
 ---
 title: Convenience Store Woman
 author: Sayaka Murata
+date_reviewed: '2026-01-11'
 rating_elements:
-  - name: Characters
-    weight: 5
-    rating: 9
-  - name: Atmosphere
-    weight: 4
-    rating: 9
-  - name: Writing
-    weight: 5
-    rating: 8
-  - name: Plot
-    weight: 2
-    rating: 3
-  - name: Intrigue
-    weight: 4
-    rating: 5
-  - name: Logic
-    weight: 5
-    rating: 8
-  - name: Enjoyment
-    weight: 2
-    rating: 6
+- name: Characters
+  weight: 5
+  rating: 9
+- name: Atmosphere
+  weight: 4
+  rating: 9
+- name: Writing
+  weight: 5
+  rating: 8
+- name: Plot
+  weight: 2
+  rating: 3
+- name: Intrigue
+  weight: 4
+  rating: 5
+- name: Logic
+  weight: 5
+  rating: 8
+- name: Enjoyment
+  weight: 2
+  rating: 6
 ---
+
 ## Commentary
 ### Overall
 Interesting read. This was very different to anything I'd read lately. I appreciated the novel point of view, and thought the author did a good job making me relate to the main character. I understood the frustration with everyone in her life, trying to make her live in a way that was totally unnatural and undesirable to her. 

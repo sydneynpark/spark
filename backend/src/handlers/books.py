@@ -1,12 +1,8 @@
-import os
 from flask import Blueprint, jsonify, request
 from utils.response_util import handle_error, convert_decimals
 from utils.rating_util import add_star_rating
 
-if os.getenv('LOCAL_MODE') == 'true':
-    from utils.local_util import LocalDynamoUtil as DynamoUtil
-else:
-    from utils.aws_util import DynamoUtil
+from utils.aws_util import DynamoUtil
 
 books_bp = Blueprint('books', __name__)
 dynamo = DynamoUtil()

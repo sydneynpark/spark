@@ -1,0 +1,53 @@
+{
+  "author": "Hannah Grace",
+  "commentary": [],
+  "cover_key": "covers/Holiday Ever After.jpg",
+  "date": 0,
+  "date_reviewed": "",
+  "genres": [
+    "Romance",
+    "Holiday",
+    "New Adult",
+    "Contemporary"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 2,
+      "weight": 5
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 7,
+      "weight": 4
+    },
+    {
+      "name": "Writing",
+      "rating": 2,
+      "weight": 2
+    },
+    {
+      "name": "Plot",
+      "rating": 5,
+      "weight": 2
+    },
+    {
+      "name": "Intrigue",
+      "rating": 1,
+      "weight": 2
+    },
+    {
+      "name": "Logic",
+      "rating": 1,
+      "weight": 3
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 5,
+      "weight": 5
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Holiday Ever After.md",
+  "synopsis": "Clara Davenport is entirely focused on advancing within her family's toy enterprise, Davenport Innovation Creative. Her career trajectory hits a major roadblock when the corporation faces allegations of plagiarizing a doll concept from an independent creator, sparking a PR disaster. Offered a long-awaited promotion on the condition that she cleans up the mess, Clara travels to the quaint town of Fraser Falls to win over the skeptical residents by any method required.\n\nMeanwhile, Jack Kelly wants nothing to do with anyone named Davenport. Months earlier, a corporate representative made empty promises before his design was ultimately stolen by the very firm that claimed they wanted to partner with him. Consequently, when Clara arrives in town trying to prove her company means no harm, Jack vows to protect himself and his neighbors from being deceived a second time. \n\nEven so, Clara pushes forward with her strategy to charm the locals, only to discover that Jack's icy exterior masks the true heart of the community—and perhaps the affections of her own heart as well.",
+  "title": "Holiday Ever After"
+}

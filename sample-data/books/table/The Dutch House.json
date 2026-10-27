@@ -1,0 +1,30 @@
+{
+  "author": "Ann Patchett",
+  "commentary": [
+    {
+      "text": "There were a lot of difficult emotions to process through the story. Reading it was painfully addictive like poking at a bruise. Central to the story is the fact that every person is more than the character you build of them in your head. It explores the nuance with which we ought to approach our understanding of others, and the combination of resistance, grief, and acceptance that realization can inspire."
+    }
+  ],
+  "cover_key": "covers/The Dutch House.jpg",
+  "date": 20261025,
+  "date_reviewed": "2026-10-25",
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 9,
+      "weight": 37
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 8,
+      "weight": 25
+    },
+    {
+      "name": "Emotional complexity",
+      "rating": 10,
+      "weight": 38
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/The Dutch House.md",
+  "title": "The Dutch House"
+}

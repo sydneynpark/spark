@@ -1,0 +1,53 @@
+{
+  "author": "Jenny Offill",
+  "commentary": [],
+  "cover_key": "covers/Dept. of Speculation.jpg",
+  "date": 20260124,
+  "date_reviewed": "2026-01-24",
+  "genres": [
+    "Literary",
+    "Women",
+    "Family Life",
+    "General"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 6,
+      "weight": 4
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 6,
+      "weight": 1
+    },
+    {
+      "name": "Writing",
+      "rating": 8,
+      "weight": 5
+    },
+    {
+      "name": "Plot",
+      "rating": 6,
+      "weight": 2
+    },
+    {
+      "name": "Intrigue",
+      "rating": 3,
+      "weight": 3
+    },
+    {
+      "name": "Logic",
+      "rating": 7,
+      "weight": 3
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 5,
+      "weight": 5
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Dept. of Speculation.md",
+  "synopsis": "Early on, envisioning their days to come was effortless. Brimming with youth and self-assurance, they felt completely certain of their mutual affection, dubbing the exciting unknowns of their path forward the \"Dept. of Speculation.\" But marriage, a baby, and the standard trials of domestic existence eventually followed, bringing along an inconsolable infant, a fraying bond, and unrealized career goals. Following an abrupt and severe crisis in their union, the wife attempts to map out where things went wrong, drawing on insights from philosophers, literary figures, and ill-fated cosmonauts to evaluate the remnants of their connection.",
+  "title": "Dept. of Speculation"
+}

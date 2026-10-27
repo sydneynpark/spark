@@ -1,0 +1,51 @@
+{
+  "author": "Catherine Chidgey",
+  "commentary": [],
+  "cover_key": "covers/Pet.jpg",
+  "date": 20260402,
+  "date_reviewed": "2026-04-02",
+  "genres": [
+    "General",
+    "Women"
+  ],
+  "rating_elements": [
+    {
+      "name": "Characters",
+      "rating": 10,
+      "weight": 5
+    },
+    {
+      "name": "Atmosphere",
+      "rating": 10,
+      "weight": 5
+    },
+    {
+      "name": "Writing",
+      "rating": 9,
+      "weight": 3
+    },
+    {
+      "name": "Plot",
+      "rating": 7,
+      "weight": 4
+    },
+    {
+      "name": "Intrigue",
+      "rating": 9,
+      "weight": 4
+    },
+    {
+      "name": "Logic",
+      "rating": 6,
+      "weight": 3
+    },
+    {
+      "name": "Enjoyment",
+      "rating": 9,
+      "weight": 3
+    }
+  ],
+  "s3_uri": "s3://spark.wiki.books/Pet.md",
+  "synopsis": "Twelve-year-old Justine and her classmates become instantly captivated by their vibrant, magnetic new teacher, all of them vying for special favor. But as a series of thefts plagues the school, Justine develops a persistent, unsettling feeling that something is deeply amiss. Amidst a cascade of dark revelations and the heavy burden of guilt, young Justine is forced to choose where her true allegiances belong.",
+  "title": "Pet"
+}
