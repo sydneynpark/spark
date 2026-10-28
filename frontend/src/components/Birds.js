@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ApiService from '../services/api';
 import PhotoDateTree, { TreeRow, buildDateHierarchy } from './PhotoDateTree';
+import { usePageTitle } from '../utils/pageTitle';
 
 const GALLERY_PATH = '/birds/gallery';
 
@@ -14,6 +15,8 @@ const Birds = () => {
 
   const activeTab = searchParams.get('tab') === 'date' ? 'date' : 'taxonomy';
   const selectTab = (tab) => setSearchParams(tab === 'date' ? { tab: 'date' } : {});
+
+  usePageTitle('Birds');
 
   useEffect(() => {
     loadPhotos();

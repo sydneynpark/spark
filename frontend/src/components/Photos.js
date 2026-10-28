@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../services/api';
 import PhotoDateTree, { buildDateHierarchy } from './PhotoDateTree';
+import { usePageTitle } from '../utils/pageTitle';
 
 // Photos that aren't of birds, browsed by the day they were taken, as the
 // bird photos are on their Date tab.
@@ -8,6 +9,8 @@ const Photos = () => {
   const [dateHierarchy, setDateHierarchy] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  usePageTitle('Photos');
 
   useEffect(() => {
     loadPhotos();

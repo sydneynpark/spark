@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ApiService from '../../services/api';
+import { usePageTitle } from '../../utils/pageTitle';
 
 function AdminLogin() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  usePageTitle('Admin Login');
   const navigate = useNavigate();
 
   async function handleSubmit(e) {

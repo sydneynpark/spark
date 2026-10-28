@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../services/api';
+import { usePageTitle } from '../utils/pageTitle';
 import ThumbnailList, { ThumbnailListItem } from './ThumbnailList';
 
 function Blog() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  usePageTitle('Blog');
 
   useEffect(() => {
     ApiService.fetchPosts()

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import ApiService from '../../services/api';
 import FacetWeightSliders from './FacetWeightSliders';
+import { usePageTitle } from '../../utils/pageTitle';
 
 const DEFAULT_FACET_NAMES = ['Characters', 'Atmosphere', 'Writing', 'Plot', 'Intrigue', 'Logic', 'Enjoyment'];
 const DEFAULT_RATING = 5;
@@ -90,6 +91,7 @@ function BookReviewForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  usePageTitle('Upload Book Review');
 
   function updateFacetName(id, name) {
     setFacets(prev => prev.map(f => (f.id === id ? { ...f, name } : f)));

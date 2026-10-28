@@ -17,6 +17,17 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import AdminRoute from './components/admin/AdminRoute';
 import BookReviewForm from './components/admin/BookReviewForm';
 import PhotoUploader from './components/admin/PhotoUploader';
+import { usePageTitle } from './utils/pageTitle';
+
+function Home() {
+  usePageTitle();
+  return (
+    <>
+      <Hero />
+      <Content />
+    </>
+  );
+}
 
 // Where the bird photos' gallery used to be, before /photos was for the rest.
 function OldBirdsGallery() {
@@ -31,12 +42,7 @@ function App() {
         <Header />
         <main>
           <Routes>
-            <Route path="/" element={
-              <>
-                <Hero />
-                <Content />
-              </>
-            } />
+            <Route path="/" element={<Home />} />
             <Route path="/photos" element={<Photos />} />
             <Route path="/photos/gallery" element={<Gallery key="photos" collection="photos" />} />
             <Route path="/birds" element={<Birds />} />

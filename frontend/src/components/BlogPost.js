@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import ApiService from '../services/api';
+import { usePageTitle } from '../utils/pageTitle';
 
 // photo://<key> embeds name a photo by its key in this bucket, e.g.
 // photo://birds/2026/05/23/<photo>.jpg or photo://photos/2026/07/04/<photo>.jpg.
@@ -47,6 +48,8 @@ function BlogPost() {
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  usePageTitle(post?.title || 'Blog');
 
   const markdownComponents = {
     h1: ({ children }) => <h2>{children}</h2>,

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import ApiService from '../../services/api';
 import { monthName } from '../../utils/photoDate';
+import { usePageTitle } from '../../utils/pageTitle';
 
 // How many photos upload to S3 at once.
 const UPLOAD_CONCURRENCY = 3;
@@ -63,6 +64,7 @@ function fileWarnings(file, listing, folderDate) {
 
 function PhotoUploader({ collection }) {
   const { title, folderName, processing } = COLLECTIONS[collection];
+  usePageTitle(title);
   const [searchParams, setSearchParams] = useSearchParams();
   const prefix = searchParams.get('folder') || '';
   const [listing, setListing] = useState(null);
