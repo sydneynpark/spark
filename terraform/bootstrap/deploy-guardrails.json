@@ -83,8 +83,6 @@
         "arn:aws:s3:::spark.wiki.books/*",
         "arn:aws:s3:::spark.wiki.photos",
         "arn:aws:s3:::spark.wiki.photos/*",
-        "arn:aws:s3:::spark.wiki.normal-photos",
-        "arn:aws:s3:::spark.wiki.normal-photos/*",
         "arn:aws:s3:::spark.wiki.thumbnails",
         "arn:aws:s3:::spark.wiki.thumbnails/*"
       ]

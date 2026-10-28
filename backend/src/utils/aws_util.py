@@ -242,20 +242,19 @@ class BooksAdminUtil:
         )
 
 
-# The admin page's photo uploader works on either photos bucket, named by
-# its collection. (The buckets are named for what they held first:
-# spark.wiki.photos has the bird photos.)
-PHOTO_BUCKETS = {
-    'birds': 'spark.wiki.photos',
-    'photos': 'spark.wiki.normal-photos',
+PHOTOS_BUCKET = 'spark.wiki.photos'
+# Each photo collection's folder in it: bird photos, and the rest.
+PHOTO_COLLECTIONS = {
+    'birds': 'birds/',
+    'photos': 'photos/',
 }
 UPLOAD_URL_TTL_SECONDS = 15 * 60
 
 
 class PhotosAdminUtil:
-    """Browses a photos bucket's folders and hands out presigned PUT URLs,
-    so the admin page uploads photos straight to S3 -- full-size photos are
-    bigger than API Gateway and Lambda will accept in a request. The
+    """Browses a photo collection's folders and hands out presigned PUT
+    URLs, so the admin page uploads photos straight to S3 -- full-size photos
+    are bigger than API Gateway and Lambda will accept in a request. The
     existing UpdatePhotoMetadata lambda's S3 trigger takes it from there
     (taxonomy, for bird photos, date, thumbnail, and the DynamoDB write)."""
 
@@ -265,11 +264,13 @@ class PhotosAdminUtil:
         # virtual-hosted ones would fail TLS validation in the browser.
         self.s3 = boto3.client('s3', config=Config(signature_version='s3v4'))
 
-    def list_folder(self, bucket, prefix):
-        """The subfolder names and photos directly inside `prefix`."""
+    def list_folder(self, collection, prefix):
+        """The subfolder names and photos directly inside `prefix`, a folder
+        in `collection`'s folder."""
         folders, photos = [], []
+        prefix = f'{PHOTO_COLLECTIONS[collection]}{prefix}'
         paginator = self.s3.get_paginator('list_objects_v2')
-        for page in paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter='/'):
+        for page in paginator.paginate(Bucket=PHOTOS_BUCKET, Prefix=prefix, Delimiter='/'):
             folders.extend(p['Prefix'][len(prefix):-1] for p in page.get('CommonPrefixes', []))
             for obj in page.get('Contents', []):
                 # The folder's own placeholder object, if it has one.
@@ -277,24 +278,24 @@ class PhotosAdminUtil:
                     continue
                 photos.append({
                     'name': obj['Key'][len(prefix):],
-                    's3_uri': f's3://{bucket}/{obj["Key"]}',
+                    's3_uri': f's3://{PHOTOS_BUCKET}/{obj["Key"]}',
                     'size': obj['Size'],
                     'last_modified': obj['LastModified'].isoformat(),
                 })
         return folders, photos
 
-    def create_folder(self, bucket, prefix):
+    def create_folder(self, collection, prefix):
         """S3 has no real folders, just key prefixes; this makes the same
         empty placeholder object the S3 console's "Create folder" does, so
         the folder exists before anything is uploaded into it."""
-        self.s3.put_object(Bucket=bucket, Key=prefix, Body=b'')
+        self.s3.put_object(Bucket=PHOTOS_BUCKET, Key=f'{PHOTO_COLLECTIONS[collection]}{prefix}', Body=b'')
 
-    def presign_upload(self, bucket, key, content_type):
-        """A URL the browser can PUT the photo to directly, sending
-        `content_type` as its Content-Type header."""
+    def presign_upload(self, key, content_type):
+        """A URL the browser can PUT the photo to directly, at bucket key
+        `key`, sending `content_type` as its Content-Type header."""
         return self.s3.generate_presigned_url(
             'put_object',
-            Params={'Bucket': bucket, 'Key': key, 'ContentType': content_type},
+            Params={'Bucket': PHOTOS_BUCKET, 'Key': key, 'ContentType': content_type},
             ExpiresIn=UPLOAD_URL_TTL_SECONDS,
         )
 

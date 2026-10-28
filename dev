@@ -119,7 +119,7 @@ case "$command" in
         ;;
     snapshot-birds)
         compose run --rm --no-deps --build \
-            --volume "$ROOT/sample-data/birds:/repo/sample-data/birds" \
+            --volume "$ROOT/sample-data/photos:/repo/sample-data/photos" \
             lambdas /lambdas/UpdatePhotoMetadata/bin/python /repo/devstack/snapshot_live_birds.py
         echo "Run ./dev reseed to load it."
         ;;

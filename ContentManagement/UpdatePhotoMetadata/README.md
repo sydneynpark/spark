@@ -2,10 +2,12 @@
 
 This lambda reads the metadata of a photo stored in S3, and writes that metadata to a DynamoDB table so that metadata is queryable. This lambda is intended to be subscribed to S3 update and delete events.
 
-It handles both photos buckets:
+The photos bucket, `spark.wiki.photos`, has two collections, and each photo's thumbnail goes to `spark.wiki.thumbnails/thumbnail/<key>`:
 
-* `spark.wiki.photos`, bird photos (the site's Birds page): their species (from their Lightroom keywords) and date go to the `spark.wiki.photos` table, one item per species, and their thumbnails to `spark.wiki.thumbnails/thumbnail/<key>`.
-* `spark.wiki.normal-photos`, photos of everything else (the site's Photos page): just their date goes to the `spark.wiki.normal-photos` table, and their thumbnails to `spark.wiki.thumbnails/normal-photos/thumbnail/<key>`.
+* `birds/`, bird photos (the site's Birds page): their species (from their Lightroom keywords) and date go to the `spark.wiki.photos` table, one item per species.
+* `photos/`, photos of everything else (the site's Photos page): just their date goes to the `spark.wiki.normal-photos` table.
+
+Anything else in the bucket, like `archive/`, is skipped.
 
 
 ## Local development
@@ -32,13 +34,12 @@ python -m unittest test\test_lambda.py
 ## Running locally
 
 The stack in the [README](../../README.md) runs this lambda on each photo
-uploaded to its emulated `spark.wiki.photos` and `spark.wiki.normal-photos`
-buckets, starting with `sample-data/birds/originals` and
-`sample-data/photos`. To reprocess a photo, e.g. after changing its
+uploaded to its emulated `spark.wiki.photos` bucket, starting with
+`sample-data/photos/originals`. To reprocess a photo, e.g. after changing its
 keywords, upload it again:
 
 ```sh
-./dev aws s3 cp "photo.jpg" "s3://spark.wiki.photos/2026/10/08/photo.jpg"
+./dev aws s3 cp "photo.jpg" "s3://spark.wiki.photos/birds/2026/10/08/photo.jpg"
 ```
 
 ## Dependencies

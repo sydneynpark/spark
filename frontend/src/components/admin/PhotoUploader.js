@@ -12,14 +12,16 @@ const NEW_FOLDER_PLACEHOLDERS = { year: 'e.g. 2026', month: '1-12', day: '1-31' 
 // so a filename's leading date says which day folder it belongs in.
 const FILENAME_DATE = /^(\d{4})-(\d{2})-(\d{2})/;
 
-// The photos buckets this uploads to (see the API's PHOTO_BUCKETS).
+// The photo collections this uploads to (see the API's PHOTO_COLLECTIONS).
 const COLLECTIONS = {
   birds: {
     title: 'Upload Bird Photos',
+    folderName: 'birds',
     processing: 'species from their keywords, plus a thumbnail',
   },
   photos: {
     title: 'Upload Photos',
+    folderName: 'photos',
     processing: 'their dates, plus a thumbnail',
   },
 };
@@ -60,7 +62,7 @@ function fileWarnings(file, listing, folderDate) {
 }
 
 function PhotoUploader({ collection }) {
-  const { title, processing } = COLLECTIONS[collection];
+  const { title, folderName, processing } = COLLECTIONS[collection];
   const [searchParams, setSearchParams] = useSearchParams();
   const prefix = searchParams.get('folder') || '';
   const [listing, setListing] = useState(null);
@@ -88,7 +90,7 @@ function PhotoUploader({ collection }) {
   const current = listing && listing.prefix === prefix ? listing : null;
   const segments = prefix.split('/').filter(Boolean);
   const crumbs = [
-    { label: 'Photos', prefix: '' },
+    { label: folderName, prefix: '' },
     ...segments.map((segment, i) => ({ label: segment, prefix: `${segments.slice(0, i + 1).join('/')}/` })),
   ];
   const folderDate = segments.join('-');

@@ -1,31 +1,16 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.spark.wiki';
 const ADMIN_TOKEN_KEY = 'spark_admin_token';
-// The bird photos' CDN, and the other photos'. Their hostnames (and buckets)
-// are named for what they held first.
-const BIRDS_CDN_BASE_URL = process.env.REACT_APP_BIRDS_CDN_URL || 'https://photos.spark.wiki';
-const PHOTOS_CDN_BASE_URL = process.env.REACT_APP_PHOTOS_CDN_URL || 'https://normal-photos.spark.wiki';
+const CDN_BASE_URL = process.env.REACT_APP_CDN_URL || 'https://photos.spark.wiki';
 // CloudFront distribution in front of spark.wiki.books, origin = bucket root
 // (no origin path override), so this mirrors S3 keys 1:1 the same way
-// BIRDS_CDN_BASE_URL does for the bird photos bucket.
+// CDN_BASE_URL does for the photos bucket.
 const COVERS_CDN_BASE_URL = process.env.REACT_APP_COVERS_CDN_URL || 'https://books.spark.wiki';
 
-// Each photos bucket's CDN. Both are laid out the same way: a photo at its
-// key, and its thumbnail at thumbnail/<key>.
-const PHOTO_CDN_BASE_URLS = {
-  'spark.wiki.photos': BIRDS_CDN_BASE_URL,
-  'spark.wiki.normal-photos': PHOTOS_CDN_BASE_URL,
-};
-
-const S3_URI = /^s3:\/\/([^/]+)\/(.*)$/;
-
-// The CDN serving an S3 URI's photo, and the URL-encoded key path it serves
-// it under.
-function photoCdnLocation(s3Uri) {
-  const [, bucket, key] = S3_URI.exec(s3Uri) || [null, null, s3Uri];
-  return {
-    baseUrl: PHOTO_CDN_BASE_URLS[bucket] || BIRDS_CDN_BASE_URL,
-    path: key.split('/').map(encodeURIComponent).join('/'),
-  };
+// Strips the "s3://<bucket>/" prefix off an S3 URI and URL-encodes each path
+// segment, yielding the key path the CDN serves images under.
+function s3UriToPath(s3Uri) {
+  const key = s3Uri.replace(/^s3:\/\/[^/]+\//, '');
+  return key.split('/').map(encodeURIComponent).join('/');
 }
 
 class ApiService {
@@ -91,13 +76,11 @@ class ApiService {
   }
 
   getThumbnailUrl(s3Uri) {
-    const { baseUrl, path } = photoCdnLocation(s3Uri);
-    return `${baseUrl}/thumbnail/${path}`;
+    return `${CDN_BASE_URL}/thumbnail/${s3UriToPath(s3Uri)}`;
   }
 
   getFullsizeUrl(s3Uri) {
-    const { baseUrl, path } = photoCdnLocation(s3Uri);
-    return `${baseUrl}/${path}`;
+    return `${CDN_BASE_URL}/${s3UriToPath(s3Uri)}`;
   }
 
   async fetchPosts() {
@@ -232,7 +215,7 @@ class ApiService {
     });
   }
 
-  // collection is the photos bucket: 'birds' or 'photos'. prefix is a
+  // collection is the photo collection: 'birds' or 'photos'. prefix is a
   // folder in it: '' for its root, else e.g. '2025/05/17/'.
   async fetchPhotoFolder(collection, prefix) {
     const params = new URLSearchParams({ collection, prefix });

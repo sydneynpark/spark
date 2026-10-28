@@ -1,6 +1,6 @@
 """
 Copies a selection of the bird photos live on spark.wiki into
-sample-data/birds/originals, for the local stack to start with (see
+sample-data/photos/originals/birds, for the local stack to start with (see
 sample-data/README.md). Run it with ./dev snapshot-birds.
 
 The full-size photos are shrunk, to keep the repository small, but keep the
@@ -28,9 +28,9 @@ import lambda_function  # noqa: E402
 import taxonomy_util  # noqa: E402
 
 API_URL = 'https://api.spark.wiki'
-BIRDS_CDN_URL = 'https://photos.spark.wiki'
+PHOTOS_CDN_URL = 'https://photos.spark.wiki'
 
-ORIGINALS_DIR = REPO / 'sample-data' / 'birds' / 'originals'
+ORIGINALS_DIR = REPO / 'sample-data' / 'photos' / 'originals' / 'birds'
 
 # Enough of the site's dates and taxonomy to fill out both of the photos
 # page's trees: families with more than one species, a species with photos
@@ -64,7 +64,8 @@ JPEG_QUALITY = 82
 # EXIF's GPS block: where the photo was taken, which nothing reads.
 GPS_IFD = 0x8825
 
-PHOTOS_BUCKET_URI = 's3://spark.wiki.photos/'
+# Where the bird photos are; SELECTED's keys are within it.
+BIRDS_URI = 's3://spark.wiki.photos/birds/'
 
 images = img_util.ImageUtil()
 taxonomy = taxonomy_util.TaxonomyUtil(str(LAMBDA_SRC / 'Bird keywords.txt'))
@@ -81,7 +82,7 @@ def live_species_and_dates():
     photos = json.loads(fetch(f'{API_URL}/birds'))['photos']
     live = {}
     for photo in photos:
-        key = photo['s3_uri'][len(PHOTOS_BUCKET_URI):]
+        key = photo['s3_uri'][len(BIRDS_URI):]
         species, date = live.get(key, (set(), photo.get('date')))
         live[key] = (species | {photo['species']}, date)
     return live
@@ -129,7 +130,7 @@ def main():
     total = 0
     for key in SELECTED:
         path = '/'.join(urllib.parse.quote(part) for part in key.split('/'))
-        original = fetch(f'{BIRDS_CDN_URL}/{path}')
+        original = fetch(f'{PHOTOS_CDN_URL}/birds/{path}')
         photo = compress(original)
 
         found = species_and_date(key, photo)

@@ -11,12 +11,11 @@ hand.
   `ContentAPI` (the public, read-only API) and `AdminAPI` (`/admin/*`, the
   only one that can write), and the API Gateway REST API and custom domain
   in front of them.
-- `site_cdn.tf`: https://photos.spark.wiki, https://normal-photos.spark.wiki,
-  and https://books.spark.wiki -- the CloudFront distributions serving bird
-  photos, normal (non-bird) photos, their thumbnails, and book covers from
-  their private buckets, and their WAF web ACLs.
+- `site_cdn.tf`: https://photos.spark.wiki and https://books.spark.wiki --
+  the CloudFront distributions serving photos, thumbnails, and book covers
+  from their private buckets, and their WAF web ACLs.
 - `site_dns.tf`: the `spark.wiki` Route 53 zone, and the TLS certificates.
-- `content_storage.tf`: the content buckets (bird photos, normal photos,
+- `content_storage.tf`: the content buckets (photos -- birds/ and photos/ --
   thumbnails, book reviews and covers, blog posts) and DynamoDB tables.
 - `content_lambdas.tf`: the Lambdas that process uploaded content, and the
   S3 triggers that invoke them.

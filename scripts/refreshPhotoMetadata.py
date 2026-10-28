@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
-Iterate over every object in the photos buckets -- bird photos, and the
-rest -- (or a given path/prefix within them) and invoke a (private) Lambda
-for each one, passing an S3-event-shaped payload where the object key is
-swapped in for the real key.
+Iterate over every object in an S3 bucket (or a given path/prefix within it)
+and invoke a (private) Lambda for each one, passing an S3-event-shaped payload
+where the object key is swapped in for the real key.
 
 Usage:
-    python refreshPhotoMetadata.py                              # both buckets
-    python refreshPhotoMetadata.py 2024/vacation/                # this prefix, in both
-    python refreshPhotoMetadata.py s3://spark.wiki.photos/2024/  # just this bucket's
+    python refreshPhotoMetadata.py                              # whole bucket
+    python refreshPhotoMetadata.py 2024/vacation/                # just this prefix
+    python refreshPhotoMetadata.py s3://spark.wiki.photos/2024/  # full s3:// URI
 
 Credentials:
     See s3_lambda_refresh.py.
@@ -26,8 +25,8 @@ from s3_lambda_refresh import AWS_REGION, make_session, parse_prefix, refresh_bu
 # CONSTANTS
 # ─────────────────────────────────────────────────────────────────────────────
 
-# UpdatePhotoMetadata processes both.
-BUCKET_NAMES = ["spark.wiki.photos", "spark.wiki.normal-photos"]
+BUCKET_NAME = "spark.wiki.photos"
+BUCKET_ARN = "arn:aws:s3:::spark.wiki.photos"
 
 # Objects under this prefix are archived and shouldn't be (re)processed.
 ARCHIVE_PREFIX = "archive/"
@@ -57,38 +56,27 @@ def main():
         "path",
         nargs="?",
         default=None,
-        help="S3 prefix to limit processing to, e.g. '2024/vacation/' (in every "
-        f"bucket) or 's3://{BUCKET_NAMES[0]}/2024/vacation/' (in just that one). "
-        "Omit to process every bucket.",
+        help="S3 prefix to limit processing to, e.g. '2024/vacation/' or "
+        f"'s3://{BUCKET_NAME}/2024/vacation/'. Omit to process the whole bucket.",
     )
     args = parser.parse_args()
-
-    bucket_names = BUCKET_NAMES
-    if args.path and args.path.startswith("s3://"):
-        bucket = args.path[len("s3://"):].partition("/")[0]
-        if bucket not in BUCKET_NAMES:
-            sys.exit(f"Not a photos bucket: {bucket!r} (expected one of {BUCKET_NAMES}).")
-        bucket_names = [bucket]
+    prefix = parse_prefix(args.path, BUCKET_NAME)
 
     if not LAMBDA_FUNCTION_NAME:
         sys.exit("Set LAMBDA_FUNCTION_NAME before running.")
 
     session = make_session(region=AWS_REGION)
 
-    failed = 0
-    for bucket_name in bucket_names:
-        print(f"\n== {bucket_name} ==")
-        _, _, bucket_failed = refresh_bucket(
-            session,
-            bucket_name=bucket_name,
-            bucket_arn=f"arn:aws:s3:::{bucket_name}",
-            region=AWS_REGION,
-            lambda_function_name=LAMBDA_FUNCTION_NAME,
-            invocation_type=INVOCATION_TYPE,
-            prefix=parse_prefix(args.path, bucket_name),
-            should_process=should_process,
-        )
-        failed += bucket_failed
+    _, _, failed = refresh_bucket(
+        session,
+        bucket_name=BUCKET_NAME,
+        bucket_arn=BUCKET_ARN,
+        region=AWS_REGION,
+        lambda_function_name=LAMBDA_FUNCTION_NAME,
+        invocation_type=INVOCATION_TYPE,
+        prefix=prefix,
+        should_process=should_process,
+    )
 
     # Fails the workflow run that ran this (.github/workflows/refresh-*.yml),
     # so failures aren't missed.
