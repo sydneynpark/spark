@@ -5,6 +5,7 @@ import SortBar from './SortBar';
 import ReadingShelf from './ReadingShelf';
 import ThumbnailList, { ThumbnailListItem } from './ThumbnailList';
 import { useSort } from '../utils/sort';
+import { usePageTitle } from '../utils/pageTitle';
 
 function formatDate(dateStr) {
   const [year, month, day] = dateStr.split('-').map(Number);
@@ -25,6 +26,8 @@ function Books() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { sortedItems: sortedBooks, sortKey, sortDirection, handleSort } = useSort(books, 'date_reviewed', 'desc');
+
+  usePageTitle('Books');
 
   useEffect(() => {
     ApiService.fetchBooks()

@@ -1,7 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom';
 import ApiService from '../../services/api';
+import { usePageTitle } from '../../utils/pageTitle';
 
 function AdminDashboard() {
+  usePageTitle('Admin');
   const navigate = useNavigate();
 
   function handleLogout() {

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import ApiService from '../services/api';
+import { usePageTitle } from '../utils/pageTitle';
 
 const PHOTO_BUCKET = 'spark.wiki.photos';
 
@@ -45,6 +46,8 @@ function BlogPost() {
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  usePageTitle(post?.title || 'Blog');
 
   const markdownComponents = {
     h1: ({ children }) => <h2>{children}</h2>,
