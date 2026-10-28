@@ -59,9 +59,10 @@ resource "aws_route53_record" "certificate_validation" {
 # Each site hostname, and the CloudFront distribution serving it.
 locals {
   cloudfront_hostnames = {
-    "spark.wiki"        = aws_cloudfront_distribution.frontend
-    "books.spark.wiki"  = aws_cloudfront_distribution.books
-    "photos.spark.wiki" = aws_cloudfront_distribution.photos
+    "spark.wiki"               = aws_cloudfront_distribution.frontend
+    "books.spark.wiki"         = aws_cloudfront_distribution.books
+    "photos.spark.wiki"        = aws_cloudfront_distribution.photos
+    "normal-photos.spark.wiki" = aws_cloudfront_distribution.normal_photos
   }
 }
 

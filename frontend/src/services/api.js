@@ -1,19 +1,52 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.spark.wiki';
 const ADMIN_TOKEN_KEY = 'spark_admin_token';
-const CDN_BASE_URL = process.env.REACT_APP_CDN_URL || 'https://photos.spark.wiki';
+// The bird photos' CDN, and the other photos'. Their hostnames (and buckets)
+// are named for what they held first.
+const BIRDS_CDN_BASE_URL = process.env.REACT_APP_BIRDS_CDN_URL || 'https://photos.spark.wiki';
+const PHOTOS_CDN_BASE_URL = process.env.REACT_APP_PHOTOS_CDN_URL || 'https://normal-photos.spark.wiki';
 // CloudFront distribution in front of spark.wiki.books, origin = bucket root
 // (no origin path override), so this mirrors S3 keys 1:1 the same way
-// CDN_BASE_URL does for the photos bucket.
+// BIRDS_CDN_BASE_URL does for the bird photos bucket.
 const COVERS_CDN_BASE_URL = process.env.REACT_APP_COVERS_CDN_URL || 'https://books.spark.wiki';
 
-// Strips the "s3://<bucket>/" prefix off an S3 URI and URL-encodes each path
-// segment, yielding the key path the CDN serves images under.
-function s3UriToPath(s3Uri) {
-  const key = s3Uri.replace(/^s3:\/\/[^/]+\//, '');
-  return key.split('/').map(encodeURIComponent).join('/');
+// Each photos bucket's CDN. Both are laid out the same way: a photo at its
+// key, and its thumbnail at thumbnail/<key>.
+const PHOTO_CDN_BASE_URLS = {
+  'spark.wiki.photos': BIRDS_CDN_BASE_URL,
+  'spark.wiki.normal-photos': PHOTOS_CDN_BASE_URL,
+};
+
+const S3_URI = /^s3:\/\/([^/]+)\/(.*)$/;
+
+// The CDN serving an S3 URI's photo, and the URL-encoded key path it serves
+// it under.
+function photoCdnLocation(s3Uri) {
+  const [, bucket, key] = S3_URI.exec(s3Uri) || [null, null, s3Uri];
+  return {
+    baseUrl: PHOTO_CDN_BASE_URLS[bucket] || BIRDS_CDN_BASE_URL,
+    path: key.split('/').map(encodeURIComponent).join('/'),
+  };
 }
 
 class ApiService {
+  async fetchBirds(filter = {}) {
+    try {
+      const params = new URLSearchParams(filter);
+      const query = params.toString() ? `?${params}` : '';
+      const response = await fetch(`${API_BASE_URL}/birds${query}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      return data.photos || [];
+    } catch (error) {
+      console.error('Error fetching bird photos:', error);
+      throw error;
+    }
+  }
+
+  // The photos that aren't of birds. filter is optionally one of year
+  // ('YYYY'), month ('YYYY-MM'), or day ('YYYY-MM-DD').
   async fetchPhotos(filter = {}) {
     try {
       const params = new URLSearchParams(filter);
@@ -32,7 +65,7 @@ class ApiService {
 
   async fetchTaxonomy() {
     try {
-      const response = await fetch(`${API_BASE_URL}/photos/taxonomy`);
+      const response = await fetch(`${API_BASE_URL}/birds/taxonomy`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -44,25 +77,27 @@ class ApiService {
     }
   }
 
-  async fetchPhoto(photoId) {
+  async fetchBird(photoId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/photos/${encodeURIComponent(photoId)}`);
+      const response = await fetch(`${API_BASE_URL}/birds/${encodeURIComponent(photoId)}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       return await response.json();
     } catch (error) {
-      console.error('Error fetching photo:', error);
+      console.error('Error fetching bird photo:', error);
       throw error;
     }
   }
 
   getThumbnailUrl(s3Uri) {
-    return `${CDN_BASE_URL}/thumbnail/${s3UriToPath(s3Uri)}`;
+    const { baseUrl, path } = photoCdnLocation(s3Uri);
+    return `${baseUrl}/thumbnail/${path}`;
   }
 
   getFullsizeUrl(s3Uri) {
-    return `${CDN_BASE_URL}/${s3UriToPath(s3Uri)}`;
+    const { baseUrl, path } = photoCdnLocation(s3Uri);
+    return `${baseUrl}/${path}`;
   }
 
   async fetchPosts() {
@@ -197,28 +232,29 @@ class ApiService {
     });
   }
 
-  // prefix is a folder in the photos bucket: '' for its root, else e.g.
-  // '2025/05/17/'.
-  async fetchPhotoFolder(prefix) {
-    return this.adminRequest(`/admin/photos/folders?prefix=${encodeURIComponent(prefix)}`, {
+  // collection is the photos bucket: 'birds' or 'photos'. prefix is a
+  // folder in it: '' for its root, else e.g. '2025/05/17/'.
+  async fetchPhotoFolder(collection, prefix) {
+    const params = new URLSearchParams({ collection, prefix });
+    return this.adminRequest(`/admin/photos/folders?${params}`, {
       failureMessage: 'Failed to load folder',
     });
   }
 
-  async createPhotoFolder(parent, name) {
+  async createPhotoFolder(collection, parent, name) {
     return this.adminRequest('/admin/photos/folders', {
       method: 'POST',
-      body: { parent, name },
+      body: { collection, parent, name },
       failureMessage: 'Failed to create folder',
     });
   }
 
   // Uploads straight to S3 through a presigned URL from the API (photos are
   // too big to send through it), reporting progress from 0 to 1.
-  async uploadPhoto(folder, file, onProgress) {
+  async uploadPhoto(collection, folder, file, onProgress) {
     const { url, headers } = await this.adminRequest('/admin/photos/upload-url', {
       method: 'POST',
-      body: { folder, filename: file.name },
+      body: { collection, folder, filename: file.name },
       failureMessage: 'Failed to start upload',
     });
 

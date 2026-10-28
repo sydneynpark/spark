@@ -10,7 +10,7 @@
 #   ./dev reseed          Start the emulated AWS over, from sample-data/
 #   ./dev aws <args>      The AWS CLI, against this stack's emulated AWS only
 #   ./dev snapshot-books  Copy the book reviews live on spark.wiki into sample-data/
-#   ./dev snapshot-photos Copy a selection of the photos live on spark.wiki into sample-data/
+#   ./dev snapshot-birds  Copy a selection of the bird photos live on spark.wiki into sample-data/
 #   ./dev down            Stop it, keeping its frontend dependencies
 #   ./dev destroy         Stop it, and delete its volumes and images
 #   ./dev compose <args>  Any other docker compose command, for this stack
@@ -117,10 +117,10 @@ case "$command" in
             lambdas /lambdas/UpdateBookReview/bin/python /repo/devstack/snapshot_live_books.py
         echo "Run ./dev reseed to load it."
         ;;
-    snapshot-photos)
+    snapshot-birds)
         compose run --rm --no-deps --build \
-            --volume "$ROOT/sample-data/photos:/repo/sample-data/photos" \
-            lambdas /lambdas/UpdatePhotoMetadata/bin/python /repo/devstack/snapshot_live_photos.py
+            --volume "$ROOT/sample-data/birds:/repo/sample-data/birds" \
+            lambdas /lambdas/UpdatePhotoMetadata/bin/python /repo/devstack/snapshot_live_birds.py
         echo "Run ./dev reseed to load it."
         ;;
     down)

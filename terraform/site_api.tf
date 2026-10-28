@@ -23,6 +23,7 @@ data "aws_iam_policy_document" "content_api" {
       aws_dynamodb_table.books.arn,
       aws_dynamodb_table.photos.arn,
       "${aws_dynamodb_table.photos.arn}/index/*",
+      aws_dynamodb_table.normal_photos.arn,
     ]
   }
 
@@ -69,9 +70,12 @@ data "aws_iam_policy_document" "admin_api" {
 
   # The photo uploader's folder browser.
   statement {
-    sid       = "ListPhotos"
-    actions   = ["s3:ListBucket"]
-    resources = [aws_s3_bucket.content["photos"].arn]
+    sid     = "ListPhotos"
+    actions = ["s3:ListBucket"]
+    resources = [
+      aws_s3_bucket.content["photos"].arn,
+      aws_s3_bucket.content["normal_photos"].arn,
+    ]
   }
 
   # Review publishing, and photo uploads (whose presigned URLs carry this
@@ -82,6 +86,7 @@ data "aws_iam_policy_document" "admin_api" {
     resources = [
       "${aws_s3_bucket.content["books"].arn}/*",
       "${aws_s3_bucket.content["photos"].arn}/*",
+      "${aws_s3_bucket.content["normal_photos"].arn}/*",
     ]
   }
 }

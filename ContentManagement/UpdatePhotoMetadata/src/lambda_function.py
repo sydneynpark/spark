@@ -15,6 +15,20 @@ taxonomy = taxonomy_util.TaxonomyUtil(taxonomy_file_path)
 
 DATE_PATH_PATTERN = re.compile(r'(\d{4})/(\d{2})/(\d{2})/')
 
+# The buckets are named for what they held first: bird photos, then photos
+# of anything else, which get the same treatment, less the taxonomy.
+BIRDS_BUCKET = 'spark.wiki.photos'
+PHOTOS_BUCKET = 'spark.wiki.normal-photos'
+THUMBNAILS_BUCKET = 'spark.wiki.thumbnails'
+
+# Where each bucket's thumbnails go in the thumbnails bucket, so that the same
+# key in both doesn't collide. Their CDNs both serve them as /thumbnail/<key>
+# (terraform/site_cdn.tf).
+THUMBNAIL_PREFIXES = {
+    BIRDS_BUCKET: 'thumbnail/',
+    PHOTOS_BUCKET: 'normal-photos/thumbnail/',
+}
+
 
 def _date_from_key(key):
     # Fallback for photos with no usable EXIF date: photos are uploaded into
@@ -38,27 +52,31 @@ def lambda_handler(event, context):
             print('Skipping folder placeholder')
             return []
 
+        thumbnail_key = f'{THUMBNAIL_PREFIXES[bucket]}{key}'
         response = aws.get_s3_object(bucket, key)
         photo_bytes = response['Body'].read()
-        photo_keywords = img.get_lightroom_keywords(io.BytesIO(photo_bytes))
-        print('The image has keywords: ' + ', '.join(photo_keywords))
-        
-        # Parse taxonomic classifications from keywords
-        taxonomies = taxonomy.parse_keywords_to_taxonomy(photo_keywords)
-        print(f'Found {len(taxonomies)} species labeled in the photo.')
-
         date_captured = img.get_date_captured(io.BytesIO(photo_bytes)) or _date_from_key(key)
-
         s3_uri = f's3://{bucket}/{key}'
-        aws.store_photo_metadata(s3_uri, taxonomies, date_captured)
+
+        if bucket == PHOTOS_BUCKET:
+            # No species to read from its keywords (which it may not have).
+            result = aws.store_photo_metadata(s3_uri, date_captured)
+        else:
+            photo_keywords = img.get_lightroom_keywords(io.BytesIO(photo_bytes))
+            print('The image has keywords: ' + ', '.join(photo_keywords))
+
+            # Parse taxonomic classifications from keywords
+            result = taxonomy.parse_keywords_to_taxonomy(photo_keywords)
+            print(f'Found {len(result)} species labeled in the photo.')
+
+            aws.store_bird_metadata(s3_uri, result, date_captured)
         print(f'Stored metadata in DynamoDB')
 
         thumbnail = img.create_thumbnail(io.BytesIO(photo_bytes))
-        thumbnail_key = f'thumbnail/{key}'
-        aws.put_s3_object('spark.wiki.thumbnails', thumbnail_key, thumbnail)
-        print(f'Saved thumbnail to spark.wiki.thumbnails/{thumbnail_key}')
+        aws.put_s3_object(THUMBNAILS_BUCKET, thumbnail_key, thumbnail)
+        print(f'Saved thumbnail to {THUMBNAILS_BUCKET}/{thumbnail_key}')
 
-        return taxonomies
+        return result
     
     except Exception as e:
         print(e)

@@ -1,14 +1,16 @@
-# The site's content: photos, book reviews, and blog posts, uploaded to S3
-# (by hand, or through the admin page), and what the content Lambdas derive
-# from them (content_lambdas.tf): thumbnails, book covers, and the DynamoDB
-# tables the API serves. Nothing here is versioned or backed up.
+# The site's content: photos (bird photos, and "normal" photos of anything
+# else), book reviews, and blog posts, uploaded to S3 (by hand, or through
+# the admin page), and what the content Lambdas derive from them
+# (content_lambdas.tf): thumbnails, book covers, and the DynamoDB tables the
+# API serves. Nothing here is versioned or backed up.
 
 locals {
   content_buckets = {
-    blog       = "spark.wiki.blog"
-    books      = "spark.wiki.books"
-    photos     = "spark.wiki.photos"
-    thumbnails = "spark.wiki.thumbnails"
+    blog          = "spark.wiki.blog"
+    books         = "spark.wiki.books"
+    photos        = "spark.wiki.photos"
+    normal_photos = "spark.wiki.normal-photos"
+    thumbnails    = "spark.wiki.thumbnails"
   }
 }
 
@@ -43,10 +45,12 @@ resource "aws_s3_bucket_ownership_controls" "content" {
   }
 }
 
-# The admin page uploads photos straight to the bucket, with presigned URLs
-# from the API.
-resource "aws_s3_bucket_cors_configuration" "photos" {
-  bucket = aws_s3_bucket.content["photos"].id
+# The admin page uploads photos straight to their bucket, with presigned
+# URLs from the API.
+resource "aws_s3_bucket_cors_configuration" "photo_uploads" {
+  for_each = toset(["photos", "normal_photos"])
+
+  bucket = aws_s3_bucket.content[each.key].id
 
   cors_rule {
     allowed_headers = ["Content-Type"]
@@ -54,6 +58,11 @@ resource "aws_s3_bucket_cors_configuration" "photos" {
     allowed_origins = ["https://spark.wiki", "https://www.spark.wiki"]
     max_age_seconds = 3000
   }
+}
+
+moved {
+  from = aws_s3_bucket_cors_configuration.photos
+  to   = aws_s3_bucket_cors_configuration.photo_uploads["photos"]
 }
 
 resource "aws_dynamodb_table" "books" {
@@ -122,6 +131,23 @@ resource "aws_dynamodb_table" "photos" {
         key_type       = "RANGE"
       }
     }
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+# Photos that aren't of birds, so have no taxonomy: one item per photo, which
+# the API lists by date.
+resource "aws_dynamodb_table" "normal_photos" {
+  name         = "spark.wiki.normal-photos"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "s3_uri"
+
+  attribute {
+    name = "s3_uri"
+    type = "S"
   }
 
   lifecycle {

@@ -30,6 +30,37 @@ class TestLambda(unittest.TestCase):
         assert result == []
         self.mock_aws.get_s3_object.assert_not_called()
 
+    def test_lambda_for_non_bird_photo_create_event(self):
+        event = copy.deepcopy(sample_events.UploadTreeSwallowPhoto)
+        event['Records'][0]['s3']['bucket']['name'] = 'spark.wiki.normal-photos'
+        self.mock_aws.get_s3_object = MagicMock(return_value={
+            'Body': sample_events.file_to_streamingbody('tree-swallow'),
+        })
+        self.mock_aws.dynamodb = MagicMock()
+        self.mock_aws.put_s3_object = MagicMock()
+
+        result = lambda_function.lambda_handler(event, None)
+
+        # Just its date: no taxonomy, though the photo has keywords for one.
+        expected = {
+            's3_uri': 's3://spark.wiki.normal-photos/2025/05/17/2025-05-17 095156 - Tree Swallow.jpg',
+            'date': '2025-05-17',
+        }
+        assert result == expected
+        self.mock_aws.dynamodb.Table.assert_called_once_with('spark.wiki.normal-photos')
+        self.mock_aws.dynamodb.Table.return_value.put_item.assert_called_once_with(Item=expected)
+        bucket, key, _ = self.mock_aws.put_s3_object.call_args.args
+        assert (bucket, key) == ('spark.wiki.thumbnails', 'normal-photos/thumbnail/2025/05/17/2025-05-17 095156 - Tree Swallow.jpg')
+
+    def test_lambda_rejects_other_buckets(self):
+        event = copy.deepcopy(sample_events.UploadTreeSwallowPhoto)
+        event['Records'][0]['s3']['bucket']['name'] = 'spark.wiki.blog'
+        self.mock_aws.get_s3_object = MagicMock()
+
+        with self.assertRaises(KeyError):
+            lambda_function.lambda_handler(event, None)
+        self.mock_aws.get_s3_object.assert_not_called()
+
     def test_date_from_key(self):
         key = '2025/05/17/2025-05-17 095156 - Tree Swallow.jpg'
         assert lambda_function._date_from_key(key) == '2025-05-17'

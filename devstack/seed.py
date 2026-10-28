@@ -34,12 +34,13 @@ BUCKETS = {
     'blog': 'spark.wiki.blog',
     'books': 'spark.wiki.books',
     'photos': 'spark.wiki.photos',
+    'normal-photos': 'spark.wiki.normal-photos',
     'thumbnails': 'spark.wiki.thumbnails',
 }
 
 # The buckets CloudFront serves (terraform/site_cdn.tf). The edge proxy
 # stands in for it, reading them anonymously.
-CDN_BUCKETS = ['books', 'photos', 'thumbnails']
+CDN_BUCKETS = ['books', 'photos', 'normal-photos', 'thumbnails']
 
 # The events each bucket triggers its Lambda on (content_triggers, in
 # terraform/content_lambdas.tf). They go to a queue, rather than straight to
@@ -48,6 +49,7 @@ TRIGGER_EVENTS = {
     'blog': ['s3:ObjectCreated:*'],
     'books': ['s3:ObjectCreated:*', 's3:ObjectRemoved:*'],
     'photos': ['s3:ObjectCreated:*', 's3:ObjectRemoved:*'],
+    'normal-photos': ['s3:ObjectCreated:*'],
 }
 EVENTS_QUEUE = 'content-events'
 
@@ -55,7 +57,8 @@ EVENTS_QUEUE = 'content-events'
 SAMPLE_CONTENT = {
     'blog': SAMPLE_DATA / 'posts',
     'books': SAMPLE_DATA / 'books' / 'markdown',
-    'photos': SAMPLE_DATA / 'photos' / 'originals',
+    'photos': SAMPLE_DATA / 'birds' / 'originals',
+    'normal-photos': SAMPLE_DATA / 'photos',
 }
 
 # The live site's processed book reviews (see devstack/snapshot_live_books.py):
@@ -135,6 +138,13 @@ def create_tables():
             }
             for rank in taxonomy_ranks
         ],
+    )
+
+    dynamodb.create_table(
+        TableName='spark.wiki.normal-photos',
+        BillingMode='PAY_PER_REQUEST',
+        AttributeDefinitions=[{'AttributeName': 's3_uri', 'AttributeType': 'S'}],
+        KeySchema=[{'AttributeName': 's3_uri', 'KeyType': 'HASH'}],
     )
 
 

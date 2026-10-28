@@ -19,11 +19,15 @@ module "update_photo_metadata" {
   policy               = data.aws_iam_policy_document.update_photo_metadata.json
 }
 
+# Bird photos, and normal photos: the same processing, less the taxonomy.
 data "aws_iam_policy_document" "update_photo_metadata" {
   statement {
-    sid       = "ReadPhotos"
-    actions   = ["s3:GetObject"]
-    resources = ["${aws_s3_bucket.content["photos"].arn}/*"]
+    sid     = "ReadPhotos"
+    actions = ["s3:GetObject"]
+    resources = [
+      "${aws_s3_bucket.content["photos"].arn}/*",
+      "${aws_s3_bucket.content["normal_photos"].arn}/*",
+    ]
   }
 
   statement {
@@ -33,9 +37,12 @@ data "aws_iam_policy_document" "update_photo_metadata" {
   }
 
   statement {
-    sid       = "WritePhotoMetadata"
-    actions   = ["dynamodb:PutItem"]
-    resources = [aws_dynamodb_table.photos.arn]
+    sid     = "WritePhotoMetadata"
+    actions = ["dynamodb:PutItem"]
+    resources = [
+      aws_dynamodb_table.photos.arn,
+      aws_dynamodb_table.normal_photos.arn,
+    ]
   }
 }
 
@@ -134,6 +141,13 @@ locals {
       function_arn  = module.update_photo_metadata.arn
       events        = ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"]
       statement_id  = "lambda-707d2ae9-c6b7-42e9-8d3c-ca0c0b39d438"
+    }
+    # Only uploads: UpdatePhotoMetadata does nothing with deletions.
+    normal_photos = {
+      function_name = module.update_photo_metadata.function_name
+      function_arn  = module.update_photo_metadata.arn
+      events        = ["s3:ObjectCreated:*"]
+      statement_id  = "NormalPhotosTrigger"
     }
   }
 }

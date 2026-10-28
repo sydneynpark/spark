@@ -1,6 +1,6 @@
-# Reprocesses every photo with UpdatePhotoMetadata, as if each were uploaded
-# again -- e.g. after changing what metadata it stores. Run by hand, from the
-# Actions tab.
+# Reprocesses every photo (birds, and the rest) with UpdatePhotoMetadata, as if
+# each were uploaded again -- e.g. after changing what metadata it stores. Run
+# by hand, from the Actions tab.
 
 name: Refresh photo metadata
 

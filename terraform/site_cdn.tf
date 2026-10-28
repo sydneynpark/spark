@@ -1,7 +1,8 @@
-# The CDNs the site loads content from: https://photos.spark.wiki (photos,
-# and under /thumbnail/, their thumbnails) and https://books.spark.wiki
-# (book covers). Each reads its private buckets with an origin access
-# control, which the buckets' policies allow.
+# The CDNs the site loads content from: https://photos.spark.wiki (bird
+# photos, and under /thumbnail/, their thumbnails),
+# https://normal-photos.spark.wiki (the same, for normal photos), and
+# https://books.spark.wiki (book covers). Each reads its private buckets with
+# an origin access control, which the buckets' policies allow.
 
 locals {
   # AWS's Managed-CachingOptimized cache policy.
@@ -64,6 +65,68 @@ resource "aws_cloudfront_distribution" "photos" {
   }
 }
 
+# Laid out like photos.spark.wiki, so the frontend builds the same paths for
+# either. Normal photos' thumbnails are in the same bucket as bird photos',
+# under normal-photos/ (so the same key in each photos bucket doesn't
+# collide), which the origin path adds back.
+resource "aws_cloudfront_distribution" "normal_photos" {
+  aliases         = ["normal-photos.spark.wiki"]
+  enabled         = true
+  is_ipv6_enabled = true
+  http_version    = "http2"
+  price_class     = "PriceClass_All"
+  # photos.spark.wiki's: a web ACL can protect more than one distribution.
+  web_acl_id = aws_wafv2_web_acl.cdn["photos"].arn
+
+  origin {
+    origin_id                = "spark.wiki.normal-photos"
+    domain_name              = aws_s3_bucket.content["normal_photos"].bucket_regional_domain_name
+    origin_access_control_id = aws_cloudfront_origin_access_control.normal_photos.id
+  }
+
+  origin {
+    origin_id                = "spark.wiki.thumbnails/normal-photos"
+    domain_name              = aws_s3_bucket.content["thumbnails"].bucket_regional_domain_name
+    origin_path              = "/normal-photos"
+    origin_access_control_id = aws_cloudfront_origin_access_control.thumbnails.id
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "spark.wiki.normal-photos"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    compress               = true
+    cache_policy_id        = local.caching_optimized_policy_id
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/thumbnail/*"
+    target_origin_id       = "spark.wiki.thumbnails/normal-photos"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    compress               = true
+    cache_policy_id        = local.caching_optimized_policy_id
+  }
+
+  viewer_certificate {
+    acm_certificate_arn      = aws_acm_certificate.wildcard.arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  tags = {
+    Name = "spark.wiki.normal-photos"
+  }
+}
+
 resource "aws_cloudfront_distribution" "books" {
   aliases         = ["books.spark.wiki"]
   enabled         = true
@@ -112,6 +175,14 @@ resource "aws_cloudfront_origin_access_control" "photos" {
   signing_protocol                  = "sigv4"
 }
 
+resource "aws_cloudfront_origin_access_control" "normal_photos" {
+  name                              = "spark.wiki.normal-photos.s3.us-east-1.amazonaws.com"
+  description                       = ""
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
 resource "aws_cloudfront_origin_access_control" "thumbnails" {
   name                              = "spark.wiki.thumbnails.s3.us-east-1.amazonaws.com"
   description                       = ""
@@ -128,12 +199,13 @@ resource "aws_cloudfront_origin_access_control" "books" {
   signing_protocol                  = "sigv4"
 }
 
-# Each bucket a CDN serves, and the distribution allowed to read it.
+# Each bucket a CDN serves, and the distributions allowed to read it.
 locals {
   cdn_buckets = {
-    books      = aws_cloudfront_distribution.books.arn
-    photos     = aws_cloudfront_distribution.photos.arn
-    thumbnails = aws_cloudfront_distribution.photos.arn
+    books         = [aws_cloudfront_distribution.books.arn]
+    photos        = [aws_cloudfront_distribution.photos.arn]
+    normal_photos = [aws_cloudfront_distribution.normal_photos.arn]
+    thumbnails    = [aws_cloudfront_distribution.photos.arn, aws_cloudfront_distribution.normal_photos.arn]
   }
 }
 

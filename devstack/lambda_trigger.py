@@ -26,6 +26,7 @@ FUNCTIONS = {
     'spark.wiki.blog': 'UpdateBlogPostMetadata',
     'spark.wiki.books': 'UpdateBookReview',
     'spark.wiki.photos': 'UpdatePhotoMetadata',
+    'spark.wiki.normal-photos': 'UpdatePhotoMetadata',
 }
 EVENTS_QUEUE = 'content-events'
 CONCURRENCY = 4

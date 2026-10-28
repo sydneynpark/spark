@@ -56,8 +56,9 @@ container, and the stack's edge proxy routes between them the same way.
 The admin page publishes a book review by uploading it to the
 `spark.wiki.books` bucket as `<title>.md`, in the exact format a manual
 upload would use, so `UpdateBookReview`'s S3 trigger enriches it and writes
-it to DynamoDB. Photos go from the browser straight to `spark.wiki.photos`,
-through presigned PUT URLs (full-size photos are bigger than API Gateway and
+it to DynamoDB. Photos go from the browser straight to their bucket
+(`spark.wiki.photos` for bird photos, `spark.wiki.normal-photos` for the
+rest), through presigned PUT URLs (full-size photos are bigger than API Gateway and
 Lambda accept in a request), and `UpdatePhotoMetadata`'s S3 trigger
 processes each one, as it would one uploaded in the console.
 

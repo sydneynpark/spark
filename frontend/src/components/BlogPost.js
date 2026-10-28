@@ -3,7 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import ApiService from '../services/api';
 
-const PHOTO_BUCKET = 'spark.wiki.photos';
+// photo:// embeds are bird photos.
+const BIRDS_BUCKET = 'spark.wiki.photos';
 
 function formatDate(dateStr) {
   const [year, month, day] = dateStr.split('-').map(Number);
@@ -51,7 +52,7 @@ function BlogPost() {
     code: ({ children, className }) => {
       const text = String(children).trim();
       if (!className && text.startsWith('photo://')) {
-        const s3Uri = `s3://${PHOTO_BUCKET}/${text.slice('photo://'.length)}`;
+        const s3Uri = `s3://${BIRDS_BUCKET}/${text.slice('photo://'.length)}`;
         return (
           <span className="blog-photo-embed" onClick={() => openLightbox(s3Uri)}>
             <img src={ApiService.getThumbnailUrl(s3Uri)} alt="Photo" />

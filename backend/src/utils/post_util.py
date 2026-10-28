@@ -1,10 +1,10 @@
 import re
 import frontmatter
 
-PHOTO_BUCKET = 'spark.wiki.photos'
+BIRDS_BUCKET = 'spark.wiki.photos'
 
-# Posts embed photos as `photo://<key>`, either in inline code or as an
-# image's URL (![alt](photo://<key>)), with <key> relative to the photos
+# Posts embed bird photos as `photo://<key>`, either in inline code or as an
+# image's URL (![alt](photo://<key>)), with <key> relative to the birds'
 # bucket. Keys can contain spaces, so a reference runs up to whatever closes
 # it.
 PHOTO_REF_PATTERN = re.compile(r'photo://([^`)\n]+)')
@@ -43,7 +43,7 @@ def photo_uri(ref):
     if key.startswith('photo://'):
         key = key[len('photo://'):]
     key = key.strip().lstrip('/')
-    return f's3://{PHOTO_BUCKET}/{key}' if key else None
+    return f's3://{BIRDS_BUCKET}/{key}' if key else None
 
 
 def first_photo_uri(body):
