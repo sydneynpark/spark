@@ -77,8 +77,9 @@ approve it, or revert the change and push.
 - **Reprocessing content**: run a Refresh workflow. To run the scripts
   locally instead (e.g. `refreshBookReviewData.py --missing-only`, or on just
   one prefix), `scripts/refresh*.py` use your `aws login` session (or
-  `AWS_PROFILE`), and the packages in `scripts/requirements.txt`. If one
-  can't find credentials, export the session into your shell (PowerShell):
+  `AWS_PROFILE`). Run them as the workflows do, from the repo root:
+  `uv run --no-project --with-requirements scripts/requirements.txt scripts/refreshPhotoMetadata.py photos/`.
+  If one can't find credentials, export the session into your shell (PowerShell):
   `aws configure export-credentials --format powershell | Invoke-Expression`.
 - **After changing anything Terraform manages in the console**, copy the
   change into its configuration: the next deploy reverts whatever the
