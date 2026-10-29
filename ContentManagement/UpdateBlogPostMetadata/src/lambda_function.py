@@ -13,7 +13,13 @@ def lambda_handler(event, context):
     
     try:
         print(f'There was a {event_type} event for S3 object: {bucket}/{key}')
-        
+
+        # The admin page keeps drafts, and the photos uploaded to them, under
+        # drafts/ (see backend/src/utils/draft_util.py). They aren't posts.
+        if not key.endswith('.md') or key.startswith('drafts/'):
+            print('Skipping: not a post')
+            return {'statusCode': 200, 'metadata': None}
+
         # Get the markdown content from S3
         response = aws.get_s3_object(bucket, key)
         markdown_content = response['Body'].read().decode('utf-8')

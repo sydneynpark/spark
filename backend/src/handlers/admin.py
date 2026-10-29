@@ -3,17 +3,23 @@ from flask import Blueprint, jsonify, request
 
 from utils.auth_util import verify_credentials, issue_token, require_admin_auth, TOKEN_TTL_SECONDS
 from utils.book_review_builder import validate_review_payload, build_review_markdown
+from utils.draft_util import (
+    DraftError, build_markdown, draft_fields, draft_photo, draft_photo_key, is_draft_id,
+    new_draft_id, plan_publish,
+)
 from utils.photo_upload_util import (
-    PHOTO_CONTENT_TYPE, UploadPathError, accepts_uploads, child_folder_kind,
+    PHOTO_COLLECTIONS, PHOTO_CONTENT_TYPE, UploadPathError, accepts_uploads, child_folder_kind,
     new_folder_prefix, photo_key, validate_prefix,
 )
 from utils.response_util import handle_error
 
-from utils.aws_util import PHOTO_COLLECTIONS, BooksAdminUtil, PhotosAdminUtil
+from utils.aws_util import BooksAdminUtil, DraftsAdminUtil, PhotosAdminUtil, PublishConflict, S3Util
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 books_admin = BooksAdminUtil()
 photos_admin = PhotosAdminUtil()
+drafts_admin = DraftsAdminUtil()
+posts = S3Util()
 
 
 # The photo endpoints work in either photo collection's folder of the photos
@@ -143,3 +149,154 @@ def create_photo_upload_url():
     except Exception as e:
         return handle_error(e)
 
+
+# Blog post drafts (utils/draft_util.py), each named by its ID.
+def draft_not_found():
+    return jsonify({'error': 'No such draft. It may have been published or deleted.'}), 404
+
+
+@admin_bp.route('/drafts', methods=['GET'])
+@require_admin_auth
+def list_drafts():
+    try:
+        return jsonify({'drafts': drafts_admin.list_drafts()})
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/drafts', methods=['POST'])
+@require_admin_auth
+def create_draft():
+    try:
+        try:
+            fields = draft_fields(request.get_json(silent=True) or {})
+        except DraftError as e:
+            return jsonify({'error': str(e)}), 400
+        draft_id = new_draft_id()
+        drafts_admin.save_draft(draft_id, build_markdown(fields))
+        return jsonify({'id': draft_id, **fields}), 201
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/drafts/<draft_id>', methods=['GET'])
+@require_admin_auth
+def get_draft(draft_id):
+    try:
+        fields = drafts_admin.get_draft(draft_id) if is_draft_id(draft_id) else None
+        if fields is None:
+            return draft_not_found()
+        return jsonify({'id': draft_id, **fields})
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/drafts/<draft_id>', methods=['PUT'])
+@require_admin_auth
+def save_draft(draft_id):
+    try:
+        if not is_draft_id(draft_id) or drafts_admin.get_draft(draft_id) is None:
+            return draft_not_found()
+        try:
+            fields = draft_fields(request.get_json(silent=True) or {})
+        except DraftError as e:
+            return jsonify({'error': str(e)}), 400
+        drafts_admin.save_draft(draft_id, build_markdown(fields))
+        return jsonify({'id': draft_id, **fields})
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/drafts/<draft_id>', methods=['DELETE'])
+@require_admin_auth
+def delete_draft(draft_id):
+    """The draft, and the photos uploaded to it, none of which are on the
+    site yet."""
+    try:
+        if not is_draft_id(draft_id):
+            return draft_not_found()
+        drafts_admin.delete_draft(draft_id)
+        return '', 204
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/drafts/<draft_id>/photos', methods=['GET'])
+@require_admin_auth
+def list_draft_photos(draft_id):
+    try:
+        if not is_draft_id(draft_id):
+            return draft_not_found()
+        return jsonify({'photos': drafts_admin.list_photos(draft_id)})
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/drafts/<draft_id>/photos/upload-url', methods=['POST'])
+@require_admin_auth
+def create_draft_photo_upload_url(draft_id):
+    """As /photos/upload-url, but into the draft, until it's published."""
+    try:
+        if not is_draft_id(draft_id) or drafts_admin.get_draft(draft_id) is None:
+            return draft_not_found()
+        data = request.get_json(silent=True) or {}
+        collection = data.get('collection')
+        if collection not in PHOTO_COLLECTIONS:
+            return unknown_collection(collection)
+        try:
+            key = draft_photo_key(draft_id, collection, data.get('filename', ''))
+        except UploadPathError as e:
+            return jsonify({'error': str(e)}), 400
+
+        return jsonify({
+            **draft_photo(draft_id, key),
+            'url': drafts_admin.presign_photo_upload(key, PHOTO_CONTENT_TYPE),
+            'headers': {'Content-Type': PHOTO_CONTENT_TYPE},
+        })
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/drafts/<draft_id>/photos', methods=['DELETE'])
+@require_admin_auth
+def delete_draft_photo(draft_id):
+    """One of the draft's photos, named by its `key`."""
+    try:
+        if not is_draft_id(draft_id):
+            return draft_not_found()
+        key = request.args.get('key', '')
+        if not draft_photo(draft_id, key):
+            return jsonify({'error': f'Not a photo in this draft: {key!r}'}), 400
+        drafts_admin.delete_photo(key)
+        return '', 204
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/drafts/<draft_id>/publish', methods=['POST'])
+@require_admin_auth
+def publish_draft(draft_id):
+    """Publish the draft as last saved: its photos to their collections, in
+    the folder for the post's date, where UpdatePhotoMetadata processes them,
+    and the post to the blog bucket, where the site reads it straight away.
+    The draft is deleted once it's published."""
+    try:
+        fields = drafts_admin.get_draft(draft_id) if is_draft_id(draft_id) else None
+        if fields is None:
+            return draft_not_found()
+        photos = drafts_admin.list_photos(draft_id)
+        try:
+            plan = plan_publish(draft_id, fields, [photo['key'] for photo in photos])
+            drafts_admin.publish(draft_id, plan, posts.list_posts())
+        except (DraftError, UploadPathError) as e:
+            return jsonify({'error': str(e)}), 400
+        except PublishConflict as e:
+            return jsonify({'error': str(e)}), 409
+
+        return jsonify({
+            'key': plan['key'],
+            'slug': plan['slug'],
+            'photos': sorted(plan['photos'].values()),
+        })
+    except Exception as e:
+        return handle_error(e)

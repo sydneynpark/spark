@@ -17,6 +17,8 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import AdminRoute from './components/admin/AdminRoute';
 import BookReviewForm from './components/admin/BookReviewForm';
 import PhotoUploader from './components/admin/PhotoUploader';
+import DraftList from './components/admin/DraftList';
+import PostEditor from './components/admin/PostEditor';
 import { usePageTitle } from './utils/pageTitle';
 
 function Home() {
@@ -57,6 +59,9 @@ function App() {
             <Route path="/admin/books/new" element={<AdminRoute><BookReviewForm /></AdminRoute>} />
             <Route path="/admin/photos/upload" element={<AdminRoute><PhotoUploader key="photos" collection="photos" /></AdminRoute>} />
             <Route path="/admin/birds/upload" element={<AdminRoute><PhotoUploader key="birds" collection="birds" /></AdminRoute>} />
+            <Route path="/admin/posts" element={<AdminRoute><DraftList /></AdminRoute>} />
+            {/* :draftId is "new" for a post not saved yet. */}
+            <Route path="/admin/posts/:draftId" element={<AdminRoute><PostEditor /></AdminRoute>} />
           </Routes>
         </main>
         <Footer />

@@ -1,8 +1,12 @@
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from botocore.config import Config
+from botocore.exceptions import ClientError
 from itertools import groupby
 from operator import itemgetter
+
+from utils.draft_util import DRAFTS_PREFIX, draft_id_from_key, draft_key, draft_photo, draft_prefix, parse_draft
+from utils.photo_upload_util import PHOTO_COLLECTIONS, PHOTO_CONTENT_TYPE
 
 def review_date(book):
     return book.get('date', 0)
@@ -205,13 +209,13 @@ class S3Util:
     def list_posts(self):
         """Parse every markdown blog post in S3, newest first. Each is read
         in full, since frontmatter and the first photo can be anywhere in
-        it."""
+        it. Drafts (see utils/draft_util.py) aren't posts."""
         from utils.post_util import parse_post
         response = self.s3.list_objects_v2(Bucket=BLOG_BUCKET)
         posts = []
         for obj in response.get('Contents', []):
             key = obj['Key']
-            if not key.endswith('.md'):
+            if not key.endswith('.md') or key.startswith(DRAFTS_PREFIX):
                 continue
             post_response = self.s3.get_object(Bucket=BLOG_BUCKET, Key=key)
             post = parse_post(key, post_response['Body'].read().decode('utf-8', errors='ignore'))
@@ -243,12 +247,10 @@ class BooksAdminUtil:
 
 
 PHOTOS_BUCKET = 'spark.wiki.photos'
-# Each photo collection's folder in it: bird photos, and the rest.
-PHOTO_COLLECTIONS = {
-    'birds': 'birds/',
-    'photos': 'photos/',
-}
 UPLOAD_URL_TTL_SECONDS = 15 * 60
+# Long enough to write a post with the editor open, which fetches them again
+# when it's reopened.
+DRAFT_PHOTO_VIEW_TTL_SECONDS = 4 * 60 * 60
 
 
 class PhotosAdminUtil:
@@ -299,3 +301,150 @@ class PhotosAdminUtil:
             ExpiresIn=UPLOAD_URL_TTL_SECONDS,
         )
 
+
+class PublishConflict(Exception):
+    """Publishing a draft would overwrite a post or photo that's already on
+    the site -- its message is shown to the admin as-is."""
+
+
+class DraftsAdminUtil:
+    """Keeps blog post drafts, and the photos uploaded to them, in the blog
+    bucket (laid out as utils/draft_util.py describes), and publishes them:
+    the photos into the photos bucket, where UpdatePhotoMetadata processes
+    them as it would any other upload, and the post into the blog bucket."""
+
+    def __init__(self):
+        # SigV4, as for PhotosAdminUtil's presigned URLs.
+        self.s3 = boto3.client('s3', config=Config(signature_version='s3v4'))
+
+    def _read(self, bucket, key):
+        try:
+            response = self.s3.get_object(Bucket=bucket, Key=key)
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'NoSuchKey':
+                return None
+            raise
+        return response['Body'].read().decode('utf-8')
+
+    def _etag(self, bucket, key):
+        """The object's ETag, or None if there's none at `key`."""
+        try:
+            return self.s3.head_object(Bucket=bucket, Key=key)['ETag']
+        except ClientError as e:
+            if e.response['Error']['Code'] in ('404', 'NoSuchKey', 'NotFound'):
+                return None
+            raise
+
+    def _keys(self, prefix):
+        paginator = self.s3.get_paginator('list_objects_v2')
+        for page in paginator.paginate(Bucket=BLOG_BUCKET, Prefix=prefix):
+            for obj in page.get('Contents', []):
+                yield obj
+
+    def list_drafts(self):
+        """Every draft's fields (less its body), and when it was last saved,
+        most recently saved first."""
+        drafts = []
+        for obj in self._keys(DRAFTS_PREFIX):
+            draft_id = draft_id_from_key(obj['Key'])
+            if not draft_id:
+                continue
+            markdown = self._read(BLOG_BUCKET, obj['Key'])
+            if markdown is None:
+                continue
+            fields = parse_draft(markdown)
+            del fields['content']
+            drafts.append({'id': draft_id, **fields, 'last_modified': obj['LastModified'].isoformat()})
+        drafts.sort(key=itemgetter('last_modified'), reverse=True)
+        return drafts
+
+    def get_draft(self, draft_id):
+        """The draft's fields, or None if there's no such draft."""
+        markdown = self._read(BLOG_BUCKET, draft_key(draft_id))
+        return parse_draft(markdown) if markdown is not None else None
+
+    def save_draft(self, draft_id, markdown):
+        self.s3.put_object(
+            Bucket=BLOG_BUCKET,
+            Key=draft_key(draft_id),
+            Body=markdown.encode('utf-8'),
+            ContentType='text/markdown; charset=utf-8',
+        )
+
+    def list_photos(self, draft_id):
+        """The photos uploaded to the draft, each with a URL to view it by
+        for a while, as the photos CDN doesn't serve the blog bucket."""
+        photos = []
+        for obj in self._keys(draft_prefix(draft_id)):
+            photo = draft_photo(draft_id, obj['Key'])
+            if photo:
+                photo['url'] = self.s3.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': BLOG_BUCKET, 'Key': obj['Key']},
+                    ExpiresIn=DRAFT_PHOTO_VIEW_TTL_SECONDS,
+                )
+                photos.append(photo)
+        photos.sort(key=itemgetter('filename'))
+        return photos
+
+    def presign_photo_upload(self, key, content_type):
+        """As PhotosAdminUtil.presign_upload, into the draft's folder."""
+        return self.s3.generate_presigned_url(
+            'put_object',
+            Params={'Bucket': BLOG_BUCKET, 'Key': key, 'ContentType': content_type},
+            ExpiresIn=UPLOAD_URL_TTL_SECONDS,
+        )
+
+    def delete_photo(self, key):
+        self.s3.delete_object(Bucket=BLOG_BUCKET, Key=key)
+
+    def delete_draft(self, draft_id):
+        """The draft and the photos uploaded to it."""
+        keys = [{'Key': obj['Key']} for obj in self._keys(draft_prefix(draft_id))]
+        # At most 1000 keys per request.
+        for start in range(0, len(keys), 1000):
+            self.s3.delete_objects(Bucket=BLOG_BUCKET, Delete={'Objects': keys[start:start + 1000], 'Quiet': True})
+
+    def publish(self, draft_id, plan, existing_posts):
+        """Publish the draft as `plan` (from utils/draft_util.plan_publish)
+        lays out, then delete it. Raises PublishConflict, before writing
+        anything, if that would overwrite a post, or a different photo than
+        the draft's, or if a post on another day has its slug (the newer
+        would hide the older). A photo already published as the draft's
+        (if an earlier attempt stopped part way) isn't a conflict."""
+        if any(post['key'] == plan['key'] for post in existing_posts):
+            raise PublishConflict(f'There\'s already a post at {plan["key"]}. Change the title or date.')
+        same_slug = next((post for post in existing_posts if post['slug'] == plan['slug']), None)
+        if same_slug:
+            raise PublishConflict(
+                f'"{same_slug["title"]}" ({same_slug["date"] or same_slug["key"]}) already has the URL '
+                f'/blog/{plan["slug"]}. Change the title.'
+            )
+
+        etags = {staged: self._etag(BLOG_BUCKET, staged) for staged in plan['photos']}
+        taken = []
+        for staged, published in plan['photos'].items():
+            existing = self._etag(PHOTOS_BUCKET, published)
+            if existing is not None and existing != etags[staged]:
+                taken.append(published)
+        if taken:
+            raise PublishConflict(
+                'These photos would replace different ones already on the site: '
+                + ', '.join(taken) + '. Rename them, or change the date.'
+            )
+
+        for staged, published in plan['photos'].items():
+            self.s3.copy_object(
+                Bucket=PHOTOS_BUCKET,
+                Key=published,
+                CopySource={'Bucket': BLOG_BUCKET, 'Key': staged},
+                ContentType=PHOTO_CONTENT_TYPE,
+                MetadataDirective='REPLACE',
+            )
+        self.s3.put_object(
+            Bucket=BLOG_BUCKET,
+            Key=plan['key'],
+            Body=plan['markdown'].encode('utf-8'),
+            ContentType='text/markdown; charset=utf-8',
+        )
+        self.delete_draft(draft_id)

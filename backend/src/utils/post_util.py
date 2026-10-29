@@ -1,4 +1,5 @@
 import re
+from datetime import date as Date
 import frontmatter
 
 PHOTOS_BUCKET = 'spark.wiki.photos'
@@ -12,6 +13,7 @@ PHOTO_REF_PATTERN = re.compile(r'photo://([^`)\n]+)')
 # Whole embeds, image or inline code, so previews can drop them.
 EMBED_PATTERN = re.compile(r'!\[[^\]]*\]\([^)]*\)|`photo://[^`]*`')
 DATE_PATH_PATTERN = re.compile(r'^\d{4}/\d{2}/\d{2}/')
+DATE_PATTERN = re.compile(r'\d{4}-\d{2}-\d{2}')
 
 
 def slugify(text):
@@ -59,18 +61,34 @@ def _frontmatter_text(metadata, name):
     return str(metadata.get(name, '') or '').strip()
 
 
+def frontmatter_date(metadata):
+    """The `date` frontmatter gives, as 'YYYY-MM-DD', or None if it gives
+    none that's a real date. YAML parses an unquoted 2026-05-23 as a date
+    (and with a time, a datetime), and a quoted one as a string."""
+    value = metadata.get('date')
+    if isinstance(value, Date):
+        return value.isoformat()[:10]
+    text = str(value or '').strip()
+    if not DATE_PATTERN.fullmatch(text):
+        return None
+    try:
+        return Date.fromisoformat(text).isoformat()
+    except ValueError:
+        return None
+
+
 def parse_post(key, markdown_text):
     """A post's metadata and body, from its S3 key (YYYY/MM/DD/<name>.md)
-    and markdown. Its title, slug, preview and photo can each be set in
-    frontmatter; any that aren't fall back to being derived from the key or
-    the body. The photo is None if neither has one, leaving the frontend to
+    and markdown. Its date, title, slug, preview and photo can each be set
+    in frontmatter; any that aren't fall back to being derived from the key
+    or the body. The photo is None if neither has one, leaving the frontend to
     show a placeholder."""
     post = frontmatter.loads(markdown_text)
     metadata = post.metadata
     body = post.content
 
-    date = None
-    if DATE_PATH_PATTERN.match(key):
+    date = frontmatter_date(metadata)
+    if not date and DATE_PATH_PATTERN.match(key):
         year, month, day = key.split('/')[:3]
         date = f'{year}-{month}-{day}'
     name = key.split('/')[-1]

@@ -24,7 +24,7 @@ resource "aws_s3_bucket" "content" {
 }
 
 # Private: CloudFront (site_cdn.tf) serves photos, thumbnails, and books, and
-# the API serves blog posts.
+# the API serves blog posts (and to the admin page, drafts).
 resource "aws_s3_bucket_public_access_block" "content" {
   for_each = aws_s3_bucket.content
 
@@ -48,6 +48,19 @@ resource "aws_s3_bucket_ownership_controls" "content" {
 # from the API.
 resource "aws_s3_bucket_cors_configuration" "photos" {
   bucket = aws_s3_bucket.content["photos"].id
+
+  cors_rule {
+    allowed_headers = ["Content-Type"]
+    allowed_methods = ["PUT"]
+    allowed_origins = ["https://spark.wiki", "https://www.spark.wiki"]
+    max_age_seconds = 3000
+  }
+}
+
+# And photos for blog post drafts, straight to the blog bucket, where they
+# wait until the post's published (backend/src/utils/draft_util.py).
+resource "aws_s3_bucket_cors_configuration" "blog" {
+  bucket = aws_s3_bucket.content["blog"].id
 
   cors_rule {
     allowed_headers = ["Content-Type"]

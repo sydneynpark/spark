@@ -1,3 +1,4 @@
+import copy
 import unittest
 from unittest.mock import MagicMock
 import os
@@ -30,6 +31,18 @@ class TestLambda(unittest.TestCase):
         self.assertIn('Hello World', metadata_str)
         self.assertIn('Sydney Park', metadata_str)
         self.assertIn('2025-07-29', metadata_str)
+
+    def test_lambda_skips_drafts_and_their_photos(self):
+        self.mock_aws.get_s3_object = MagicMock()
+        for key in ('drafts%2F0123%2Fdraft.md', 'drafts%2F0123%2Fbirds%2Fphoto.jpg'):
+            event = copy.deepcopy(sample_events.UploadSamplePost)
+            event['Records'][0]['s3']['object']['key'] = key
+
+            result = lambda_function.lambda_handler(event, None)
+
+            self.assertEqual(result['statusCode'], 200)
+            self.assertIsNone(result['metadata'])
+        self.mock_aws.get_s3_object.assert_not_called()
 
 if __name__ == '__main__':
     unittest.main()

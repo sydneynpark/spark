@@ -143,8 +143,10 @@ ones included) from the CI roles:
   permissions boundary, `SiteWorkloadBoundary`. Every role Terraform manages
   carries it, which caps what any of them can do at the site's buckets,
   tables, parameters, and logs. Of the content, it can delete only what
-  the Lambdas derive from the rest (book covers, and thumbnails), so no
-  deployed code can delete a photo, review, or post -- though it could
+  the Lambdas derive from the rest (book covers, and thumbnails), and the
+  admin page's blog post drafts, which aren't on the site (under the blog
+  bucket's `drafts/`), so no deployed code can delete a photo, review, or
+  post -- though it could
   still overwrite one, since the buckets aren't versioned. Logs it allows
   everywhere: API Gateway refuses a logging role that can't use any log
   group. The deploy role

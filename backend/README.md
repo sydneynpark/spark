@@ -17,9 +17,11 @@ pip install -r src/requirements.txt
 ## Running Tests
 
 ```ps
-$env:PYTHONPATH = ".\src"
-python -m unittest test\test_markdown_util.py
+python -m unittest discover -s test
 ```
+
+Or, in the local stack (see the [README](../README.md)):
+`./dev compose exec -w /repo/backend admin-api python -m unittest discover -s test`.
 
 ## Dependencies
 
@@ -64,6 +66,24 @@ uploaded in the console.
 
 Locally, both go to the emulated buckets, whose triggers run the same
 Lambdas, so they show up on the local site the same way.
+
+### Blog post drafts
+
+The admin page's blog editor saves drafts in the `spark.wiki.blog` bucket,
+under `drafts/<id>/`, which the public API skips (and ContentAPI's role
+can't read): the draft's markdown, `draft.md`, in the same frontmatter
+format as a post, and the photos uploaded to it, as
+`drafts/<id>/birds/<photo>.jpg` or `drafts/<id>/photos/<photo>.jpg`. They
+go there, rather than to `spark.wiki.photos`, so that they don't appear on
+the site before the post does (see `src/utils/draft_util.py`).
+
+Publishing a draft copies its photos into `spark.wiki.photos`, at
+`birds/` or `photos/` + the post's `YYYY/MM/DD/`, where
+`UpdatePhotoMetadata` processes them as any other upload; writes the post
+to `YYYY/MM/DD/<slug>.md` (its title, `date`, `preview`, and thumbnail
+`photo` in its frontmatter), with its embeds pointed at the published
+photos; and deletes the draft. It refuses, before writing anything, to
+overwrite a post or a different photo, or to give two posts the same URL.
 
 ### Admin login (one-time, AWS-side)
 
