@@ -4,7 +4,9 @@ import ReactMarkdown from 'react-markdown';
 import ApiService from '../services/api';
 import { usePageTitle } from '../utils/pageTitle';
 
-const PHOTO_BUCKET = 'spark.wiki.photos';
+// photo://<key> embeds name a photo by its key in this bucket, e.g.
+// photo://birds/2026/05/23/<photo>.jpg or photo://photos/2026/07/04/<photo>.jpg.
+const PHOTOS_BUCKET = 'spark.wiki.photos';
 
 function formatDate(dateStr) {
   const [year, month, day] = dateStr.split('-').map(Number);
@@ -54,7 +56,7 @@ function BlogPost() {
     code: ({ children, className }) => {
       const text = String(children).trim();
       if (!className && text.startsWith('photo://')) {
-        const s3Uri = `s3://${PHOTO_BUCKET}/${text.slice('photo://'.length)}`;
+        const s3Uri = `s3://${PHOTOS_BUCKET}/${text.slice('photo://'.length)}`;
         return (
           <span className="blog-photo-embed" onClick={() => openLightbox(s3Uri)}>
             <img src={ApiService.getThumbnailUrl(s3Uri)} alt="Photo" />

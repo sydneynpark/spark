@@ -13,6 +13,20 @@ const NEW_FOLDER_PLACEHOLDERS = { year: 'e.g. 2026', month: '1-12', day: '1-31' 
 // so a filename's leading date says which day folder it belongs in.
 const FILENAME_DATE = /^(\d{4})-(\d{2})-(\d{2})/;
 
+// The photo collections this uploads to (see the API's PHOTO_COLLECTIONS).
+const COLLECTIONS = {
+  birds: {
+    title: 'Upload Bird Photos',
+    folderName: 'birds',
+    processing: 'species from their keywords, plus a thumbnail',
+  },
+  photos: {
+    title: 'Upload Photos',
+    folderName: 'photos',
+    processing: 'their dates, plus a thumbnail',
+  },
+};
+
 let nextId = 0;
 
 function formatSize(bytes) {
@@ -48,8 +62,9 @@ function fileWarnings(file, listing, folderDate) {
   return warnings;
 }
 
-function PhotoUploader() {
-  usePageTitle('Upload Photos');
+function PhotoUploader({ collection }) {
+  const { title, folderName, processing } = COLLECTIONS[collection];
+  usePageTitle(title);
   const [searchParams, setSearchParams] = useSearchParams();
   const prefix = searchParams.get('folder') || '';
   const [listing, setListing] = useState(null);
@@ -63,7 +78,7 @@ function PhotoUploader() {
   useEffect(() => {
     let cancelled = false;
     setError(null);
-    ApiService.fetchPhotoFolder(prefix)
+    ApiService.fetchPhotoFolder(collection, prefix)
       .then(data => { if (!cancelled) setListing(data); })
       .catch(err => {
         if (cancelled) return;
@@ -71,13 +86,13 @@ function PhotoUploader() {
         setError(err.message);
       });
     return () => { cancelled = true; };
-  }, [prefix, refreshCount]);
+  }, [collection, prefix, refreshCount]);
 
   // Until the folder that's open has loaded, rather than the last one.
   const current = listing && listing.prefix === prefix ? listing : null;
   const segments = prefix.split('/').filter(Boolean);
   const crumbs = [
-    { label: 'Photos', prefix: '' },
+    { label: folderName, prefix: '' },
     ...segments.map((segment, i) => ({ label: segment, prefix: `${segments.slice(0, i + 1).join('/')}/` })),
   ];
   const folderDate = segments.join('-');
@@ -93,7 +108,7 @@ function PhotoUploader() {
     setError(null);
     setCreatingFolder(true);
     try {
-      const created = await ApiService.createPhotoFolder(prefix, newFolderName);
+      const created = await ApiService.createPhotoFolder(collection, prefix, newFolderName);
       openFolder(created.prefix);
     } catch (err) {
       setError(err.message);
@@ -133,7 +148,7 @@ function PhotoUploader() {
         const item = queue.shift();
         updateFile(item.id, { status: 'uploading', progress: 0, error: null });
         try {
-          await ApiService.uploadPhoto(folder, item.file, progress => updateFile(item.id, { progress }));
+          await ApiService.uploadPhoto(collection, folder, item.file, progress => updateFile(item.id, { progress }));
           updateFile(item.id, { status: 'done', progress: 1 });
         } catch (err) {
           updateFile(item.id, { status: 'error', error: err.message });
@@ -149,7 +164,7 @@ function PhotoUploader() {
   return (
     <div className="admin-page admin-photo-upload-page">
       <Link to="/admin" className="back-link">← Back to Admin</Link>
-      <h2>Upload Bird Photos</h2>
+      <h2>{title}</h2>
       <p className="admin-form-hint">
         Photos are filed by the day they were taken, in YYYY/MM/DD folders. Open that day's folder -- creating it, if it's new -- to upload into it.
       </p>
@@ -286,7 +301,7 @@ function PhotoUploader() {
                     </button>
                   </div>
                   <p className="admin-form-hint">
-                    Uploaded photos are processed in the background (species from their keywords, plus a thumbnail), and show up on the site a few seconds later.
+                    Uploaded photos are processed in the background ({processing}), and show up on the site a few seconds later.
                   </p>
                 </section>
               </>

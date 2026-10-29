@@ -14,6 +14,24 @@ function s3UriToPath(s3Uri) {
 }
 
 class ApiService {
+  async fetchBirds(filter = {}) {
+    try {
+      const params = new URLSearchParams(filter);
+      const query = params.toString() ? `?${params}` : '';
+      const response = await fetch(`${API_BASE_URL}/birds${query}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      return data.photos || [];
+    } catch (error) {
+      console.error('Error fetching bird photos:', error);
+      throw error;
+    }
+  }
+
+  // The photos that aren't of birds. filter is optionally one of year
+  // ('YYYY'), month ('YYYY-MM'), or day ('YYYY-MM-DD').
   async fetchPhotos(filter = {}) {
     try {
       const params = new URLSearchParams(filter);
@@ -32,7 +50,7 @@ class ApiService {
 
   async fetchTaxonomy() {
     try {
-      const response = await fetch(`${API_BASE_URL}/photos/taxonomy`);
+      const response = await fetch(`${API_BASE_URL}/birds/taxonomy`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -44,15 +62,15 @@ class ApiService {
     }
   }
 
-  async fetchPhoto(photoId) {
+  async fetchBird(photoId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/photos/${encodeURIComponent(photoId)}`);
+      const response = await fetch(`${API_BASE_URL}/birds/${encodeURIComponent(photoId)}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       return await response.json();
     } catch (error) {
-      console.error('Error fetching photo:', error);
+      console.error('Error fetching bird photo:', error);
       throw error;
     }
   }
@@ -197,28 +215,29 @@ class ApiService {
     });
   }
 
-  // prefix is a folder in the photos bucket: '' for its root, else e.g.
-  // '2025/05/17/'.
-  async fetchPhotoFolder(prefix) {
-    return this.adminRequest(`/admin/photos/folders?prefix=${encodeURIComponent(prefix)}`, {
+  // collection is the photo collection: 'birds' or 'photos'. prefix is a
+  // folder in it: '' for its root, else e.g. '2025/05/17/'.
+  async fetchPhotoFolder(collection, prefix) {
+    const params = new URLSearchParams({ collection, prefix });
+    return this.adminRequest(`/admin/photos/folders?${params}`, {
       failureMessage: 'Failed to load folder',
     });
   }
 
-  async createPhotoFolder(parent, name) {
+  async createPhotoFolder(collection, parent, name) {
     return this.adminRequest('/admin/photos/folders', {
       method: 'POST',
-      body: { parent, name },
+      body: { collection, parent, name },
       failureMessage: 'Failed to create folder',
     });
   }
 
   // Uploads straight to S3 through a presigned URL from the API (photos are
   // too big to send through it), reporting progress from 0 to 1.
-  async uploadPhoto(folder, file, onProgress) {
+  async uploadPhoto(collection, folder, file, onProgress) {
     const { url, headers } = await this.adminRequest('/admin/photos/upload-url', {
       method: 'POST',
-      body: { folder, filename: file.name },
+      body: { collection, folder, filename: file.name },
       failureMessage: 'Failed to start upload',
     });
 

@@ -39,7 +39,7 @@ export function formatDayLabel({ year, month, day }) {
   return `${WEEKDAY_FORMATTER.format(date)} ${monthName(month)} ${ordinal(parseInt(day, 10))}`;
 }
 
-// Renders the /gallery filter chip label for a year/month/day value, e.g.
+// Renders the gallery's filter label for a year/month/day value, e.g.
 // year "2025" -> "2025", month "2025-05" -> "May 2025", day "2025-05-17" -> "May 17, 2025".
 export function formatDateFilterLabel(type, value) {
   if (type === 'year') return value;

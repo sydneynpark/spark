@@ -137,6 +137,13 @@ def create_tables():
         ],
     )
 
+    dynamodb.create_table(
+        TableName='spark.wiki.normal-photos',
+        BillingMode='PAY_PER_REQUEST',
+        AttributeDefinitions=[{'AttributeName': 's3_uri', 'AttributeType': 'S'}],
+        KeySchema=[{'AttributeName': 's3_uri', 'KeyType': 'HASH'}],
+    )
+
 
 def put_parameters():
     # Not managed by Terraform in AWS (see backend/README.md).

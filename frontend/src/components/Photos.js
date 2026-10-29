@@ -1,38 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
 import ApiService from '../services/api';
-import {
-  getPhotoDateParts,
-  monthName,
-  monthValue,
-  dayValue,
-  formatDayLabel,
-} from '../utils/photoDate';
+import PhotoDateTree, { buildDateHierarchy } from './PhotoDateTree';
 import { usePageTitle } from '../utils/pageTitle';
 
-const ThumbnailStack = ({ photos }) => (
-  <div className="thumb-stack">
-    {photos.slice(0, 3).map(photo => (
-      <img
-        key={photo.s3_uri}
-        className="thumb-stack-img"
-        src={ApiService.getThumbnailUrl(photo.s3_uri)}
-        alt=""
-        onError={e => { e.target.src = '/images/placeholder-unknown.jpg'; }}
-      />
-    ))}
-  </div>
-);
-
+// Photos that aren't of birds, browsed by the day they were taken, as the
+// bird photos are on their Date tab.
 const Photos = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [hierarchy, setHierarchy] = useState({});
   const [dateHierarchy, setDateHierarchy] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const activeTab = searchParams.get('tab') === 'date' ? 'date' : 'taxonomy';
-  const selectTab = (tab) => setSearchParams(tab === 'date' ? { tab: 'date' } : {});
 
   usePageTitle('Photos');
 
@@ -43,12 +19,8 @@ const Photos = () => {
   const loadPhotos = async () => {
     try {
       setLoading(true);
-      const [photoData, taxonomyData] = await Promise.all([
-        ApiService.fetchPhotos(),
-        ApiService.fetchTaxonomy(),
-      ]);
-      setHierarchy(taxonomyData);
-      setDateHierarchy(buildDateHierarchy(photoData));
+      setError(null);
+      setDateHierarchy(buildDateHierarchy(await ApiService.fetchPhotos()));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -56,139 +28,10 @@ const Photos = () => {
     }
   };
 
-  const buildDateHierarchy = (photoData) => {
-    const hierarchy = {};
-
-    photoData.forEach(photo => {
-      const parts = getPhotoDateParts(photo);
-      if (!parts) return;
-      const { year, month, day } = parts;
-
-      if (!hierarchy[year]) {
-        hierarchy[year] = { count: 0, months: {} };
-      }
-
-      if (!hierarchy[year].months[month]) {
-        hierarchy[year].months[month] = { count: 0, days: {} };
-      }
-
-      if (!hierarchy[year].months[month].days[day]) {
-        hierarchy[year].months[month].days[day] = { count: 0, photos: [] };
-      }
-
-      hierarchy[year].count++;
-      hierarchy[year].months[month].count++;
-      hierarchy[year].months[month].days[day].count++;
-      hierarchy[year].months[month].days[day].photos.push(photo);
-    });
-
-    return hierarchy;
-  };
-
-  const renderRow = (rank, name, count, value = name) => (
-    <Link
-      to={`/gallery?type=${rank}&value=${encodeURIComponent(value)}`}
-      className={`taxonomy-row rank-${rank}`}
-    >
-      <span className="taxonomy-name">{name}</span>
-      <span className="taxonomy-count">{count}</span>
-    </Link>
-  );
-
-  const renderDayRow = (parts, dayData) => (
-    <Link
-      to={`/gallery?type=day&value=${encodeURIComponent(dayValue(parts))}`}
-      className="taxonomy-row rank-day"
-    >
-      <ThumbnailStack photos={dayData.photos} />
-      <span className="taxonomy-name">{formatDayLabel(parts)}</span>
-      <span className="taxonomy-count">{dayData.count}</span>
-    </Link>
-  );
-
-  const renderSpeciesRow = (species, speciesData) => (
-    <Link
-      to={`/gallery?type=species&value=${encodeURIComponent(species)}`}
-      className="taxonomy-row rank-species"
-    >
-      <ThumbnailStack photos={speciesData.thumbnails.map(uri => ({ s3_uri: uri }))} />
-      <span className="taxonomy-name">{species}</span>
-      <span className="taxonomy-count">{speciesData.count}</span>
-    </Link>
-  );
-
-  const renderHierarchy = () => {
-    return Object.entries(hierarchy).map(([className, classData]) => (
-      <div key={className} className="taxonomy-node">
-        {renderRow('class', className, classData.count)}
-
-        <div className="taxonomy-children">
-          {Object.entries(classData.orders).map(([order, orderData]) => (
-            <div key={order} className="taxonomy-node">
-              {renderRow('order', order, orderData.count)}
-
-              <div className="taxonomy-children">
-                {Object.entries(orderData.families).map(([family, familyData]) => (
-                  <div key={family} className="taxonomy-node">
-                    {renderRow('family', family, familyData.count)}
-
-                    <div className="taxonomy-children">
-                      {Object.entries(familyData.species).map(([species, speciesData]) => (
-                        <div key={species} className="taxonomy-node">
-                          {renderSpeciesRow(species, speciesData)}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    ));
-  };
-
-  const renderDateHierarchy = () => {
-    const years = Object.keys(dateHierarchy).sort((a, b) => b.localeCompare(a));
-
-    return years.map(year => {
-      const yearData = dateHierarchy[year];
-      const months = Object.keys(yearData.months).sort((a, b) => b.localeCompare(a));
-
-      return (
-        <div key={year} className="taxonomy-node">
-          {renderRow('year', year, yearData.count)}
-
-          <div className="taxonomy-children">
-            {months.map(month => {
-              const monthData = yearData.months[month];
-              const days = Object.keys(monthData.days).sort((a, b) => b.localeCompare(a));
-
-              return (
-                <div key={month} className="taxonomy-node">
-                  {renderRow('month', monthName(month), monthData.count, monthValue({ year, month }))}
-
-                  <div className="taxonomy-children">
-                    {days.map(day => (
-                      <div key={day} className="taxonomy-node">
-                        {renderDayRow({ year, month, day }, monthData.days[day])}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      );
-    });
-  };
-
   if (loading) {
     return (
       <div className="photos-page">
-        <h2>Bird Photo Gallery</h2>
+        <h2>Photos</h2>
         <p>Loading photos...</p>
       </div>
     );
@@ -197,43 +40,21 @@ const Photos = () => {
   if (error) {
     return (
       <div className="photos-page">
-        <h2>Bird Photo Gallery</h2>
+        <h2>Photos</h2>
         <p className="error">Error loading photos: {error}</p>
         <button onClick={loadPhotos}>Retry</button>
       </div>
     );
   }
 
-  const hasContent = activeTab === 'taxonomy'
-    ? Object.keys(hierarchy).length > 0
-    : Object.keys(dateHierarchy).length > 0;
-
   return (
     <div className="photos-page">
-      <h2>Bird Photo Gallery</h2>
-
-      <div className="photos-tabs">
-        <span className="photos-tabs-label">Browse by...</span>
-        <button
-          type="button"
-          className={`photos-tab${activeTab === 'taxonomy' ? ' active' : ''}`}
-          onClick={() => selectTab('taxonomy')}
-        >
-          Taxonomy
-        </button>
-        <button
-          type="button"
-          className={`photos-tab${activeTab === 'date' ? ' active' : ''}`}
-          onClick={() => selectTab('date')}
-        >
-          Date
-        </button>
-      </div>
+      <h2>Photos</h2>
 
       <div className="taxonomy-hierarchy">
-        {hasContent ? (
+        {Object.keys(dateHierarchy).length > 0 ? (
           <div className="taxonomy-tree">
-            {activeTab === 'taxonomy' ? renderHierarchy() : renderDateHierarchy()}
+            <PhotoDateTree hierarchy={dateHierarchy} galleryPath="/photos/gallery" />
           </div>
         ) : (
           <p>No photos found.</p>

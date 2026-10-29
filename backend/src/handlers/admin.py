@@ -9,11 +9,18 @@ from utils.photo_upload_util import (
 )
 from utils.response_util import handle_error
 
-from utils.aws_util import BooksAdminUtil, PhotosAdminUtil
+from utils.aws_util import PHOTO_COLLECTIONS, BooksAdminUtil, PhotosAdminUtil
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 books_admin = BooksAdminUtil()
 photos_admin = PhotosAdminUtil()
+
+
+# The photo endpoints work in either photo collection's folder of the photos
+# bucket, named by `collection`: 'birds' or 'photos'. Their folder paths are
+# within it.
+def unknown_collection(collection):
+    return jsonify({'error': f'Unknown photo collection: {collection!r}'}), 400
 
 
 @admin_bp.route('/login', methods=['POST'])
@@ -68,16 +75,19 @@ def create_book_review():
 @admin_bp.route('/photos/folders', methods=['GET'])
 @require_admin_auth
 def list_photo_folder():
-    """One folder of the photos bucket: its subfolders and photos, plus what
+    """One folder of a photo collection: its subfolders and photos, plus what
     the YYYY/MM/DD/ layout allows here -- which kind of folder can be
     created inside it, and whether photos can be uploaded into it."""
     try:
+        collection = request.args.get('collection')
+        if collection not in PHOTO_COLLECTIONS:
+            return unknown_collection(collection)
         prefix = request.args.get('prefix', '')
         error = validate_prefix(prefix)
         if error:
             return jsonify({'error': error}), 400
 
-        folders, photos = photos_admin.list_folder(prefix)
+        folders, photos = photos_admin.list_folder(collection, prefix)
         return jsonify({
             'prefix': prefix,
             'folders': folders,
@@ -96,12 +106,15 @@ def create_photo_folder():
     inside `parent`. Creating one that already exists is harmless."""
     try:
         data = request.get_json(silent=True) or {}
+        collection = data.get('collection')
+        if collection not in PHOTO_COLLECTIONS:
+            return unknown_collection(collection)
         try:
             prefix = new_folder_prefix(data.get('parent', ''), data.get('name', ''))
         except UploadPathError as e:
             return jsonify({'error': str(e)}), 400
 
-        photos_admin.create_folder(prefix)
+        photos_admin.create_folder(collection, prefix)
         return jsonify({'prefix': prefix}), 201
     except Exception as e:
         return handle_error(e)
@@ -114,8 +127,11 @@ def create_photo_upload_url():
     per photo just before uploading it so a long batch can't outlive it."""
     try:
         data = request.get_json(silent=True) or {}
+        collection = data.get('collection')
+        if collection not in PHOTO_COLLECTIONS:
+            return unknown_collection(collection)
         try:
-            key = photo_key(data.get('folder', ''), data.get('filename', ''))
+            key = PHOTO_COLLECTIONS[collection] + photo_key(data.get('folder', ''), data.get('filename', ''))
         except UploadPathError as e:
             return jsonify({'error': str(e)}), 400
 

@@ -40,7 +40,7 @@ UploadTreeSwallowPhoto = {
           "arn": "arn:aws:s3:::spark.wiki.photos"
         },
         "object": {
-          "key": "2025%2F05%2F17%2F2025-05-17%20095156%20-%20Tree%20Swallow.jpg",
+          "key": "birds%2F2025%2F05%2F17%2F2025-05-17%20095156%20-%20Tree%20Swallow.jpg",
           "size": 6300000,
           "eTag": "0870ed374e8469daa5971927e9a43203",
           "sequencer": "0A1B2C3D4E5F678901"

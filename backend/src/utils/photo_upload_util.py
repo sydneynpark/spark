@@ -1,6 +1,7 @@
 """Path rules for admin photo uploads into spark.wiki.photos.
 
-The bucket is laid out as YYYY/MM/DD/<filename>, and UpdatePhotoMetadata
+Each photo collection's folder in it (birds/, and photos/) is laid out as
+YYYY/MM/DD/<filename>, and these paths are within it. UpdatePhotoMetadata
 falls back to that path for a photo's date when it has no EXIF capture date,
 so new folders can only extend that structure (a year, then a month, then a
 day) and photos can only be uploaded into a day folder.

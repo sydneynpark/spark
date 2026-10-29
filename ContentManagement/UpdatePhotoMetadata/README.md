@@ -2,6 +2,13 @@
 
 This lambda reads the metadata of a photo stored in S3, and writes that metadata to a DynamoDB table so that metadata is queryable. This lambda is intended to be subscribed to S3 update and delete events.
 
+The photos bucket, `spark.wiki.photos`, has two collections, and each photo's thumbnail goes to `spark.wiki.thumbnails/thumbnail/<key>`:
+
+* `birds/`, bird photos (the site's Birds page): their species (from their Lightroom keywords) and date go to the `spark.wiki.photos` table, one item per species.
+* `photos/`, photos of everything else (the site's Photos page): just their date goes to the `spark.wiki.normal-photos` table.
+
+Anything else in the bucket, like `archive/`, is skipped.
+
 
 ## Local development
 
@@ -32,7 +39,7 @@ uploaded to its emulated `spark.wiki.photos` bucket, starting with
 keywords, upload it again:
 
 ```sh
-./dev aws s3 cp "photo.jpg" "s3://spark.wiki.photos/2026/10/08/photo.jpg"
+./dev aws s3 cp "photo.jpg" "s3://spark.wiki.photos/birds/2026/10/08/photo.jpg"
 ```
 
 ## Dependencies

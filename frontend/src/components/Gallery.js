@@ -9,7 +9,35 @@ const LABEL_BY_TYPE = {
   year: 'Year', month: 'Month', day: 'Day',
 };
 
-const Gallery = () => {
+// The photo collections this shows: bird photos, and photos of anything
+// else, which have only their dates to caption them with.
+const COLLECTIONS = {
+  birds: {
+    browsePath: '/birds',
+    fetchPhotos: filter => ApiService.fetchBirds(filter),
+    caption: photo => ({
+      title: photo.species || 'Unknown Species',
+      details: [photo.family, photo.order].filter(Boolean),
+    }),
+    alt: photo => photo.species || 'Bird photo',
+    // Each thumbnail's caption, as well as the lightbox's.
+    captionThumbnails: true,
+  },
+  photos: {
+    browsePath: '/photos',
+    fetchPhotos: filter => ApiService.fetchPhotos(filter),
+    caption: photo => ({
+      title: photo.date ? formatDateFilterLabel('day', photo.date) : 'Undated',
+      details: [],
+    }),
+    alt: () => 'Photo',
+    // A gallery of one day's photos would give them all the same caption.
+    captionThumbnails: false,
+  },
+};
+
+const Gallery = ({ collection = 'birds' }) => {
+  const { browsePath, fetchPhotos, caption, alt, captionThumbnails } = COLLECTIONS[collection];
   const [searchParams] = useSearchParams();
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +54,7 @@ const Gallery = () => {
 
   useEffect(() => {
     loadPhotos();
-  }, [type, value]);
+  }, [collection, type, value]);
 
   // Reset image load state whenever the lightbox opens or navigates to a
   // different photo.
@@ -102,7 +130,7 @@ const Gallery = () => {
       if (type && value) {
         filter[type] = value;
       }
-      const data = await ApiService.fetchPhotos(filter);
+      const data = await fetchPhotos(filter);
       setPhotos(data);
     } catch (err) {
       setError(err.message);
@@ -119,7 +147,7 @@ const Gallery = () => {
 
   const header = (
     <div className="gallery-header">
-      <Link to="/photos" className="back-link">← Back to Browse</Link>
+      <Link to={browsePath} className="back-link">← Back to Browse</Link>
       <h2>Photo Gallery</h2>
     </div>
   );
@@ -146,7 +174,7 @@ const Gallery = () => {
   return (
     <div className="gallery-page">
       <div className="gallery-header">
-        <Link to="/photos" className="back-link">← Back to Browse</Link>
+        <Link to={browsePath} className="back-link">← Back to Browse</Link>
         <h2>Photo Gallery</h2>
         <p className="filter-info">{filterLabel()} ({photos.length} photos)</p>
       </div>
@@ -161,22 +189,25 @@ const Gallery = () => {
               <div className="photo-thumbnail">
                 <img
                   src={ApiService.getThumbnailUrl(photo.s3_uri)}
-                  alt={photo.species || 'Bird photo'}
+                  alt={alt(photo)}
                   onError={e => { e.target.src = '/images/placeholder-unknown.jpg'; }}
                 />
               </div>
-              <div className="photo-info">
-                <h4>{photo.species || 'Unknown Species'}</h4>
-                {photo.family && <p className="taxonomy-info">{photo.family}</p>}
-                {photo.order && <p className="taxonomy-info">{photo.order}</p>}
-              </div>
+              {captionThumbnails && (
+                <div className="photo-info">
+                  <h4>{caption(photo).title}</h4>
+                  {caption(photo).details.map(detail => (
+                    <p key={detail} className="taxonomy-info">{detail}</p>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
       ) : (
         <div className="no-photos">
           <p>No photos found for this filter.</p>
-          <Link to="/photos">Browse all categories</Link>
+          <Link to={browsePath}>Browse all categories</Link>
         </div>
       )}
 
@@ -202,7 +233,7 @@ const Gallery = () => {
             {imageError && <div className="lightbox-error">Failed to load image</div>}
             <img
               src={ApiService.getFullsizeUrl(selectedPhoto.s3_uri)}
-              alt={selectedPhoto.species || 'Bird photo'}
+              alt={alt(selectedPhoto)}
               className="lightbox-image"
               style={{ display: imageLoaded ? 'block' : 'none' }}
               onLoad={() => setImageLoaded(true)}
@@ -210,9 +241,8 @@ const Gallery = () => {
             />
             <div className="lightbox-caption">
               <div className="lightbox-caption-info">
-                <h3>{selectedPhoto.species || 'Unknown Species'}</h3>
-                {selectedPhoto.family && <p>{selectedPhoto.family}</p>}
-                {selectedPhoto.order && <p>{selectedPhoto.order}</p>}
+                <h3>{caption(selectedPhoto).title}</h3>
+                {caption(selectedPhoto).details.map(detail => <p key={detail}>{detail}</p>)}
               </div>
               <a
                 className="lightbox-open-new-tab"

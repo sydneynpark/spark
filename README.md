@@ -30,7 +30,7 @@ different port.
 | `./dev reseed` | Start the emulated AWS over, from `sample-data/` |
 | `./dev aws <args>` | The AWS CLI, against this stack's emulated AWS only |
 | `./dev snapshot-books` | Copy the book reviews live on spark.wiki into `sample-data/` |
-| `./dev snapshot-photos` | Copy a selection of the photos live on spark.wiki into `sample-data/` |
+| `./dev snapshot-birds` | Copy a selection of the bird photos live on spark.wiki into `sample-data/` |
 | `./dev down` | Stop it |
 | `./dev destroy` | Stop it, and delete its volumes and images |
 | `./dev compose <args>` | Any other `docker compose` command, for this stack |

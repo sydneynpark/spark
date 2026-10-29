@@ -32,10 +32,14 @@ data "aws_iam_policy_document" "update_photo_metadata" {
     resources = ["${aws_s3_bucket.content["thumbnails"].arn}/*"]
   }
 
+  # Bird photos' taxonomy, and the rest's dates.
   statement {
-    sid       = "WritePhotoMetadata"
-    actions   = ["dynamodb:PutItem"]
-    resources = [aws_dynamodb_table.photos.arn]
+    sid     = "WritePhotoMetadata"
+    actions = ["dynamodb:PutItem"]
+    resources = [
+      aws_dynamodb_table.photos.arn,
+      aws_dynamodb_table.normal_photos.arn,
+    ]
   }
 }
 

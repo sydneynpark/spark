@@ -12,4 +12,4 @@ Here we are.
 
 Check out these wood ducks
 
-`photo://2026/02/27/2026-02-27 - 864A3942.jpg`
+`photo://birds/2026/02/27/2026-02-27 - 864A3942.jpg`

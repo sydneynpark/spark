@@ -56,10 +56,11 @@ container, and the stack's edge proxy routes between them the same way.
 The admin page publishes a book review by uploading it to the
 `spark.wiki.books` bucket as `<title>.md`, in the exact format a manual
 upload would use, so `UpdateBookReview`'s S3 trigger enriches it and writes
-it to DynamoDB. Photos go from the browser straight to `spark.wiki.photos`,
-through presigned PUT URLs (full-size photos are bigger than API Gateway and
-Lambda accept in a request), and `UpdatePhotoMetadata`'s S3 trigger
-processes each one, as it would one uploaded in the console.
+it to DynamoDB. Photos go from the browser straight to `spark.wiki.photos`
+(into `birds/` or `photos/`), through presigned PUT URLs (full-size photos
+are bigger than API Gateway and Lambda accept in a request), and
+`UpdatePhotoMetadata`'s S3 trigger processes each one, as it would one
+uploaded in the console.
 
 Locally, both go to the emulated buckets, whose triggers run the same
 Lambdas, so they show up on the local site the same way.
