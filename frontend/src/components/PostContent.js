@@ -16,6 +16,18 @@ export function formatPostDate(dateStr) {
 
 const SWIPE_THRESHOLD = 50;
 
+function isPhotoEmbed(node) {
+  return node.type === 'element' && node.tagName === 'code' && node.children.length === 1
+    && node.children[0].type === 'text' && node.children[0].value.trim().startsWith('photo://');
+}
+
+// A paragraph of nothing but photo embeds, e.g. one per line: laid out as a
+// row of tiles rather than as text.
+function isPhotoRow(node) {
+  const embeds = node.children.filter(child => !(child.type === 'text' && !child.value.trim()));
+  return embeds.length > 0 && embeds.every(isPhotoEmbed);
+}
+
 // A post's body: its markdown, with each photo:// embed shown as a tile of the
 // photo's thumbnail, which opens it full size, from where you can page through
 // the post's photos in order. photoUrls gives a URL to show instead, by key,
@@ -80,6 +92,9 @@ function PostContent({ content, photoUrls = {} }) {
 
   const markdownComponents = {
     h1: ({ children }) => <h2>{children}</h2>,
+    p: ({ node, children }) => (isPhotoRow(node)
+      ? <div className="blog-photo-row">{children}</div>
+      : <p>{children}</p>),
     code: ({ children, className }) => {
       const text = String(children).trim();
       if (!className && text.startsWith('photo://')) {

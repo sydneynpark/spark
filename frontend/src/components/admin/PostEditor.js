@@ -248,7 +248,8 @@ function PostEditor() {
   saveRef.current = handleSave;
 
   // Puts a photo's embed at the cursor (or the end, from the preview tab),
-  // as a paragraph of its own.
+  // as a paragraph of its own -- or, right after another embed, on the next
+  // line, which joins its row of tiles.
   function insertEmbed(ref) {
     const embed = `\`${ref}\``;
     const textarea = textareaRef.current;
@@ -256,7 +257,10 @@ function PostEditor() {
       const at = textarea ? textarea.selectionEnd : prev.content.length;
       const before = prev.content.slice(0, at);
       const after = prev.content.slice(at);
-      const lead = before === '' || before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
+      const afterEmbed = /`photo:\/\/[^`\n]*`\n?$/.test(before);
+      const lead = before === '' || before.endsWith('\n\n') ? ''
+        : before.endsWith('\n') ? (afterEmbed ? '' : '\n')
+        : afterEmbed ? '\n' : '\n\n';
       const trail = after.startsWith('\n\n') ? '' : after.startsWith('\n') ? '\n' : after === '' ? '\n' : '\n\n';
       const cursor = before.length + lead.length + embed.length + trail.length;
       if (textarea) {

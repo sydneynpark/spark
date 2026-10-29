@@ -870,20 +870,35 @@ footer {
   margin: 0.5rem 0;
 }
 
-/* A photo embed: a square tile like the gallery's, which opens the photo full
-   size. Embeds in the same paragraph sit side by side. */
+/* A photo embed: a square tile like the gallery's, the photo filling it, which
+   opens the photo full size. A paragraph of only embeds is a row of them,
+   three across; one in a paragraph of text is on a line of its own, as wide as
+   one of the row's. */
+.post-content {
+  --blog-photo-gap: 1rem;
+}
+
+.blog-photo-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--blog-photo-gap);
+  margin: 1.25rem 0;
+}
+
 .blog-photo-embed {
-  display: inline-block;
-  vertical-align: top;
-  width: 240px;
-  max-width: 100%;
-  margin: 0.5rem 1rem 0.5rem 0;
-  padding: 8px;
-  box-sizing: border-box;
+  display: block;
+  margin: 0.75rem 0;
+  width: calc((100% - 2 * var(--blog-photo-gap)) / 3);
+  overflow: hidden;
   background: var(--color-background);
   border-radius: 8px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   cursor: pointer;
+}
+
+.blog-photo-row .blog-photo-embed {
+  width: auto;
+  margin: 0;
 }
 
 .post-content .blog-photo-embed img {
@@ -894,6 +909,12 @@ footer {
   margin: 0;
   border-radius: 0;
   transition: opacity 0.2s;
+}
+
+@media (max-width: 640px) {
+  .post-content {
+    --blog-photo-gap: 0.5rem;
+  }
 }
 
 .blog-photo-embed:hover img {
