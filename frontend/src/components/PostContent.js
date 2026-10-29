@@ -6,16 +6,6 @@ import ApiService from '../services/api';
 // photo://birds/2026/05/23/<photo>.jpg or photo://photos/2026/07/04/<photo>.jpg.
 const PHOTOS_BUCKET = 'spark.wiki.photos';
 
-// The shorter side of the thumbnails UpdatePhotoMetadata makes
-// (img_util.create_thumbnail), which a photo without one is shown at, to look
-// as it will once it has one.
-const THUMBNAIL_MIN_DIMENSION = 300;
-
-function sizeAsThumbnail(e) {
-  const { naturalWidth: width, naturalHeight: height } = e.target;
-  e.target.style.width = `${Math.round(width * THUMBNAIL_MIN_DIMENSION / Math.min(width, height))}px`;
-}
-
 // 'YYYY-MM-DD', as a post's date reads at the top of it.
 export function formatPostDate(dateStr) {
   const [year, month, day] = dateStr.split('-').map(Number);
@@ -24,8 +14,8 @@ export function formatPostDate(dateStr) {
   });
 }
 
-// A post's body: its markdown, with each photo:// embed shown as the photo's
-// thumbnail, which opens it full size. photoUrls gives a URL to show instead,
+// A post's body: its markdown, with each photo:// embed shown as a tile of the
+// photo's thumbnail, which opens it full size. photoUrls gives a URL to show instead,
 // by key, for photos the CDN doesn't serve -- a draft's, until it's published.
 function PostContent({ content, photoUrls = {} }) {
   const [lightboxSrc, setLightboxSrc] = useState(null);
@@ -60,9 +50,7 @@ function PostContent({ content, photoUrls = {} }) {
         const url = photoUrls[key];
         return (
           <span className="blog-photo-embed" onClick={() => openLightbox(url || ApiService.getFullsizeUrl(s3Uri))}>
-            {url
-              ? <img src={url} alt="Photo" onLoad={sizeAsThumbnail} />
-              : <img src={ApiService.getThumbnailUrl(s3Uri)} alt="Photo" />}
+            <img src={url || ApiService.getThumbnailUrl(s3Uri)} alt="Photo" />
           </span>
         );
       }
