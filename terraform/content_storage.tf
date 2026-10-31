@@ -175,3 +175,34 @@ resource "aws_dynamodb_table" "normal_photos" {
     prevent_destroy = true
   }
 }
+
+# Each blog post's metadata, but its body, which UpdateBlogPostMetadata keeps
+# in step with the blog bucket, for the API to list posts, and find one by its
+# slug, without reading every post. Nothing but the bucket's posts is in it,
+# so unlike the tables above, it can be rebuilt from them, with
+# scripts/refreshBlogPosts.py.
+resource "aws_dynamodb_table" "posts" {
+  name         = "spark.wiki.posts"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "s3_uri"
+
+  attribute {
+    name = "s3_uri"
+    type = "S"
+  }
+
+  attribute {
+    name = "slug"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "slug-index"
+    projection_type = "ALL"
+
+    key_schema {
+      attribute_name = "slug"
+      key_type       = "HASH"
+    }
+  }
+}

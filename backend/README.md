@@ -67,6 +67,16 @@ uploaded in the console.
 Locally, both go to the emulated buckets, whose triggers run the same
 Lambdas, so they show up on the local site the same way.
 
+### Blog posts
+
+The API lists posts, and finds one by its slug, from the `spark.wiki.posts`
+table, which `UpdateBlogPostMetadata` keeps in step with the `spark.wiki.blog`
+bucket: one item per post, with its metadata but not its body. Viewing a
+post reads just that post's file, for its body. Publishing a post from the
+admin page also writes its item itself, so it's listed straight away.
+`src/utils/post_util.py` makes the items, and is copied verbatim into that
+Lambda (see its [README](../ContentManagement/UpdateBlogPostMetadata/README.md)).
+
 ### Blog post drafts
 
 The admin page's blog editor saves drafts in the `spark.wiki.blog` bucket,

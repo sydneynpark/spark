@@ -1,8 +1,20 @@
+"""Reading blog posts: their metadata, from their S3 key and markdown.
+
+This file is also, verbatim, ContentManagement/UpdateBlogPostMetadata/src/
+post_util.py, which keeps the posts table (POSTS_TABLE) with it, so that the
+table's items match what the admin page publishes and previews -- a test
+there fails if the two differ. Edit this one, then copy it there.
+"""
 import re
 from datetime import date as Date
 import frontmatter
 
 PHOTOS_BUCKET = 'spark.wiki.photos'
+BLOG_BUCKET = 'spark.wiki.blog'
+# Each post's metadata, its body aside, keyed by its s3_uri, with a
+# slug-index to look posts up by slug.
+POSTS_TABLE = 'spark.wiki.posts'
+POSTS_SLUG_INDEX = 'slug-index'
 
 # Posts embed photos as `photo://<key>`, either in inline code or as an
 # image's URL (![alt](photo://<key>)), with <key> the photo's key in the
@@ -130,3 +142,14 @@ def parse_post(key, markdown_text):
         'photo': photo_uri(photo) if photo else first_photo_uri(body),
         'content': body,
     }
+
+
+def post_item(key, markdown_text, last_modified=None):
+    """The posts table's item for the post at `key` in the blog bucket: what
+    parse_post gives, but its body, and when the post was last modified (an
+    ISO 8601 string), if given. Unset values are left out, rather than
+    stored as nulls: the slug index can't have one."""
+    post = parse_post(key, markdown_text)
+    del post['content']
+    item = {'s3_uri': f's3://{BLOG_BUCKET}/{key}', **post, 'last_modified': last_modified}
+    return {name: value for name, value in item.items() if value is not None and value != ''}

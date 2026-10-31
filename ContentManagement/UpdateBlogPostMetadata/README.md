@@ -1,6 +1,22 @@
 # Update Blog Post Metadata lambda
 
-This lambda reads the metadata of a blog post stored in S3, and writes that metadata to a DynamoDB table so that metadata is queryable. This lambda is intended to be subscribed to S3 update and delete events.
+This lambda keeps the `spark.wiki.posts` DynamoDB table in step with the
+`spark.wiki.blog` bucket: when a post (`YYYY/MM/DD/<post>.md`) is uploaded, it
+writes the post's metadata -- title, slug, dates, tags, preview, thumbnail,
+everything but its body -- as one item, keyed by its `s3_uri`; when a post is
+deleted, it deletes the item. The API lists posts, and finds one by its slug
+(the table's `slug-index`), from the table, rather than reading every post.
+It's subscribed to the bucket's create and delete events, and skips the admin
+page's drafts, under `drafts/`.
+
+`src/post_util.py`, which reads a post's metadata, is a copy of
+[backend/src/utils/post_util.py](../../backend/src/utils/post_util.py), which
+the admin page publishes and previews posts with, so the table matches them.
+Edit that one, then copy it here; a test fails while they differ.
+
+To fill the table from the bucket -- the first time, or after changing what
+it stores -- run the Refresh blog posts workflow, or
+`scripts/refreshBlogPosts.py`.
 
 
 ## Local development
@@ -19,7 +35,7 @@ pip install -r src/requirements.txt
 
 ```ps
 $env:PYTHONPATH = ".\src"
-python -m unittest test\test_markdown_util.py
+python -m unittest test\test_lambda.py
 ```
 
 ## Dependencies

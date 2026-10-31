@@ -51,7 +51,7 @@ module "update_blog_post_metadata" {
   memory_size   = 128
   timeout       = 3
 
-  role_description     = "Allows the UpdateBlogPostMetadata Lambda function to read blog posts."
+  role_description     = "Allows the UpdateBlogPostMetadata Lambda function to read blog posts, and index them."
   permissions_boundary = local.workload_boundary_arn
   policy               = data.aws_iam_policy_document.update_blog_post_metadata.json
 }
@@ -61,6 +61,12 @@ data "aws_iam_policy_document" "update_blog_post_metadata" {
     sid       = "ReadPosts"
     actions   = ["s3:GetObject"]
     resources = ["${aws_s3_bucket.content["blog"].arn}/*"]
+  }
+
+  statement {
+    sid       = "IndexPosts"
+    actions   = ["dynamodb:PutItem", "dynamodb:DeleteItem"]
+    resources = [aws_dynamodb_table.posts.arn]
   }
 }
 
@@ -123,7 +129,7 @@ locals {
     blog = {
       function_name = module.update_blog_post_metadata.function_name
       function_arn  = module.update_blog_post_metadata.arn
-      events        = ["s3:ObjectCreated:*"]
+      events        = ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"]
       # As the console named them (changing one replaces it).
       statement_id = "lambda-334591f7-d838-4edf-9930-8f9d3263c32f"
     }

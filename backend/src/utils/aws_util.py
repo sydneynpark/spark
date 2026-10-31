@@ -12,9 +12,22 @@ from utils.draft_util import (
     draft_prefix, editing_key, new_draft_id, parse_draft,
 )
 from utils.photo_upload_util import PHOTO_COLLECTIONS, PHOTO_CONTENT_TYPE
+from utils.post_util import BLOG_BUCKET, POSTS_SLUG_INDEX, POSTS_TABLE, parse_post, post_item
 
 def review_date(book):
     return book.get('date', 0)
+
+
+def post_from_item(item):
+    """A post's metadata, as the API gives it, from its posts table item
+    (post_util.post_item), which leaves out what isn't set."""
+    post = {'date': None, 'written': None, 'tags': [], 'preview': '', 'photo': None, 'last_modified': None, **item}
+    del post['s3_uri']
+    return post
+
+
+def post_date(post):
+    return post['date'] or ''
 
 class DynamoUtil:
     def __init__(self):
@@ -24,6 +37,7 @@ class DynamoUtil:
         self.birds_table = self.dynamodb.Table('spark.wiki.photos')
         self.photos_table = self.dynamodb.Table('spark.wiki.normal-photos')
         self.books_table = self.dynamodb.Table('spark.wiki.books')
+        self.posts_table = self.dynamodb.Table(POSTS_TABLE)
     
     def _paginate(self, table_method, limit=None, **kwargs):
         """Call a boto3 scan/query method repeatedly, following
@@ -205,29 +219,45 @@ class DynamoUtil:
             print(f'Error getting book {title}: {str(e)}')
             raise e
 
-BLOG_BUCKET = 'spark.wiki.blog'
+    def get_posts(self):
+        """Every blog post's metadata, but its body, newest first, from the
+        posts table UpdateBlogPostMetadata keeps."""
+        items = self._paginate(self.posts_table.scan)
+        return sorted((post_from_item(item) for item in items), key=post_date, reverse=True)
+
+    def get_post_by_slug(self, slug):
+        """The metadata of the post with `slug`, or None if there's none. If
+        two have it, the newer wins."""
+        items = self._paginate(
+            self.posts_table.query,
+            IndexName=POSTS_SLUG_INDEX,
+            KeyConditionExpression=Key('slug').eq(slug),
+        )
+        return max((post_from_item(item) for item in items), key=post_date, default=None)
+
+    def index_post(self, key, markdown_text, last_modified):
+        """Puts the post in the posts table straight away, as
+        UpdateBlogPostMetadata does too once S3 tells it of the upload -- for
+        the admin page, so a post's on the site as soon as it's published."""
+        self.posts_table.put_item(Item=post_item(key, markdown_text, last_modified))
+
 
 class S3Util:
     def __init__(self):
         self.s3 = boto3.client('s3')
 
-    def list_posts(self):
-        """Parse every markdown blog post in S3, newest first. Each is read
-        in full, since frontmatter and the first photo can be anywhere in
-        it. Drafts (see utils/draft_util.py) aren't posts."""
-        from utils.post_util import parse_post
-        response = self.s3.list_objects_v2(Bucket=BLOG_BUCKET)
-        posts = []
-        for obj in response.get('Contents', []):
-            key = obj['Key']
-            if not key.endswith('.md') or key.startswith(DRAFTS_PREFIX):
-                continue
-            post_response = self.s3.get_object(Bucket=BLOG_BUCKET, Key=key)
-            post = parse_post(key, post_response['Body'].read().decode('utf-8', errors='ignore'))
-            post['last_modified'] = obj['LastModified'].isoformat()
-            posts.append(post)
-        posts.sort(key=lambda p: (p['date'] or ''), reverse=True)
-        return posts
+    def get_post(self, key):
+        """The post at `key` in the blog bucket, body and all, as it is now,
+        or None if there's none there."""
+        try:
+            response = self.s3.get_object(Bucket=BLOG_BUCKET, Key=key)
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'NoSuchKey':
+                return None
+            raise
+        post = parse_post(key, response['Body'].read().decode('utf-8', errors='ignore'))
+        post['last_modified'] = response['LastModified'].isoformat()
+        return post
 
 
 BOOKS_BUCKET = 'spark.wiki.books'

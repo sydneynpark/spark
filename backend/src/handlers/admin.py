@@ -1,4 +1,6 @@
 
+from datetime import datetime, timezone
+
 from flask import Blueprint, jsonify, request
 
 from utils.auth_util import verify_credentials, issue_token, require_admin_auth, TOKEN_TTL_SECONDS
@@ -13,13 +15,13 @@ from utils.photo_upload_util import (
 )
 from utils.response_util import handle_error
 
-from utils.aws_util import BooksAdminUtil, DraftsAdminUtil, PhotosAdminUtil, PublishConflict, S3Util
+from utils.aws_util import BooksAdminUtil, DraftsAdminUtil, DynamoUtil, PhotosAdminUtil, PublishConflict
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 books_admin = BooksAdminUtil()
 photos_admin = PhotosAdminUtil()
 drafts_admin = DraftsAdminUtil()
-posts = S3Util()
+dynamo = DynamoUtil()
 
 
 # The photo endpoints work in either photo collection's folder of the photos
@@ -308,11 +310,19 @@ def publish_draft(draft_id):
         editing = drafts_admin.get_editing(draft_id)
         try:
             plan = plan_publish(draft_id, fields, [photo['key'] for photo in photos], editing)
-            drafts_admin.publish(draft_id, plan, posts.list_posts(), editing)
+            drafts_admin.publish(draft_id, plan, dynamo.get_posts(), editing)
         except (DraftError, UploadPathError) as e:
             return jsonify({'error': str(e)}), 400
         except PublishConflict as e:
             return jsonify({'error': str(e)}), 409
+
+        # UpdateBlogPostMetadata indexes it too, once S3 tells it of the
+        # upload, but this puts it on the blog right away. It's already
+        # published, so a failure here is left to that.
+        try:
+            dynamo.index_post(plan['key'], plan['markdown'], datetime.now(timezone.utc).isoformat())
+        except Exception as e:
+            print(f'Indexing {plan["key"]} failed, leaving it to UpdateBlogPostMetadata: {e}')
 
         return jsonify({
             'key': plan['key'],
