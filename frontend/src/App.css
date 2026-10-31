@@ -735,6 +735,12 @@ footer {
   color: var(--color-accent-medium);
 }
 
+.post-list-dates {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-accent-medium);
+}
+
 /* Blog list page */
 .blog-page {
   width: 100%;
@@ -870,18 +876,51 @@ footer {
   margin: 0.5rem 0;
 }
 
-.blog-photo-embed {
-  display: block;
-  cursor: pointer;
-  margin: 1rem 0;
-  width: fit-content;
+/* A photo embed: a square tile like the gallery's, the photo filling it, which
+   opens the photo full size. A paragraph of only embeds is a row of them,
+   three across; one in a paragraph of text is on a line of its own, as wide as
+   one of the row's. */
+.post-content {
+  --blog-photo-gap: 1rem;
 }
 
-.blog-photo-embed img {
+.blog-photo-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--blog-photo-gap);
+  margin: 1.25rem 0;
+}
+
+.blog-photo-embed {
   display: block;
-  max-width: 100%;
+  margin: 0.75rem 0;
+  width: calc((100% - 2 * var(--blog-photo-gap)) / 3);
+  overflow: hidden;
+  background: var(--color-background);
   border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.blog-photo-row .blog-photo-embed {
+  width: auto;
+  margin: 0;
+}
+
+.post-content .blog-photo-embed img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  margin: 0;
+  border-radius: 0;
   transition: opacity 0.2s;
+}
+
+@media (max-width: 640px) {
+  .post-content {
+    --blog-photo-gap: 0.5rem;
+  }
 }
 
 .blog-photo-embed:hover img {
@@ -936,6 +975,145 @@ footer {
 
 .sort-bar-arrow {
   font-size: 0.8rem;
+}
+
+/* Tags: on posts and the blog list, and the blog list's filter by them */
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.65rem;
+  border-radius: 999px;
+  background: var(--color-background);
+  color: var(--color-accent-dark);
+  font-size: 0.8rem;
+  font-weight: normal;
+  line-height: 1.5;
+}
+
+.post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+}
+
+.post-header-tags {
+  margin-top: 0.9rem;
+}
+
+.post-header-tags .tag-chip {
+  background: rgba(255, 255, 255, 0.18);
+  color: white;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.post-header-tags .tag-chip:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+/* The blog list's sort options and filter by tags, in a row */
+.blog-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.blog-controls .sort-bar {
+  margin-bottom: 0;
+}
+
+.tag-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 1 24rem;
+}
+
+.tag-filter .tag-input {
+  flex: 1;
+}
+
+/* Room to type a few letters of a tag beside the chosen ones, for a one-line
+   box while it's only a couple. */
+.tag-filter .tag-input-box {
+  min-width: 5rem;
+}
+
+/* TagInput: chips and a borderless box, together looking like one input */
+.tag-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #c7d0e0;
+  border-radius: 6px;
+  background: var(--color-white);
+}
+
+.tag-input:focus-within {
+  border-color: var(--color-accent-dark);
+}
+
+.tag-input-box {
+  position: relative;
+  flex: 1;
+  min-width: 10rem;
+}
+
+/* Over .admin-page's input styles, too. */
+.tag-input input[type="text"],
+.admin-page .tag-input input[type="text"] {
+  font: inherit;
+  color: var(--color-text-primary);
+  width: 100%;
+  padding: 0.2rem;
+  border: none;
+  outline: none;
+  background: transparent;
+}
+
+.tag-chip-remove,
+.admin-page .tag-chip-remove {
+  margin-left: 0.3rem;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tag-input-suggestions {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  min-width: 100%;
+  z-index: 10;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  background: var(--color-white);
+  border: 1px solid #c7d0e0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.tag-input-suggestions li {
+  padding: 0.4rem 0.75rem;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+.tag-input-suggestions li.is-highlighted {
+  background: var(--color-background);
 }
 
 /* Book reviews list page */
@@ -2112,6 +2290,267 @@ footer {
   color: #8a5a00;
 }
 
+/* Admin blog drafts and editor */
+.admin-drafts-page .back-link,
+.admin-post-editor-page .back-link {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: var(--color-text-primary);
+}
+
+.admin-drafts-page .admin-submit-button {
+  text-decoration: none;
+}
+
+.admin-draft-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-draft {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--color-card-background);
+  border: 1px solid #e1e8ed;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.admin-draft-link {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.admin-draft-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.admin-draft-link:hover .admin-draft-title {
+  text-decoration: underline;
+}
+
+.admin-drafts-heading {
+  margin: 1.75rem 0 0.75rem;
+}
+
+a.admin-draft-action {
+  text-decoration: none;
+}
+
+.admin-editing-note {
+  margin: -0.5rem 0 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--color-accent-medium);
+  background: var(--color-card-background);
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.blog-post-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.admin-post-editor-page {
+  max-width: 860px;
+}
+
+.admin-post-fields {
+  grid-template-columns: 1fr auto auto;
+}
+
+.admin-post-dates-hint {
+  margin-top: -0.5rem;
+}
+
+.admin-editor-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.admin-link-button {
+  margin-left: 0.5rem;
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 0.85rem;
+  color: var(--color-accent-dark);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.admin-editor-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid rgba(43, 49, 63, 0.18);
+  margin-bottom: -0.5rem;
+}
+
+.admin-editor-tabs button {
+  padding: 0.5rem 1.1rem;
+  background: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  color: var(--color-accent-dark);
+  margin-bottom: -1px;
+}
+
+.admin-editor-tabs button.is-active {
+  background: var(--color-white);
+  border-color: rgba(43, 49, 63, 0.18);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.admin-page textarea.admin-editor-textarea {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  min-height: 20rem;
+}
+
+.admin-post-preview {
+  margin-top: 0;
+}
+
+.admin-post-preview .post-header,
+.admin-post-preview .post-content {
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+.admin-editor-upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-editor-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.admin-editor-choice label {
+  font-weight: normal;
+}
+
+.admin-editor-upload-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.admin-editor-photo-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-photo-existing .admin-add-button,
+.admin-photo-existing .admin-remove-button {
+  align-self: center;
+  padding: 0.35rem 0.75rem;
+  flex-shrink: 0;
+}
+
+.admin-editor-details summary {
+  cursor: pointer;
+  color: var(--color-accent-dark);
+  font-weight: 600;
+}
+
+.admin-existing-photos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.admin-editor-photo-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: 0.6rem;
+}
+
+.admin-editor-photo-grid button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.35rem;
+  background: var(--color-white);
+  border: 1px solid #c7d0e0;
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  font-size: 0.75rem;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.admin-editor-photo-grid button:hover {
+  border-color: var(--color-accent-dark);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.admin-editor-photo-grid img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.admin-editor-thumbnail {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.admin-editor-thumbnail label {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-editor-thumbnail img {
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.admin-page select {
+  font: inherit;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #c7d0e0;
+  border-radius: 6px;
+  background: var(--color-white);
+  color: var(--color-text-primary);
+}
+
+.admin-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
 @media (max-width: 640px) {
   .admin-photo-queue-row {
     grid-template-columns: 1fr auto;
@@ -2127,6 +2566,18 @@ footer {
 
   .admin-form-row {
     grid-template-columns: 1fr;
+  }
+
+  .admin-post-preview .post-header,
+  .admin-post-preview .post-content {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  .admin-form-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 1rem;
   }
 
   .admin-slider-row {

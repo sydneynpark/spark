@@ -1,2 +1,3 @@
 # Dependencies of the refresh*.py scripts, which the refresh workflows run too.
-boto3
+# The crt extra is what reads an `aws login` session, when run locally.
+boto3[crt]

@@ -45,7 +45,7 @@ CDN_BUCKETS = ['books', 'photos', 'thumbnails']
 # terraform/content_lambdas.tf). They go to a queue, rather than straight to
 # the Lambda, for devstack/lambda_trigger.py to run it.
 TRIGGER_EVENTS = {
-    'blog': ['s3:ObjectCreated:*'],
+    'blog': ['s3:ObjectCreated:*', 's3:ObjectRemoved:*'],
     'books': ['s3:ObjectCreated:*', 's3:ObjectRemoved:*'],
     'photos': ['s3:ObjectCreated:*', 's3:ObjectRemoved:*'],
 }
@@ -142,6 +142,21 @@ def create_tables():
         BillingMode='PAY_PER_REQUEST',
         AttributeDefinitions=[{'AttributeName': 's3_uri', 'AttributeType': 'S'}],
         KeySchema=[{'AttributeName': 's3_uri', 'KeyType': 'HASH'}],
+    )
+
+    dynamodb.create_table(
+        TableName='spark.wiki.posts',
+        BillingMode='PAY_PER_REQUEST',
+        AttributeDefinitions=[
+            {'AttributeName': 's3_uri', 'AttributeType': 'S'},
+            {'AttributeName': 'slug', 'AttributeType': 'S'},
+        ],
+        KeySchema=[{'AttributeName': 's3_uri', 'KeyType': 'HASH'}],
+        GlobalSecondaryIndexes=[{
+            'IndexName': 'slug-index',
+            'KeySchema': [{'AttributeName': 'slug', 'KeyType': 'HASH'}],
+            'Projection': {'ProjectionType': 'ALL'},
+        }],
     )
 
 

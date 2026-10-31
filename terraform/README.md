@@ -77,8 +77,9 @@ approve it, or revert the change and push.
 - **Reprocessing content**: run a Refresh workflow. To run the scripts
   locally instead (e.g. `refreshBookReviewData.py --missing-only`, or on just
   one prefix), `scripts/refresh*.py` use your `aws login` session (or
-  `AWS_PROFILE`), and the packages in `scripts/requirements.txt`. If one
-  can't find credentials, export the session into your shell (PowerShell):
+  `AWS_PROFILE`). Run them as the workflows do, from the repo root:
+  `uv run --no-project --with-requirements scripts/requirements.txt scripts/refreshPhotoMetadata.py photos/`.
+  If one can't find credentials, export the session into your shell (PowerShell):
   `aws configure export-credentials --format powershell | Invoke-Expression`.
 - **After changing anything Terraform manages in the console**, copy the
   change into its configuration: the next deploy reverts whatever the
@@ -143,8 +144,10 @@ ones included) from the CI roles:
   permissions boundary, `SiteWorkloadBoundary`. Every role Terraform manages
   carries it, which caps what any of them can do at the site's buckets,
   tables, parameters, and logs. Of the content, it can delete only what
-  the Lambdas derive from the rest (book covers, and thumbnails), so no
-  deployed code can delete a photo, review, or post -- though it could
+  the Lambdas derive from the rest (book covers, and thumbnails), and the
+  admin page's blog post drafts, which aren't on the site (under the blog
+  bucket's `drafts/`), so no deployed code can delete a photo, review, or
+  post -- though it could
   still overwrite one, since the buckets aren't versioned. Logs it allows
   everywhere: API Gateway refuses a logging role that can't use any log
   group. The deploy role
