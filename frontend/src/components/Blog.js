@@ -4,6 +4,7 @@ import ApiService from '../services/api';
 import { usePageTitle } from '../utils/pageTitle';
 import ThumbnailList, { ThumbnailListItem } from './ThumbnailList';
 import SortBar from './SortBar';
+import TagInput from './TagInput';
 import { useSort } from '../utils/sort';
 import { hasTag, tagsInUse } from '../utils/postTags';
 
@@ -18,16 +19,21 @@ function Blog() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // The tag the posts are filtered by, if any, kept in the URL to link to.
+  // The tags the posts are filtered by, kept in the URL to link to (as
+  // ?tag=A&tag=B): just the posts with all of them are shown.
   const [searchParams, setSearchParams] = useSearchParams();
-  const tag = searchParams.get('tag');
-  const tags = useMemo(() => tagsInUse(posts), [posts]);
-  const shownPosts = useMemo(() => (tag ? posts.filter(post => hasTag(post, tag)) : posts), [posts, tag]);
+  const allTags = useMemo(() => tagsInUse(posts).map(({ tag }) => tag), [posts]);
+  // As spelled in the posts, whatever the URL's case.
+  const filterTags = useMemo(() => searchParams.getAll('tag').map(
+    tag => allTags.find(t => t.toLowerCase() === tag.toLowerCase()) || tag,
+  ), [searchParams, allTags]);
+  const shownPosts = useMemo(
+    () => posts.filter(post => filterTags.every(tag => hasTag(post, tag))),
+    [posts, filterTags],
+  );
+  // Only ones some shown post has, so adding one never leaves none shown.
+  const tagSuggestions = useMemo(() => tagsInUse(shownPosts).map(({ tag }) => tag), [shownPosts]);
   const { sortedItems: sortedPosts, sortKey, sortDirection, handleSort } = useSort(shownPosts, 'date', 'desc');
-
-  function filterBy(newTag) {
-    setSearchParams(newTag ? { tag: newTag } : {});
-  }
 
   usePageTitle('Blog');
 
@@ -48,32 +54,23 @@ function Blog() {
         <p>No posts yet.</p>
       ) : (
         <>
-          {tags.length > 0 && (
-            <div className="sort-bar tag-filter">
-              <span className="sort-bar-label">Tags:</span>
-              {tags.map(({ tag: name, count }) => {
-                const active = tag !== null && name.toLowerCase() === tag.toLowerCase();
-                return (
-                  <button
-                    key={name}
-                    type="button"
-                    className={`sort-bar-button${active ? ' sort-bar-button--active' : ''}`}
-                    onClick={() => filterBy(active ? null : name)}
-                    aria-pressed={active}
-                  >
-                    {name} <span className="tag-filter-count">{count}</span>
-                  </button>
-                );
-              })}
-              {tag && (
-                <button type="button" className="tag-filter-clear" onClick={() => filterBy(null)}>
-                  Show all posts
-                </button>
-              )}
-            </div>
-          )}
-          <SortBar options={SORT_OPTIONS} sortKey={sortKey} sortDirection={sortDirection} onSort={handleSort} />
-          {sortedPosts.length === 0 && <p>No posts are tagged "{tag}".</p>}
+          <div className="blog-controls">
+            <SortBar options={SORT_OPTIONS} sortKey={sortKey} sortDirection={sortDirection} onSort={handleSort} />
+            {allTags.length > 0 && (
+              <div className="tag-filter">
+                <span id="tag-filter-label" className="sort-bar-label">Tags:</span>
+                <TagInput
+                  tags={filterTags}
+                  onChange={tags => setSearchParams({ tag: tags })}
+                  suggestions={tagSuggestions}
+                  allowNew={false}
+                  labelledBy="tag-filter-label"
+                  placeholder={filterTags.length ? '' : 'Filter by tag'}
+                />
+              </div>
+            )}
+          </div>
+          {sortedPosts.length === 0 && <p>No posts have all of those tags.</p>}
           <ThumbnailList>
             {sortedPosts.map(post => (
               <ThumbnailListItem

@@ -1014,24 +1014,106 @@ footer {
   background: rgba(255, 255, 255, 0.32);
 }
 
+/* The blog list's sort options and filter by tags, in a row */
+.blog-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.blog-controls .sort-bar {
+  margin-bottom: 0;
+}
+
 .tag-filter {
-  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 1 24rem;
 }
 
-.tag-filter-count {
-  font-size: 0.8rem;
-  opacity: 0.7;
+.tag-filter .tag-input {
+  flex: 1;
 }
 
-.tag-filter-clear {
+/* Room to type a few letters of a tag beside the chosen ones, for a one-line
+   box while it's only a couple. */
+.tag-filter .tag-input-box {
+  min-width: 5rem;
+}
+
+/* TagInput: chips and a borderless box, together looking like one input */
+.tag-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #c7d0e0;
+  border-radius: 6px;
+  background: var(--color-white);
+}
+
+.tag-input:focus-within {
+  border-color: var(--color-accent-dark);
+}
+
+.tag-input-box {
+  position: relative;
+  flex: 1;
+  min-width: 10rem;
+}
+
+/* Over .admin-page's input styles, too. */
+.tag-input input[type="text"],
+.admin-page .tag-input input[type="text"] {
+  font: inherit;
+  color: var(--color-text-primary);
+  width: 100%;
+  padding: 0.2rem;
+  border: none;
+  outline: none;
+  background: transparent;
+}
+
+.tag-chip-remove,
+.admin-page .tag-chip-remove {
+  margin-left: 0.3rem;
   padding: 0;
   background: none;
   border: none;
-  font: inherit;
-  font-size: 0.9rem;
-  color: var(--color-accent-dark);
-  text-decoration: underline;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
   cursor: pointer;
+}
+
+.tag-input-suggestions {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  min-width: 100%;
+  z-index: 10;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  background: var(--color-white);
+  border: 1px solid #c7d0e0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.tag-input-suggestions li {
+  padding: 0.4rem 0.75rem;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+.tag-input-suggestions li.is-highlighted {
+  background: var(--color-background);
 }
 
 /* Book reviews list page */
@@ -2274,71 +2356,6 @@ footer {
   flex-direction: column;
   gap: 0.4rem;
   font-weight: 600;
-}
-
-/* TagInput: chips and a borderless box, together looking like one input */
-.tag-input {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.5rem;
-  border: 1px solid #c7d0e0;
-  border-radius: 6px;
-  background: var(--color-white);
-}
-
-.tag-input:focus-within {
-  border-color: var(--color-accent-dark);
-}
-
-.tag-input-box {
-  position: relative;
-  flex: 1;
-  min-width: 10rem;
-}
-
-.admin-page .tag-input input[type="text"] {
-  width: 100%;
-  padding: 0.2rem;
-  border: none;
-  outline: none;
-  background: transparent;
-}
-
-.admin-page .tag-chip-remove {
-  margin-left: 0.3rem;
-  padding: 0;
-  background: none;
-  border: none;
-  color: inherit;
-  font-size: 1rem;
-  line-height: 1;
-}
-
-.tag-input-suggestions {
-  position: absolute;
-  top: calc(100% + 0.5rem);
-  left: 0;
-  min-width: 100%;
-  z-index: 10;
-  list-style: none;
-  margin: 0;
-  padding: 0.25rem 0;
-  background: var(--color-white);
-  border: 1px solid #c7d0e0;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-
-.tag-input-suggestions li {
-  padding: 0.4rem 0.75rem;
-  font-weight: normal;
-  cursor: pointer;
-}
-
-.tag-input-suggestions li.is-highlighted {
-  background: var(--color-background);
 }
 
 .admin-link-button {

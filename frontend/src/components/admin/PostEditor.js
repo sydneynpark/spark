@@ -5,7 +5,7 @@ import PostContent, { PostDates } from '../PostContent';
 import { monthName } from '../../utils/photoDate';
 import { usePageTitle } from '../../utils/pageTitle';
 import { tagsInUse } from '../../utils/postTags';
-import TagInput from './TagInput';
+import TagInput from '../TagInput';
 
 // How many photos upload to S3 at once, as in PhotoUploader.
 const UPLOAD_CONCURRENCY = 3;

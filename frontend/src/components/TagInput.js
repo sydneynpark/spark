@@ -10,8 +10,13 @@ function findTag(tags, tag) {
 // tags already in use (`suggestions`, most used first) as you type, to
 // reuse rather than respell. A tag typed in another case than one in use is
 // added as the one in use. Enter or a comma adds a tag; Backspace in the
-// empty box removes the last.
-function TagInput({ tags, onChange, suggestions = [], labelledBy }) {
+// empty box removes the last. Without `allowNew`, only suggested tags can be
+// added, Enter adding the first suggestion for what's typed -- e.g. to pick
+// tags to filter by.
+function TagInput({
+  tags, onChange, suggestions = [], allowNew = true, labelledBy,
+  placeholder = tags.length ? 'Add another tag' : 'Add a tag',
+}) {
   const listId = useId();
   const [text, setText] = useState('');
   const [open, setOpen] = useState(false);
@@ -29,8 +34,9 @@ function TagInput({ tags, onChange, suggestions = [], labelledBy }) {
     const next = [...tags];
     newTags.forEach(raw => {
       const typed = raw.split(/\s+/).filter(Boolean).join(' ');
-      if (!typed || findTag(next, typed)) return;
-      next.push(findTag(suggestions, typed) || typed);
+      const suggested = findTag(suggestions, typed);
+      if (!typed || findTag(next, typed) || (!allowNew && !suggested)) return;
+      next.push(suggested || typed);
     });
     if (next.length !== tags.length) onChange(next);
     setText('');
@@ -54,6 +60,7 @@ function TagInput({ tags, onChange, suggestions = [], labelledBy }) {
     if (e.key === 'Enter') {
       e.preventDefault();
       if (showList && highlight >= 0) addTags([matches[highlight]]);
+      else if (!allowNew && query && matches.length > 0) addTags([matches[0]]);
       else addTags([text]);
     } else if (e.key === 'ArrowDown' && matches.length > 0) {
       e.preventDefault();
@@ -94,7 +101,7 @@ function TagInput({ tags, onChange, suggestions = [], labelledBy }) {
           onKeyDown={handleKeyDown}
           onFocus={() => setOpen(true)}
           onBlur={() => { addTags([text]); setOpen(false); }}
-          placeholder={tags.length ? 'Add another tag' : 'Add a tag'}
+          placeholder={placeholder}
           aria-labelledby={labelledBy}
           role="combobox"
           aria-expanded={showList}

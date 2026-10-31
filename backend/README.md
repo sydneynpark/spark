@@ -87,7 +87,8 @@ shown, foldered, and its photos filed under; `written`, optional, is when it
 was written, for a post about something past, and is the same as `date` if
 not set. The blog can be sorted by either. `tags` is a list (or a string of
 them separated by commas), matched regardless of case; the blog can be
-filtered by one, and the editor suggests those already in use. It refuses, before writing anything, to
+filtered by any number of them (showing the posts with all of them), and the
+editor suggests those already in use. It refuses, before writing anything, to
 overwrite a post or a different photo, or to give two posts the same URL.
 
 ### Admin login (one-time, AWS-side)
