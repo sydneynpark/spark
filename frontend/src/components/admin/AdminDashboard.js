@@ -18,7 +18,7 @@ function AdminDashboard() {
         <button className="admin-logout-button" onClick={handleLogout}>Log Out</button>
       </div>
       <div className="admin-action-list">
-        <Link className="admin-action-button" to="/admin/posts">Write Blog Post</Link>
+        <Link className="admin-action-button" to="/admin/posts">Blog Posts</Link>
         <Link className="admin-action-button" to="/admin/books/new">Upload Book Review</Link>
         <Link className="admin-action-button" to="/admin/photos/upload">Upload Photos</Link>
         <Link className="admin-action-button" to="/admin/birds/upload">Upload Bird Photos</Link>

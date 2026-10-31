@@ -7,11 +7,15 @@ YYYY/MM/DD/ layout, and ContentAPI can't read it (terraform/site_api.tf):
 * drafts/<id>/<collection>/<filename>: the photos uploaded to it, 'birds' or
   'photos' as they'll be published. A post embeds one as
   photo://drafts/<id>/<collection>/<filename>.
+* drafts/<id>/editing.json, for a draft of changes to a published post: which
+  post (its key, and ETag when the draft was made from it), its slug, and any
+  frontmatter it has that drafts don't (see draft_from_post).
 
 The photos wait there, rather than in the photos bucket, so that
 UpdatePhotoMetadata doesn't put them on the site before the post is. When it
 is, they're copied into their collection's folder for the post's date, the
-post's embeds of them are pointed there, and the draft is deleted.
+post's embeds of them are pointed there, and the draft is deleted. A draft
+of changes to a post replaces it, at the same key and URL.
 """
 import re
 import uuid
@@ -20,15 +24,17 @@ import frontmatter
 import yaml
 
 from utils.photo_upload_util import PHOTO_COLLECTIONS, photo_key, validate_photo_filename
-from utils.post_util import PHOTO_REF_PATTERN, frontmatter_date, frontmatter_tags, slugify
+from utils.post_util import PHOTO_REF_PATTERN, frontmatter_date, frontmatter_tags, parse_post, slugify
 
 DRAFTS_PREFIX = 'drafts/'
 DRAFT_FILENAME = 'draft.md'
+EDITING_FILENAME = 'editing.json'
 DRAFT_ID_PATTERN = re.compile(r'[0-9a-f]{32}')
 # In the order they're written to a post's frontmatter. All are strings but
-# tags, a list of them.
-FRONTMATTER_FIELDS = ('title', 'date', 'written', 'tags', 'preview', 'photo')
-TEXT_FIELDS = tuple(name for name in FRONTMATTER_FIELDS if name != 'tags')
+# tags, a list of them. The slug isn't a draft's to set: a new post's comes
+# from its title, and an edited one keeps its own.
+FRONTMATTER_FIELDS = ('title', 'slug', 'date', 'written', 'tags', 'preview', 'photo')
+TEXT_FIELDS = ('title', 'date', 'written', 'preview', 'photo')
 MAX_TITLE_LENGTH = 200
 MAX_PREVIEW_LENGTH = 500
 MAX_TAG_LENGTH = 50
@@ -53,6 +59,10 @@ def draft_prefix(draft_id):
 
 def draft_key(draft_id):
     return f'{draft_prefix(draft_id)}{DRAFT_FILENAME}'
+
+
+def editing_key(draft_id):
+    return f'{draft_prefix(draft_id)}{EDITING_FILENAME}'
 
 
 def draft_id_from_key(key):
@@ -104,10 +114,12 @@ def draft_fields(payload):
     return fields
 
 
-def build_markdown(fields):
+def build_markdown(fields, extra_frontmatter=None):
     """A draft's or post's file content: its frontmatter (just the fields it
-    has), then its body."""
+    has, then any `extra_frontmatter`), then its body."""
     metadata = {name: fields[name] for name in FRONTMATTER_FIELDS if fields.get(name)}
+    for name, value in (extra_frontmatter or {}).items():
+        metadata.setdefault(name, value)
     body = fields.get('content', '')
     if not metadata:
         return body
@@ -127,7 +139,23 @@ def parse_draft(markdown_text):
     return fields
 
 
-def plan_publish(draft_id, fields, photo_keys):
+def draft_from_post(key, markdown_text):
+    """A draft of changes to the post at `key`: its fields, as parse_draft
+    reads them, but with the title and date the post is shown with even if
+    they come from its key rather than its frontmatter, so it can be
+    published again as it is; and what editing.json keeps about it, but its
+    ETag: its key, its slug, and its frontmatter that drafts don't have
+    fields for, to keep when it's published."""
+    post = parse_post(key, markdown_text)
+    fields = parse_draft(markdown_text)
+    fields['title'] = fields['title'] or post['title']
+    fields['date'] = fields['date'] or post['date'] or ''
+    metadata = frontmatter.loads(markdown_text).metadata
+    extra = {name: value for name, value in metadata.items() if name not in FRONTMATTER_FIELDS}
+    return fields, {'key': key, 'slug': post['slug'], 'frontmatter': extra}
+
+
+def plan_publish(draft_id, fields, photo_keys, editing=None):
     """What publishing the draft writes, given its fields and the keys of the
     photos uploaded to it: the post's key in the blog bucket
     (YYYY/MM/DD/<slug>.md), the post's markdown, its slug, and each photo's
@@ -135,13 +163,16 @@ def plan_publish(draft_id, fields, photo_keys):
     post's date), keyed by its key in the draft. Raises DraftError if the
     draft isn't ready to publish.
 
+    A draft of changes to a post (`editing`, from its editing.json) replaces
+    it: at its key, with its slug, and the frontmatter drafts don't have.
+
     Every photo uploaded to the draft is published, whether the post embeds
     it or not, so a photo can go up along with a post without being in it.
     """
     title = fields.get('title', '')
     if not title:
         raise DraftError('Give the post a title before publishing it.')
-    slug = slugify(title)
+    slug = editing['slug'] if editing else slugify(title)
     if not slug:
         raise DraftError('The title needs at least one letter or number, for the post\'s URL.')
     # Already checked to be a real date, if there is one, by draft_fields.
@@ -170,6 +201,15 @@ def plan_publish(draft_id, fields, photo_keys):
         'content': PHOTO_REF_PATTERN.sub(published_ref, fields.get('content', '')),
         'photo': PHOTO_REF_PATTERN.sub(published_ref, fields.get('photo', '')),
     }
+    if editing:
+        # Its key stays put even if its date changes, since its frontmatter
+        # date wins over its key's -- and so the post needn't be deleted.
+        return {
+            'key': editing['key'],
+            'slug': slug,
+            'markdown': build_markdown({**published, 'slug': slug}, editing.get('frontmatter')),
+            'photos': photos,
+        }
     return {
         'key': f'{folder}{slug}.md',
         'slug': slug,

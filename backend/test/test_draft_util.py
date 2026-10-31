@@ -4,7 +4,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 from utils.draft_util import (  # noqa: E402
-    DraftError, build_markdown, draft_fields, draft_id_from_key, draft_photo, draft_photo_key,
+    DraftError, build_markdown, draft_fields, draft_from_post, draft_id_from_key, draft_photo, draft_photo_key,
     parse_draft, plan_publish,
 )
 from utils.photo_upload_util import UploadPathError  # noqa: E402
@@ -190,6 +190,39 @@ class TestPlanPublish(unittest.TestCase):
             plan_publish(DRAFT_ID, fields(content=f'`photo://{PREFIX}birds/gone.jpg`'), [])
         with self.assertRaises(DraftError):
             plan_publish(DRAFT_ID, fields(photo=f'photo://{PREFIX}birds/gone.jpg'), [])
+
+
+
+class TestEditingAPost(unittest.TestCase):
+    KEY = '2026/05/23/may-23-field-notes.md'
+    POST = (
+        '---\ntitle: "May 23 Field Notes"\nslug: marsh-morning\nauthor: Me\ntags: [Birds]\n---\n\n'
+        '`photo://birds/2026/05/23/grebe.jpg`\n'
+    )
+
+    def test_makes_a_draft_of_the_post(self):
+        fields, editing = draft_from_post(self.KEY, self.POST)
+        self.assertEqual(fields, {
+            'title': 'May 23 Field Notes', 'date': '2026-05-23', 'written': '', 'tags': ['Birds'],
+            'preview': '', 'photo': '', 'content': '`photo://birds/2026/05/23/grebe.jpg`',
+        })
+        self.assertEqual(editing, {'key': self.KEY, 'slug': 'marsh-morning', 'frontmatter': {'author': 'Me'}})
+
+    def test_a_post_with_no_frontmatter(self):
+        fields, editing = draft_from_post('2026/05/01/hello-world.md', 'Hi')
+        self.assertEqual((fields['title'], fields['date'], editing['slug']), ('Hello World', '2026-05-01', 'hello-world'))
+
+    def test_publishing_replaces_the_post_at_its_url(self):
+        fields, editing = draft_from_post(self.KEY, self.POST)
+        fields.update(title='A New Title', date='2026-05-24', content=fields['content'] + f'\n`photo://{PREFIX}birds/new.jpg`')
+        plan = plan_publish(DRAFT_ID, fields, [f'{PREFIX}birds/new.jpg'], editing)
+
+        self.assertEqual((plan['key'], plan['slug']), (self.KEY, 'marsh-morning'))
+        self.assertEqual(plan['photos'], {f'{PREFIX}birds/new.jpg': 'birds/2026/05/24/new.jpg'})
+        post = parse_post(plan['key'], plan['markdown'])
+        self.assertEqual((post['title'], post['slug'], post['date']), ('A New Title', 'marsh-morning', '2026-05-24'))
+        self.assertIn('author: Me', plan['markdown'])
+        self.assertIn('`photo://birds/2026/05/24/new.jpg`', post['content'])
 
 
 if __name__ == '__main__':

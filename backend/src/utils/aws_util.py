@@ -1,3 +1,5 @@
+import json
+
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from botocore.config import Config
@@ -5,7 +7,10 @@ from botocore.exceptions import ClientError
 from itertools import groupby
 from operator import itemgetter
 
-from utils.draft_util import DRAFTS_PREFIX, draft_id_from_key, draft_key, draft_photo, draft_prefix, parse_draft
+from utils.draft_util import (
+    DRAFTS_PREFIX, EDITING_FILENAME, build_markdown, draft_from_post, draft_id_from_key, draft_key, draft_photo,
+    draft_prefix, editing_key, new_draft_id, parse_draft,
+)
 from utils.photo_upload_util import PHOTO_COLLECTIONS, PHOTO_CONTENT_TYPE
 
 def review_date(book):
@@ -354,7 +359,12 @@ class DraftsAdminUtil:
                 continue
             fields = parse_draft(markdown)
             del fields['content']
-            drafts.append({'id': draft_id, **fields, 'last_modified': obj['LastModified'].isoformat()})
+            drafts.append({
+                'id': draft_id,
+                **fields,
+                'editing': self.editing_summary(draft_id),
+                'last_modified': obj['LastModified'].isoformat(),
+            })
         drafts.sort(key=itemgetter('last_modified'), reverse=True)
         return drafts
 
@@ -398,6 +408,52 @@ class DraftsAdminUtil:
     def delete_photo(self, key):
         self.s3.delete_object(Bucket=BLOG_BUCKET, Key=key)
 
+    def get_editing(self, draft_id):
+        """What the draft's editing.json keeps about the published post it's
+        changes to, or None if it's a draft of a new post."""
+        text = self._read(BLOG_BUCKET, editing_key(draft_id))
+        return json.loads(text) if text is not None else None
+
+    def editing_summary(self, draft_id):
+        """The published post the draft is changes to, as the admin page
+        shows it: its key and slug. None for a draft of a new post."""
+        editing = self.get_editing(draft_id)
+        return {'key': editing['key'], 'slug': editing['slug']} if editing else None
+
+    def edit_post(self, key):
+        """A draft of changes to the post at `key` -- the one already being
+        made, if there is one, so a post has at most one -- as (draft ID,
+        whether it was just made). None if there's no post at `key`."""
+        for obj in self._keys(DRAFTS_PREFIX):
+            if not obj['Key'].endswith(f'/{EDITING_FILENAME}'):
+                continue
+            draft_id = obj['Key'][len(DRAFTS_PREFIX):].split('/')[0]
+            editing = self.get_editing(draft_id)
+            if editing and editing['key'] == key and self.get_draft(draft_id) is not None:
+                return draft_id, False
+
+        try:
+            response = self.s3.get_object(Bucket=BLOG_BUCKET, Key=key)
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'NoSuchKey':
+                return None
+            raise
+        fields, editing = draft_from_post(key, response['Body'].read().decode('utf-8', errors='ignore'))
+        editing['etag'] = response['ETag']
+
+        draft_id = new_draft_id()
+        # editing.json first: a draft.md without it would be taken for a new
+        # post's, if this stopped between the two.
+        self.s3.put_object(
+            Bucket=BLOG_BUCKET,
+            Key=editing_key(draft_id),
+            # default=str: YAML can parse frontmatter it doesn't know as dates.
+            Body=json.dumps(editing, default=str).encode('utf-8'),
+            ContentType='application/json',
+        )
+        self.save_draft(draft_id, build_markdown(fields))
+        return draft_id, True
+
     def delete_draft(self, draft_id):
         """The draft and the photos uploaded to it."""
         keys = [{'Key': obj['Key']} for obj in self._keys(draft_prefix(draft_id))]
@@ -405,13 +461,25 @@ class DraftsAdminUtil:
         for start in range(0, len(keys), 1000):
             self.s3.delete_objects(Bucket=BLOG_BUCKET, Delete={'Objects': keys[start:start + 1000], 'Quiet': True})
 
-    def publish(self, draft_id, plan, existing_posts):
+    def publish(self, draft_id, plan, existing_posts, editing=None):
         """Publish the draft as `plan` (from utils/draft_util.plan_publish)
         lays out, then delete it. Raises PublishConflict, before writing
         anything, if that would overwrite a post, or a different photo than
         the draft's, or if a post on another day has its slug (the newer
         would hide the older). A photo already published as the draft's
-        (if an earlier attempt stopped part way) isn't a conflict."""
+        (if an earlier attempt stopped part way) isn't a conflict.
+
+        A draft of changes to a post (`editing`, from get_editing) overwrites
+        just that post, and only if it hasn't changed since the draft was
+        made from it -- e.g. by a hand upload, which this would undo."""
+        if editing:
+            current = self._etag(BLOG_BUCKET, editing['key'])
+            if current is not None and current != editing['etag']:
+                raise PublishConflict(
+                    'The published post has changed since these changes were started from it, so publishing them '
+                    'would undo that. Discard them, and edit the post again.'
+                )
+            existing_posts = [post for post in existing_posts if post['key'] != editing['key']]
         if any(post['key'] == plan['key'] for post in existing_posts):
             raise PublishConflict(f'There\'s already a post at {plan["key"]}. Change the title or date.')
         same_slug = next((post for post in existing_posts if post['slug'] == plan['slug']), None)

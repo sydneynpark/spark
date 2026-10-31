@@ -165,6 +165,8 @@ function PostEditor() {
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
+  // For a draft of changes to a published post, which: { key, slug }.
+  const [editing, setEditing] = useState(null);
   // The tags published posts have, to suggest.
   const [tagSuggestions, setTagSuggestions] = useState([]);
   const textareaRef = useRef(null);
@@ -193,6 +195,7 @@ function PostEditor() {
         const loaded = draftFields(draft);
         setFields(loaded);
         setSavedFields(loaded);
+        setEditing(draft.editing || null);
         setPhotos(draftPhotos);
       })
       .catch(err => { if (!cancelled) setLoadError(err.message); })
@@ -372,7 +375,10 @@ function PostEditor() {
       ? ` Its ${photos.length} uploaded photo${photos.length === 1 ? '' : 's'} will be added to the site's photos too, filed under ${fields.date}.`
       : '';
     const writtenNote = fields.written && fields.written !== fields.date ? `, written ${fields.written}` : '';
-    if (!window.confirm(`Publish "${fields.title.trim()}" on the site now, dated ${fields.date}${writtenNote}?${photoNote}`)) return;
+    const question = editing
+      ? `Replace the published post at /blog/${editing.slug} with these changes now?`
+      : `Publish "${fields.title.trim()}" on the site now, dated ${fields.date}${writtenNote}?`;
+    if (!window.confirm(`${question}${photoNote}`)) return;
 
     setPublishing(true);
     try {
@@ -380,7 +386,7 @@ function PostEditor() {
       const result = await ApiService.publishDraft(id);
       // Nothing's left to lose: the draft is gone.
       setSavedFields(fields);
-      navigate('/admin/posts', { state: { published: { ...result, title: fields.title.trim() } } });
+      navigate('/admin/posts', { state: { published: { ...result, title: fields.title.trim(), edited: !!editing } } });
     } catch (err) {
       setError(err.message);
       setPublishing(false);
@@ -388,7 +394,10 @@ function PostEditor() {
   }
 
   async function handleDelete() {
-    if (!window.confirm('Delete this draft, and any photos uploaded to it? This can\'t be undone.')) return;
+    const question = editing
+      ? 'Discard these changes, and any photos uploaded with them? The published post stays as it is.'
+      : 'Delete this draft, and any photos uploaded to it? This can\'t be undone.';
+    if (!window.confirm(question)) return;
     setError(null);
     try {
       if (draftId) await ApiService.deleteDraft(draftId);
@@ -427,8 +436,15 @@ function PostEditor() {
 
   return (
     <div className="admin-page admin-post-editor-page">
-      <Link to="/admin/posts" className="back-link" onClick={handleBack}>← Back to Drafts</Link>
-      <h2>{draftId ? 'Edit Draft' : 'New Post'}</h2>
+      <Link to="/admin/posts" className="back-link" onClick={handleBack}>← Back to Blog Posts</Link>
+      <h2>{editing ? 'Edit Post' : draftId ? 'Edit Draft' : 'New Post'}</h2>
+      {editing && (
+        <p className="admin-editing-note">
+          These are changes to the published post at{' '}
+          <Link to={`/blog/${encodeURIComponent(editing.slug)}`}>/blog/{editing.slug}</Link>. It stays as it is
+          until you publish them, which replaces it, keeping its URL. Until then, they're saved as a draft.
+        </p>
+      )}
 
       {error && <p className="error">{error}</p>}
       {notice && !dirty && <p className="admin-success">{notice}</p>}
@@ -596,7 +612,7 @@ function PostEditor() {
 
         <div className="admin-form-actions">
           <button type="button" className="admin-remove-button" onClick={handleDelete} disabled={busy}>
-            Delete Draft
+            {editing ? 'Discard Changes' : 'Delete Draft'}
           </button>
           <div className="admin-editor-actions">
             <span className="admin-form-hint">{dirty ? 'Unsaved changes' : draftId ? 'Saved' : ''}</span>
@@ -604,7 +620,7 @@ function PostEditor() {
               {saving ? 'Saving...' : 'Save Draft'}
             </button>
             <button type="button" className="admin-submit-button" onClick={handlePublish} disabled={busy || uploading}>
-              {publishing ? 'Publishing...' : 'Publish'}
+              {publishing ? 'Publishing...' : editing ? 'Publish Changes' : 'Publish'}
             </button>
           </div>
         </div>

@@ -252,6 +252,18 @@ class ApiService {
     return data.drafts || [];
   }
 
+  // A draft of changes to the published post at `key` (its S3 key, as
+  // fetchPosts gives it), which publishDraft replaces it with: a new one, or
+  // the one already being made. Its `editing` is { key, slug } of the post,
+  // as fetchDraft's is for such a draft (and null for a new post's).
+  async editPost(key) {
+    return this.adminRequest('/admin/posts/edit', {
+      method: 'POST',
+      body: { key },
+      failureMessage: 'Failed to start editing the post',
+    });
+  }
+
   async fetchDraft(draftId) {
     return this.adminRequest(`/admin/drafts/${draftId}`, { failureMessage: 'Failed to load draft' });
   }

@@ -2339,6 +2339,29 @@ footer {
   text-decoration: underline;
 }
 
+.admin-drafts-heading {
+  margin: 1.75rem 0 0.75rem;
+}
+
+a.admin-draft-action {
+  text-decoration: none;
+}
+
+.admin-editing-note {
+  margin: -0.5rem 0 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--color-accent-medium);
+  background: var(--color-card-background);
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.blog-post-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
 .admin-post-editor-page {
   max-width: 860px;
 }

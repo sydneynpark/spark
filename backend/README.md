@@ -91,6 +91,16 @@ filtered by any number of them (showing the posts with all of them), and the
 editor suggests those already in use. It refuses, before writing anything, to
 overwrite a post or a different photo, or to give two posts the same URL.
 
+Editing a published post (`POST /admin/posts/edit`) makes a draft of
+changes to it, with an `editing.json` beside its `draft.md` naming the post.
+Publishing that replaces the post: at the same key, so its URL and slug stay
+put even if its title or date changes (its frontmatter `date` wins over its
+key's), and keeping any frontmatter the editor has no field for. It refuses
+if the post has changed since the draft was made from it, e.g. by a hand
+upload, which publishing would undo. A post has at most one such draft at a
+time. Nothing is deleted from the published posts, so this needs no more
+permissions than publishing a new post.
+
 ### Admin login (one-time, AWS-side)
 
 (Locally, the stack sets up its own: `admin` / `admin`.)

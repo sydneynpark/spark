@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, request
 from utils.auth_util import verify_credentials, issue_token, require_admin_auth, TOKEN_TTL_SECONDS
 from utils.book_review_builder import validate_review_payload, build_review_markdown
 from utils.draft_util import (
-    DraftError, build_markdown, draft_fields, draft_photo, draft_photo_key, is_draft_id,
+    DRAFTS_PREFIX, DraftError, build_markdown, draft_fields, draft_photo, draft_photo_key, is_draft_id,
     new_draft_id, plan_publish,
 )
 from utils.photo_upload_util import (
@@ -179,6 +179,26 @@ def create_draft():
         return handle_error(e)
 
 
+@admin_bp.route('/posts/edit', methods=['POST'])
+@require_admin_auth
+def edit_post():
+    """A draft of changes to the published post at `key`, which publishing
+    replaces it with: made from it, or the one already being made. The post
+    stays as it is until then."""
+    try:
+        key = str((request.get_json(silent=True) or {}).get('key') or '')
+        if not key.endswith('.md') or key.startswith(DRAFTS_PREFIX):
+            return jsonify({'error': 'That isn\'t a post.'}), 400
+        result = drafts_admin.edit_post(key)
+        if result is None:
+            return jsonify({'error': 'No such post. It may have been deleted.'}), 404
+        draft_id, created = result
+        fields = drafts_admin.get_draft(draft_id)
+        return jsonify({'id': draft_id, **fields, 'editing': drafts_admin.editing_summary(draft_id)}), 201 if created else 200
+    except Exception as e:
+        return handle_error(e)
+
+
 @admin_bp.route('/drafts/<draft_id>', methods=['GET'])
 @require_admin_auth
 def get_draft(draft_id):
@@ -186,7 +206,7 @@ def get_draft(draft_id):
         fields = drafts_admin.get_draft(draft_id) if is_draft_id(draft_id) else None
         if fields is None:
             return draft_not_found()
-        return jsonify({'id': draft_id, **fields})
+        return jsonify({'id': draft_id, **fields, 'editing': drafts_admin.editing_summary(draft_id)})
     except Exception as e:
         return handle_error(e)
 
@@ -285,9 +305,10 @@ def publish_draft(draft_id):
         if fields is None:
             return draft_not_found()
         photos = drafts_admin.list_photos(draft_id)
+        editing = drafts_admin.get_editing(draft_id)
         try:
-            plan = plan_publish(draft_id, fields, [photo['key'] for photo in photos])
-            drafts_admin.publish(draft_id, plan, posts.list_posts())
+            plan = plan_publish(draft_id, fields, [photo['key'] for photo in photos], editing)
+            drafts_admin.publish(draft_id, plan, posts.list_posts(), editing)
         except (DraftError, UploadPathError) as e:
             return jsonify({'error': str(e)}), 400
         except PublishConflict as e:

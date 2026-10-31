@@ -25,7 +25,13 @@ function BlogPost() {
 
   return (
     <div className="blog-post-page">
-      <Link to="/blog" className="back-link">← Back to Blog</Link>
+      <div className="blog-post-nav">
+        <Link to="/blog" className="back-link">← Back to Blog</Link>
+        {/* Signed in to the admin page (or was: it checks). */}
+        {ApiService.getAdminToken() && (
+          <Link to={`/admin/posts?edit=${encodeURIComponent(post.key)}`} className="back-link">Edit</Link>
+        )}
+      </div>
       <article className="blog-post">
         <header className="post-header">
           <h1>{post.title}</h1>
