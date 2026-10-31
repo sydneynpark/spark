@@ -26,7 +26,7 @@ DRAFTS_PREFIX = 'drafts/'
 DRAFT_FILENAME = 'draft.md'
 DRAFT_ID_PATTERN = re.compile(r'[0-9a-f]{32}')
 # In the order they're written to a post's frontmatter.
-FRONTMATTER_FIELDS = ('title', 'date', 'preview', 'photo')
+FRONTMATTER_FIELDS = ('title', 'date', 'written', 'preview', 'photo')
 MAX_TITLE_LENGTH = 200
 MAX_PREVIEW_LENGTH = 500
 
@@ -80,7 +80,8 @@ def draft_photo(draft_id, key):
 def draft_fields(payload):
     """The draft fields in a request's JSON, as strings, checking what can be
     checked before it's published. A draft can be saved with no title or
-    date yet, but not with a date that isn't one."""
+    date yet, but not with a date that isn't one. Its `written` date is
+    optional even to publish: without one, it's the same as its `date`."""
     fields = {name: str(payload.get(name) or '').strip() for name in FRONTMATTER_FIELDS}
     fields['content'] = str(payload.get('content') or '')
 
@@ -88,8 +89,9 @@ def draft_fields(payload):
         raise DraftError(f'The title is longer than {MAX_TITLE_LENGTH} characters.')
     if len(fields['preview']) > MAX_PREVIEW_LENGTH:
         raise DraftError(f'The preview text is longer than {MAX_PREVIEW_LENGTH} characters.')
-    if fields['date'] and frontmatter_date({'date': fields['date']}) is None:
-        raise DraftError(f'"{fields["date"]}" isn\'t a date (YYYY-MM-DD).')
+    for name in ('date', 'written'):
+        if fields[name] and frontmatter_date(fields, name) is None:
+            raise DraftError(f'"{fields[name]}" isn\'t a date (YYYY-MM-DD).')
     if fields['photo'] and not fields['photo'].startswith('photo://'):
         raise DraftError('The thumbnail photo should be a photo://<key> reference.')
     return fields
@@ -112,6 +114,7 @@ def parse_draft(markdown_text):
     post = frontmatter.loads(markdown_text)
     fields = {name: str(post.metadata.get(name) or '').strip() for name in FRONTMATTER_FIELDS}
     fields['date'] = frontmatter_date(post.metadata) or ''
+    fields['written'] = frontmatter_date(post.metadata, 'written') or ''
     fields['content'] = post.content
     return fields
 
@@ -136,7 +139,7 @@ def plan_publish(draft_id, fields, photo_keys):
     # Already checked to be a real date, if there is one, by draft_fields.
     date = fields.get('date', '')
     if not date:
-        raise DraftError('Give the post a publish date before publishing it.')
+        raise DraftError('Give the post a date before publishing it.')
 
     folder = f'{date.replace("-", "/")}/'
     photos = {}

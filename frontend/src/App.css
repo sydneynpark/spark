@@ -735,6 +735,12 @@ footer {
   color: var(--color-accent-medium);
 }
 
+.post-list-dates {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-accent-medium);
+}
+
 /* Blog list page */
 .blog-page {
   width: 100%;
@@ -2199,7 +2205,22 @@ footer {
 }
 
 .admin-post-fields {
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
+}
+
+.admin-post-dates-hint {
+  margin-top: -0.5rem;
+}
+
+.admin-link-button {
+  margin-left: 0.5rem;
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 0.85rem;
+  color: var(--color-accent-dark);
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .admin-editor-tabs {

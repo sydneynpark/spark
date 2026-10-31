@@ -14,6 +14,22 @@ export function formatPostDate(dateStr) {
   });
 }
 
+// A post's dates, as they read at the top of it: the one it's shown under,
+// and when it was written, if that was later (or earlier).
+export function PostDates({ date, written }) {
+  if (!date) return null;
+  return (
+    <>
+      <time className="post-date" dateTime={date}>{formatPostDate(date)}</time>
+      {written && written !== date && (
+        <span className="post-date post-written">
+          {' · Written '}<time dateTime={written}>{formatPostDate(written)}</time>
+        </span>
+      )}
+    </>
+  );
+}
+
 const SWIPE_THRESHOLD = 50;
 
 function isPhotoEmbed(node) {

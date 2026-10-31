@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ApiService from '../services/api';
 import { usePageTitle } from '../utils/pageTitle';
-import PostContent, { formatPostDate } from './PostContent';
+import PostContent, { PostDates } from './PostContent';
 
 function BlogPost() {
   const { slug } = useParams();
@@ -29,7 +29,7 @@ function BlogPost() {
       <article className="blog-post">
         <header className="post-header">
           <h1>{post.title}</h1>
-          {post.date && <time className="post-date">{formatPostDate(post.date)}</time>}
+          <PostDates date={post.date} written={post.written} />
         </header>
         <PostContent content={post.content} />
       </article>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import ApiService from '../../services/api';
-import PostContent, { formatPostDate } from '../PostContent';
+import PostContent, { PostDates } from '../PostContent';
 import { monthName } from '../../utils/photoDate';
 import { usePageTitle } from '../../utils/pageTitle';
 
@@ -18,7 +18,7 @@ const COLLECTIONS = {
 // Every photo:// reference in some markdown, as the API finds them.
 const PHOTO_REF = /photo:\/\/([^`)\n]+)/g;
 
-const EMPTY_FIELDS = { title: '', date: '', preview: '', photo: '', content: '' };
+const EMPTY_FIELDS = { title: '', date: '', written: '', preview: '', photo: '', content: '' };
 
 let nextUploadId = 0;
 
@@ -349,13 +349,14 @@ function PostEditor() {
     setError(null);
     setNotice(null);
     if (!fields.title.trim() || !fields.date) {
-      setError('Give the post a title and publish date before publishing it.');
+      setError('Give the post a title and date before publishing it.');
       return;
     }
     const photoNote = photos.length > 0
       ? ` Its ${photos.length} uploaded photo${photos.length === 1 ? '' : 's'} will be added to the site's photos too, filed under ${fields.date}.`
       : '';
-    if (!window.confirm(`Publish "${fields.title.trim()}" on the site now, dated ${fields.date}?${photoNote}`)) return;
+    const writtenNote = fields.written && fields.written !== fields.date ? `, written ${fields.written}` : '';
+    if (!window.confirm(`Publish "${fields.title.trim()}" on the site now, dated ${fields.date}${writtenNote}?${photoNote}`)) return;
 
     setPublishing(true);
     try {
@@ -423,10 +424,23 @@ function PostEditor() {
             <input type="text" value={fields.title} onChange={e => setField('title', e.target.value)} />
           </label>
           <label>
-            Publish Date
+            Date
             <input type="date" value={fields.date} onChange={e => setField('date', e.target.value)} />
           </label>
+          <label>
+            <span>
+              Date Written <span className="admin-form-hint">(optional)</span>
+              {fields.written && (
+                <button type="button" className="admin-link-button" onClick={() => setField('written', '')}>Clear</button>
+              )}
+            </span>
+            <input type="date" value={fields.written} onChange={e => setField('written', e.target.value)} />
+          </label>
         </div>
+        <p className="admin-form-hint admin-post-dates-hint">
+          The post is shown under its date, and its photos are filed under it. Writing about something past, like a
+          trip? Give the trip's date, and when you wrote it as the date written. Left empty, that's the same as the date.
+        </p>
 
         <div className="admin-editor-tabs" role="tablist">
           {['write', 'preview'].map(name => (
@@ -456,7 +470,7 @@ function PostEditor() {
           <article className="blog-post admin-post-preview">
             <header className="post-header">
               <h1>{fields.title || 'Untitled'}</h1>
-              {fields.date && <time className="post-date">{formatPostDate(fields.date)}</time>}
+              <PostDates date={fields.date} written={fields.written} />
             </header>
             {fields.content.trim()
               ? <PostContent content={fields.content} photoUrls={photoUrls} />

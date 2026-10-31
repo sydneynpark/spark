@@ -61,11 +61,11 @@ def _frontmatter_text(metadata, name):
     return str(metadata.get(name, '') or '').strip()
 
 
-def frontmatter_date(metadata):
-    """The `date` frontmatter gives, as 'YYYY-MM-DD', or None if it gives
-    none that's a real date. YAML parses an unquoted 2026-05-23 as a date
-    (and with a time, a datetime), and a quoted one as a string."""
-    value = metadata.get('date')
+def frontmatter_date(metadata, name='date'):
+    """The date frontmatter gives as `name`, as 'YYYY-MM-DD', or None if it
+    gives none that's a real date. YAML parses an unquoted 2026-05-23 as a
+    date (and with a time, a datetime), and a quoted one as a string."""
+    value = metadata.get(name)
     if isinstance(value, Date):
         return value.isoformat()[:10]
     text = str(value or '').strip()
@@ -82,7 +82,11 @@ def parse_post(key, markdown_text):
     and markdown. Its date, title, slug, preview and photo can each be set
     in frontmatter; any that aren't fall back to being derived from the key
     or the body. The photo is None if neither has one, leaving the frontend to
-    show a placeholder."""
+    show a placeholder.
+
+    A post has two dates: `date`, the one it's shown under -- for a post
+    written later about something past, e.g. a trip, the trip's -- and
+    `written`, when it was written, the same as `date` unless set."""
     post = frontmatter.loads(markdown_text)
     metadata = post.metadata
     body = post.content
@@ -99,6 +103,7 @@ def parse_post(key, markdown_text):
     return {
         'key': key,
         'date': date,
+        'written': frontmatter_date(metadata, 'written') or date,
         'title': _frontmatter_text(metadata, 'title') or name.replace('-', ' ').replace('_', ' ').title(),
         'slug': slugify(_frontmatter_text(metadata, 'slug')) or slugify(name),
         'preview': _frontmatter_text(metadata, 'preview') or extract_preview(body),

@@ -18,6 +18,7 @@ def fields(**overrides):
     return {
         'title': 'Marsh Morning',
         'date': '2026-10-28',
+        'written': '',
         'preview': '',
         'photo': '',
         'content': '',
@@ -30,6 +31,10 @@ class TestDraftFields(unittest.TestCase):
     def test_a_draft_can_be_saved_before_it_has_a_title_or_date(self):
         self.assertEqual(draft_fields({}), fields(title='', date=''))
 
+    def test_a_written_date_is_optional(self):
+        self.assertEqual(draft_fields({'date': '2019-07-28', 'written': ' 2026-10-30'})['written'], '2026-10-30')
+        self.assertEqual(draft_fields({'date': '2019-07-28'})['written'], '')
+
     def test_strips_everything_but_the_body(self):
         result = draft_fields({'title': '  Hi ', 'date': ' 2026-10-28', 'content': '  indented\n'})
         self.assertEqual(result['title'], 'Hi')
@@ -40,6 +45,8 @@ class TestDraftFields(unittest.TestCase):
         for date in ('2026-02-30', '10/28/2026', 'soon'):
             with self.assertRaises(DraftError):
                 draft_fields({'date': date})
+            with self.assertRaises(DraftError):
+                draft_fields({'date': '2026-10-28', 'written': date})
 
     def test_rejects_a_thumbnail_that_isnt_a_photo_reference(self):
         with self.assertRaises(DraftError):
@@ -51,6 +58,7 @@ class TestMarkdown(unittest.TestCase):
     def test_round_trips_through_the_post_format(self):
         draft = fields(
             title='Marsh Morning: Day 2',
+            written='2026-10-30',
             preview='Grebes, "egrets", and more',
             photo=f'photo://{PREFIX}birds/a b.jpg',
             content=f'# Hi\n\n`photo://{PREFIX}birds/a b.jpg`',
@@ -62,7 +70,8 @@ class TestMarkdown(unittest.TestCase):
         self.assertEqual(markdown, 'Just text')
 
     def test_reads_an_unquoted_date(self):
-        self.assertEqual(parse_draft('---\ndate: 2026-10-28\n---\nHi')['date'], '2026-10-28')
+        draft = parse_draft('---\ndate: 2026-10-28\nwritten: 2026-10-30\n---\nHi')
+        self.assertEqual((draft['date'], draft['written']), ('2026-10-28', '2026-10-30'))
 
 
 class TestParsePostDate(unittest.TestCase):
@@ -74,6 +83,15 @@ class TestParsePostDate(unittest.TestCase):
     def test_falls_back_to_the_key(self):
         self.assertEqual(parse_post('2026/05/01/hello.md', 'Hi')['date'], '2026-05-01')
         self.assertEqual(parse_post('2026/05/01/hello.md', '---\ndate: whenever\n---\nHi')['date'], '2026-05-01')
+
+    def test_written_is_when_it_was_written(self):
+        post = parse_post('2019/07/28/trip.md', '---\ndate: 2019-07-28\nwritten: 2026-10-30\n---\nHi')
+        self.assertEqual((post['date'], post['written']), ('2019-07-28', '2026-10-30'))
+
+    def test_written_defaults_to_the_date(self):
+        self.assertEqual(parse_post('2019/07/28/trip.md', 'Hi')['written'], '2019-07-28')
+        post = parse_post('2019/07/28/trip.md', '---\ndate: 2019-07-29\nwritten: someday\n---\nHi')
+        self.assertEqual(post['written'], '2019-07-29')
 
 
 class TestDraftKeys(unittest.TestCase):
@@ -124,6 +142,7 @@ class TestPlanPublish(unittest.TestCase):
         })
         post = parse_post(plan['key'], plan['markdown'])
         self.assertEqual(post['date'], '2026-10-28')
+        self.assertEqual(post['written'], '2026-10-28')
         self.assertEqual(post['title'], 'Marsh Morning')
         self.assertEqual(post['photo'], 's3://spark.wiki.photos/photos/2026/10/28/b.jpg')
         self.assertEqual(post['content'], (
@@ -131,6 +150,12 @@ class TestPlanPublish(unittest.TestCase):
             '`photo://birds/2026/02/27/old.jpg`\n\n'
             '![alt](photo://photos/2026/10/28/b.jpg)'
         ))
+
+    def test_keeps_the_written_date(self):
+        plan = plan_publish(DRAFT_ID, fields(date='2019-07-28', written='2026-10-30'), [])
+        self.assertEqual(plan['key'], '2019/07/28/marsh-morning.md')
+        post = parse_post(plan['key'], plan['markdown'])
+        self.assertEqual((post['date'], post['written']), ('2019-07-28', '2026-10-30'))
 
     def test_needs_a_title_and_date(self):
         for draft in (fields(title=''), fields(title='!!!'), fields(date='')):
