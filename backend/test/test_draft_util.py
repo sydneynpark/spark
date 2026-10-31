@@ -8,7 +8,7 @@ from utils.draft_util import (  # noqa: E402
     parse_draft, plan_publish,
 )
 from utils.photo_upload_util import UploadPathError  # noqa: E402
-from utils.post_util import parse_post  # noqa: E402
+from utils.post_util import frontmatter_tags, parse_post  # noqa: E402
 
 DRAFT_ID = '0123456789abcdef0123456789abcdef'
 PREFIX = f'drafts/{DRAFT_ID}/'
@@ -19,6 +19,7 @@ def fields(**overrides):
         'title': 'Marsh Morning',
         'date': '2026-10-28',
         'written': '',
+        'tags': [],
         'preview': '',
         'photo': '',
         'content': '',
@@ -48,6 +49,11 @@ class TestDraftFields(unittest.TestCase):
             with self.assertRaises(DraftError):
                 draft_fields({'date': '2026-10-28', 'written': date})
 
+    def test_tags(self):
+        self.assertEqual(draft_fields({'tags': [' Road  Trip ', 'Colorado', 'road trip', '']})['tags'], ['Road Trip', 'Colorado'])
+        with self.assertRaises(DraftError):
+            draft_fields({'tags': ['x' * 51]})
+
     def test_rejects_a_thumbnail_that_isnt_a_photo_reference(self):
         with self.assertRaises(DraftError):
             draft_fields({'photo': 'https://example.com/a.jpg'})
@@ -59,6 +65,7 @@ class TestMarkdown(unittest.TestCase):
         draft = fields(
             title='Marsh Morning: Day 2',
             written='2026-10-30',
+            tags=['Road Trip', 'Colorado: Day 2'],
             preview='Grebes, "egrets", and more',
             photo=f'photo://{PREFIX}birds/a b.jpg',
             content=f'# Hi\n\n`photo://{PREFIX}birds/a b.jpg`',
@@ -92,6 +99,21 @@ class TestParsePostDate(unittest.TestCase):
         self.assertEqual(parse_post('2019/07/28/trip.md', 'Hi')['written'], '2019-07-28')
         post = parse_post('2019/07/28/trip.md', '---\ndate: 2019-07-29\nwritten: someday\n---\nHi')
         self.assertEqual(post['written'], '2019-07-29')
+
+
+class TestTags(unittest.TestCase):
+
+    def test_reads_a_list_or_a_comma_separated_string(self):
+        self.assertEqual(frontmatter_tags(['Birds', 2026, None]), ['Birds', '2026'])
+        self.assertEqual(frontmatter_tags('Birds, Road Trip,,'), ['Birds', 'Road Trip'])
+        self.assertEqual(frontmatter_tags(None), [])
+
+    def test_the_first_spelling_wins(self):
+        self.assertEqual(frontmatter_tags(['Road Trip', 'road  trip', 'ROAD TRIP']), ['Road Trip'])
+
+    def test_a_posts_tags(self):
+        self.assertEqual(parse_post('2026/05/01/hello.md', '---\ntags: [Birds, Marsh]\n---\nHi')['tags'], ['Birds', 'Marsh'])
+        self.assertEqual(parse_post('2026/05/01/hello.md', 'Hi')['tags'], [])
 
 
 class TestDraftKeys(unittest.TestCase):
@@ -152,10 +174,11 @@ class TestPlanPublish(unittest.TestCase):
         ))
 
     def test_keeps_the_written_date(self):
-        plan = plan_publish(DRAFT_ID, fields(date='2019-07-28', written='2026-10-30'), [])
+        plan = plan_publish(DRAFT_ID, fields(date='2019-07-28', written='2026-10-30', tags=['Road Trip']), [])
         self.assertEqual(plan['key'], '2019/07/28/marsh-morning.md')
         post = parse_post(plan['key'], plan['markdown'])
         self.assertEqual((post['date'], post['written']), ('2019-07-28', '2026-10-30'))
+        self.assertEqual(post['tags'], ['Road Trip'])
 
     def test_needs_a_title_and_date(self):
         for draft in (fields(title=''), fields(title='!!!'), fields(date='')):

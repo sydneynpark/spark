@@ -61,6 +61,24 @@ def _frontmatter_text(metadata, name):
     return str(metadata.get(name, '') or '').strip()
 
 
+def frontmatter_tags(value):
+    """A post's tags, from its `tags` frontmatter: a YAML list, or a string
+    of them separated by commas. Each is trimmed, with its whitespace
+    collapsed, and the first spelling of one wins over any other in another
+    case, as tags are matched regardless of case."""
+    if value is None:
+        return []
+    items = value if isinstance(value, list) else str(value).split(',')
+    tags = []
+    seen = set()
+    for item in items:
+        tag = ' '.join(str(item if item is not None else '').replace(',', ' ').split())
+        if tag and tag.lower() not in seen:
+            seen.add(tag.lower())
+            tags.append(tag)
+    return tags
+
+
 def frontmatter_date(metadata, name='date'):
     """The date frontmatter gives as `name`, as 'YYYY-MM-DD', or None if it
     gives none that's a real date. YAML parses an unquoted 2026-05-23 as a
@@ -86,7 +104,8 @@ def parse_post(key, markdown_text):
 
     A post has two dates: `date`, the one it's shown under -- for a post
     written later about something past, e.g. a trip, the trip's -- and
-    `written`, when it was written, the same as `date` unless set."""
+    `written`, when it was written, the same as `date` unless set. It has
+    any number of tags, which the blog can be filtered by."""
     post = frontmatter.loads(markdown_text)
     metadata = post.metadata
     body = post.content
@@ -106,6 +125,7 @@ def parse_post(key, markdown_text):
         'written': frontmatter_date(metadata, 'written') or date,
         'title': _frontmatter_text(metadata, 'title') or name.replace('-', ' ').replace('_', ' ').title(),
         'slug': slugify(_frontmatter_text(metadata, 'slug')) or slugify(name),
+        'tags': frontmatter_tags(metadata.get('tags')),
         'preview': _frontmatter_text(metadata, 'preview') or extract_preview(body),
         'photo': photo_uri(photo) if photo else first_photo_uri(body),
         'content': body,

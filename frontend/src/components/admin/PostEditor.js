@@ -4,6 +4,8 @@ import ApiService from '../../services/api';
 import PostContent, { PostDates } from '../PostContent';
 import { monthName } from '../../utils/photoDate';
 import { usePageTitle } from '../../utils/pageTitle';
+import { tagsInUse } from '../../utils/postTags';
+import TagInput from './TagInput';
 
 // How many photos upload to S3 at once, as in PhotoUploader.
 const UPLOAD_CONCURRENCY = 3;
@@ -18,7 +20,8 @@ const COLLECTIONS = {
 // Every photo:// reference in some markdown, as the API finds them.
 const PHOTO_REF = /photo:\/\/([^`)\n]+)/g;
 
-const EMPTY_FIELDS = { title: '', date: '', written: '', preview: '', photo: '', content: '' };
+// All strings, but tags, a list of them.
+const EMPTY_FIELDS = { title: '', date: '', written: '', tags: [], preview: '', photo: '', content: '' };
 
 let nextUploadId = 0;
 
@@ -28,11 +31,13 @@ function todayIso() {
 }
 
 function draftFields(draft) {
-  return Object.fromEntries(Object.keys(EMPTY_FIELDS).map(name => [name, draft[name] || '']));
+  return Object.fromEntries(Object.keys(EMPTY_FIELDS).map(name => [name, draft[name] || EMPTY_FIELDS[name]]));
 }
 
 function sameFields(a, b) {
-  return Object.keys(EMPTY_FIELDS).every(name => a[name] === b[name]);
+  return Object.keys(EMPTY_FIELDS).every(name => (name === 'tags'
+    ? a.tags.join('\n') === b.tags.join('\n')
+    : a[name] === b[name]));
 }
 
 function photoRefs(markdown) {
@@ -160,6 +165,8 @@ function PostEditor() {
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
+  // The tags published posts have, to suggest.
+  const [tagSuggestions, setTagSuggestions] = useState([]);
   const textareaRef = useRef(null);
   const saveRef = useRef(null);
 
@@ -167,6 +174,15 @@ function PostEditor() {
   const dirty = !sameFields(fields, savedFields);
   const uploading = uploads.some(u => u.status === 'uploading');
   const busy = saving || publishing;
+
+  useEffect(() => {
+    let cancelled = false;
+    // Just suggestions: without them, tags can still be typed.
+    ApiService.fetchPosts()
+      .then(posts => { if (!cancelled) setTagSuggestions(tagsInUse(posts).map(({ tag }) => tag)); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (!initialId) return;
@@ -544,6 +560,17 @@ function PostEditor() {
 
         <section className="admin-form-section">
           <h3>Blog Listing</h3>
+          <div className="admin-editor-tags">
+            <span id="admin-editor-tags-label">
+              Tags <span className="admin-form-hint">(optional; the blog can be filtered by them)</span>
+            </span>
+            <TagInput
+              tags={fields.tags}
+              onChange={tags => setField('tags', tags)}
+              suggestions={tagSuggestions}
+              labelledBy="admin-editor-tags-label"
+            />
+          </div>
           <label>
             Preview Text <span className="admin-form-hint">(optional)</span>
             <textarea

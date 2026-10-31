@@ -243,8 +243,9 @@ class ApiService {
     await this.putToPresignedUrl(url, headers, file, onProgress);
   }
 
-  // Blog post drafts. A draft's fields are { title, date, preview, photo,
-  // content }, all strings, '' for any not set yet.
+  // Blog post drafts. A draft's fields are { title, date, written, tags,
+  // preview, photo, content }, all strings, '' for any not set yet, but tags,
+  // a list of them.
 
   async fetchDrafts() {
     const data = await this.adminRequest('/admin/drafts', { failureMessage: 'Failed to load drafts' });

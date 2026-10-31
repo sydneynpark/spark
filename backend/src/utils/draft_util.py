@@ -20,15 +20,18 @@ import frontmatter
 import yaml
 
 from utils.photo_upload_util import PHOTO_COLLECTIONS, photo_key, validate_photo_filename
-from utils.post_util import PHOTO_REF_PATTERN, frontmatter_date, slugify
+from utils.post_util import PHOTO_REF_PATTERN, frontmatter_date, frontmatter_tags, slugify
 
 DRAFTS_PREFIX = 'drafts/'
 DRAFT_FILENAME = 'draft.md'
 DRAFT_ID_PATTERN = re.compile(r'[0-9a-f]{32}')
-# In the order they're written to a post's frontmatter.
-FRONTMATTER_FIELDS = ('title', 'date', 'written', 'preview', 'photo')
+# In the order they're written to a post's frontmatter. All are strings but
+# tags, a list of them.
+FRONTMATTER_FIELDS = ('title', 'date', 'written', 'tags', 'preview', 'photo')
+TEXT_FIELDS = tuple(name for name in FRONTMATTER_FIELDS if name != 'tags')
 MAX_TITLE_LENGTH = 200
 MAX_PREVIEW_LENGTH = 500
+MAX_TAG_LENGTH = 50
 
 
 class DraftError(ValueError):
@@ -78,17 +81,21 @@ def draft_photo(draft_id, key):
 
 
 def draft_fields(payload):
-    """The draft fields in a request's JSON, as strings, checking what can be
-    checked before it's published. A draft can be saved with no title or
+    """The draft fields in a request's JSON, as strings (and tags, a list of
+    them), checking what can be checked before it's published. A draft can be saved with no title or
     date yet, but not with a date that isn't one. Its `written` date is
     optional even to publish: without one, it's the same as its `date`."""
-    fields = {name: str(payload.get(name) or '').strip() for name in FRONTMATTER_FIELDS}
+    fields = {name: str(payload.get(name) or '').strip() for name in TEXT_FIELDS}
+    fields['tags'] = frontmatter_tags(payload.get('tags'))
     fields['content'] = str(payload.get('content') or '')
 
     if len(fields['title']) > MAX_TITLE_LENGTH:
         raise DraftError(f'The title is longer than {MAX_TITLE_LENGTH} characters.')
     if len(fields['preview']) > MAX_PREVIEW_LENGTH:
         raise DraftError(f'The preview text is longer than {MAX_PREVIEW_LENGTH} characters.')
+    for tag in fields['tags']:
+        if len(tag) > MAX_TAG_LENGTH:
+            raise DraftError(f'The tag "{tag}" is longer than {MAX_TAG_LENGTH} characters.')
     for name in ('date', 'written'):
         if fields[name] and frontmatter_date(fields, name) is None:
             raise DraftError(f'"{fields[name]}" isn\'t a date (YYYY-MM-DD).')
@@ -112,8 +119,9 @@ def parse_draft(markdown_text):
     """A draft's fields, as the editor edits them -- unlike parse_post,
     with nothing filled in for what it hasn't set yet."""
     post = frontmatter.loads(markdown_text)
-    fields = {name: str(post.metadata.get(name) or '').strip() for name in FRONTMATTER_FIELDS}
+    fields = {name: str(post.metadata.get(name) or '').strip() for name in TEXT_FIELDS}
     fields['date'] = frontmatter_date(post.metadata) or ''
+    fields['tags'] = frontmatter_tags(post.metadata.get('tags'))
     fields['written'] = frontmatter_date(post.metadata, 'written') or ''
     fields['content'] = post.content
     return fields

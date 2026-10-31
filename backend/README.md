@@ -80,12 +80,14 @@ the site before the post does (see `src/utils/draft_util.py`).
 Publishing a draft copies its photos into `spark.wiki.photos`, at
 `birds/` or `photos/` + the post's `YYYY/MM/DD/`, where
 `UpdatePhotoMetadata` processes them as any other upload; writes the post
-to `YYYY/MM/DD/<slug>.md` (its title, `date`, `written`, `preview`, and
-thumbnail `photo` in its frontmatter), with its embeds pointed at the
+to `YYYY/MM/DD/<slug>.md` (its title, `date`, `written`, `tags`, `preview`,
+and thumbnail `photo` in its frontmatter), with its embeds pointed at the
 published photos; and deletes the draft. A post's `date` is the one it's
 shown, foldered, and its photos filed under; `written`, optional, is when it
 was written, for a post about something past, and is the same as `date` if
-not set. The blog can be sorted by either. It refuses, before writing anything, to
+not set. The blog can be sorted by either. `tags` is a list (or a string of
+them separated by commas), matched regardless of case; the blog can be
+filtered by one, and the editor suggests those already in use. It refuses, before writing anything, to
 overwrite a post or a different photo, or to give two posts the same URL.
 
 ### Admin login (one-time, AWS-side)

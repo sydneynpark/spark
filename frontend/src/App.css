@@ -977,6 +977,63 @@ footer {
   font-size: 0.8rem;
 }
 
+/* Tags: on posts and the blog list, and the blog list's filter by them */
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.65rem;
+  border-radius: 999px;
+  background: var(--color-background);
+  color: var(--color-accent-dark);
+  font-size: 0.8rem;
+  font-weight: normal;
+  line-height: 1.5;
+}
+
+.post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+}
+
+.post-header-tags {
+  margin-top: 0.9rem;
+}
+
+.post-header-tags .tag-chip {
+  background: rgba(255, 255, 255, 0.18);
+  color: white;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.post-header-tags .tag-chip:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.tag-filter {
+  margin-bottom: 0.75rem;
+}
+
+.tag-filter-count {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.tag-filter-clear {
+  padding: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--color-accent-dark);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* Book reviews list page */
 .books-page {
   width: 100%;
@@ -2210,6 +2267,78 @@ footer {
 
 .admin-post-dates-hint {
   margin-top: -0.5rem;
+}
+
+.admin-editor-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+/* TagInput: chips and a borderless box, together looking like one input */
+.tag-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #c7d0e0;
+  border-radius: 6px;
+  background: var(--color-white);
+}
+
+.tag-input:focus-within {
+  border-color: var(--color-accent-dark);
+}
+
+.tag-input-box {
+  position: relative;
+  flex: 1;
+  min-width: 10rem;
+}
+
+.admin-page .tag-input input[type="text"] {
+  width: 100%;
+  padding: 0.2rem;
+  border: none;
+  outline: none;
+  background: transparent;
+}
+
+.admin-page .tag-chip-remove {
+  margin-left: 0.3rem;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.tag-input-suggestions {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  min-width: 100%;
+  z-index: 10;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  background: var(--color-white);
+  border: 1px solid #c7d0e0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.tag-input-suggestions li {
+  padding: 0.4rem 0.75rem;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+.tag-input-suggestions li.is-highlighted {
+  background: var(--color-background);
 }
 
 .admin-link-button {

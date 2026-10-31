@@ -30,6 +30,15 @@ function BlogPost() {
         <header className="post-header">
           <h1>{post.title}</h1>
           <PostDates date={post.date} written={post.written} />
+          {post.tags?.length > 0 && (
+            <ul className="post-tags post-header-tags">
+              {post.tags.map(name => (
+                <li key={name}>
+                  <Link className="tag-chip" to={`/blog?tag=${encodeURIComponent(name)}`}>{name}</Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </header>
         <PostContent content={post.content} />
       </article>
