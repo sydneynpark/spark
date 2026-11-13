@@ -24,9 +24,14 @@ data "aws_iam_policy_document" "content_api" {
       aws_dynamodb_table.photos.arn,
       "${aws_dynamodb_table.photos.arn}/index/*",
       aws_dynamodb_table.normal_photos.arn,
+      aws_dynamodb_table.posts.arn,
+      "${aws_dynamodb_table.posts.arn}/index/*",
     ]
   }
 
+  # A post's body, found by its slug in the posts table. Without ListBucket,
+  # one the table has but the bucket hasn't is AccessDenied rather than
+  # NoSuchKey.
   statement {
     sid       = "ListPosts"
     actions   = ["s3:ListBucket"]
@@ -37,6 +42,15 @@ data "aws_iam_policy_document" "content_api" {
     sid       = "ReadPosts"
     actions   = ["s3:GetObject"]
     resources = ["${aws_s3_bucket.content["blog"].arn}/*"]
+  }
+
+  # The admin page's drafts, and the photos uploaded to them, which aren't
+  # on the site until they're published (backend/src/utils/draft_util.py).
+  statement {
+    sid       = "NotDrafts"
+    effect    = "Deny"
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.content["blog"].arn}/drafts/*"]
   }
 }
 
@@ -68,22 +82,57 @@ data "aws_iam_policy_document" "admin_api" {
     ]
   }
 
-  # The photo uploader's folder browser.
+  # The photo uploader's folder browser, and the blog post drafts (and,
+  # when publishing one, the posts it mustn't overwrite). Without
+  # ListBucket, checking for an object that isn't there is AccessDenied
+  # rather than NotFound.
   statement {
-    sid       = "ListPhotos"
-    actions   = ["s3:ListBucket"]
-    resources = [aws_s3_bucket.content["photos"].arn]
+    sid     = "ListContent"
+    actions = ["s3:ListBucket"]
+    resources = [
+      aws_s3_bucket.content["photos"].arn,
+      aws_s3_bucket.content["blog"].arn,
+    ]
   }
 
-  # Review publishing, and photo uploads (whose presigned URLs carry this
-  # role's permissions) and folders.
+  # Drafts and their photos (whose view URLs carry this role's
+  # permissions), and the posts and photos publishing one mustn't overwrite.
+  statement {
+    sid     = "ReadContent"
+    actions = ["s3:GetObject"]
+    resources = [
+      "${aws_s3_bucket.content["blog"].arn}/*",
+      "${aws_s3_bucket.content["photos"].arn}/*",
+    ]
+  }
+
+  # Review publishing, photo uploads (whose presigned URLs carry this
+  # role's permissions) and folders, and drafts, their photos, and
+  # publishing them.
   statement {
     sid     = "Uploads"
     actions = ["s3:PutObject"]
     resources = [
       "${aws_s3_bucket.content["books"].arn}/*",
       "${aws_s3_bucket.content["photos"].arn}/*",
+      "${aws_s3_bucket.content["blog"].arn}/*",
     ]
+  }
+
+  # Deleting a draft, or a photo uploaded to one, and a draft once it's
+  # published. Nothing on the site.
+  statement {
+    sid       = "DeleteDrafts"
+    actions   = ["s3:DeleteObject"]
+    resources = ["${aws_s3_bucket.content["blog"].arn}/drafts/*"]
+  }
+
+  # The posts publishing a draft mustn't clash with, and the post it
+  # publishes, put on the blog without waiting for UpdateBlogPostMetadata.
+  statement {
+    sid       = "IndexPosts"
+    actions   = ["dynamodb:Scan", "dynamodb:PutItem"]
+    resources = [aws_dynamodb_table.posts.arn]
   }
 }
 

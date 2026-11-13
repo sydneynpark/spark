@@ -6,11 +6,15 @@ passing an S3-event-shaped payload where the object key is swapped in for the
 real key. Then invalidates the bucket's CloudFront distribution, so rewritten
 covers are served right away.
 
-Usage:
-    python refreshBookReviewData.py                                   # whole bucket
-    python refreshBookReviewData.py "Project Hail Mary.md"             # just this review
-    python refreshBookReviewData.py s3://spark.wiki.books/Pet.md       # full s3:// URI
-    python refreshBookReviewData.py --missing-only                    # only reviews missing a cover/synopsis
+Usage, from the repo root -- uv installs scripts/requirements.txt to run it
+with, as the Refresh book review data workflow does:
+    uv run --no-project --with-requirements scripts/requirements.txt scripts/refreshBookReviewData.py [path] [--missing-only]
+
+    path:
+    (none)                                 # whole bucket
+    "Project Hail Mary.md"                 # just this review
+    s3://spark.wiki.books/Pet.md           # full s3:// URI
+    --missing-only                         # only reviews missing a cover/synopsis
 
 Credentials:
     See s3_lambda_refresh.py.

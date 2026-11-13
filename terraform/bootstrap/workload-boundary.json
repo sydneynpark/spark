@@ -28,6 +28,7 @@
       "Effect": "Allow",
       "Action": "s3:DeleteObject",
       "Resource": [
+        "arn:aws:s3:::spark.wiki.blog/drafts/*",
         "arn:aws:s3:::spark.wiki.books/covers/*",
         "arn:aws:s3:::spark.wiki.thumbnails/*"
       ]
@@ -52,7 +53,9 @@
         "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.books/index/*",
         "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.photos",
         "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.photos/index/*",
-        "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.normal-photos"
+        "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.normal-photos",
+        "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.posts",
+        "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.posts/index/*"
       ]
     },
     {

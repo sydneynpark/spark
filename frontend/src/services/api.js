@@ -240,7 +240,95 @@ class ApiService {
       body: { collection, folder, filename: file.name },
       failureMessage: 'Failed to start upload',
     });
+    await this.putToPresignedUrl(url, headers, file, onProgress);
+  }
 
+  // Blog post drafts. A draft's fields are { title, date, written, tags,
+  // preview, photo, content }, all strings, '' for any not set yet, but tags,
+  // a list of them.
+
+  async fetchDrafts() {
+    const data = await this.adminRequest('/admin/drafts', { failureMessage: 'Failed to load drafts' });
+    return data.drafts || [];
+  }
+
+  // A draft of changes to the published post at `key` (its S3 key, as
+  // fetchPosts gives it), which publishDraft replaces it with: a new one, or
+  // the one already being made. Its `editing` is { key, slug } of the post,
+  // as fetchDraft's is for such a draft (and null for a new post's).
+  async editPost(key) {
+    return this.adminRequest('/admin/posts/edit', {
+      method: 'POST',
+      body: { key },
+      failureMessage: 'Failed to start editing the post',
+    });
+  }
+
+  async fetchDraft(draftId) {
+    return this.adminRequest(`/admin/drafts/${draftId}`, { failureMessage: 'Failed to load draft' });
+  }
+
+  async createDraft(fields) {
+    return this.adminRequest('/admin/drafts', {
+      method: 'POST',
+      body: fields,
+      failureMessage: 'Failed to save draft',
+    });
+  }
+
+  async saveDraft(draftId, fields) {
+    return this.adminRequest(`/admin/drafts/${draftId}`, {
+      method: 'PUT',
+      body: fields,
+      failureMessage: 'Failed to save draft',
+    });
+  }
+
+  async deleteDraft(draftId) {
+    return this.adminRequest(`/admin/drafts/${draftId}`, {
+      method: 'DELETE',
+      failureMessage: 'Failed to delete draft',
+    });
+  }
+
+  // The photos uploaded to a draft, each with { key, collection, filename,
+  // ref (its photo:// embed), url (to view it by, for a few hours) }.
+  async fetchDraftPhotos(draftId) {
+    const data = await this.adminRequest(`/admin/drafts/${draftId}/photos`, {
+      failureMessage: 'Failed to load the draft\'s photos',
+    });
+    return data.photos || [];
+  }
+
+  // As uploadPhoto, into the draft until it's published. collection is the
+  // one it'll be published to: 'birds' or 'photos'.
+  async uploadDraftPhoto(draftId, collection, file, onProgress) {
+    const { url, headers } = await this.adminRequest(`/admin/drafts/${draftId}/photos/upload-url`, {
+      method: 'POST',
+      body: { collection, filename: file.name },
+      failureMessage: 'Failed to start upload',
+    });
+    await this.putToPresignedUrl(url, headers, file, onProgress);
+  }
+
+  async deleteDraftPhoto(draftId, key) {
+    const params = new URLSearchParams({ key });
+    return this.adminRequest(`/admin/drafts/${draftId}/photos?${params}`, {
+      method: 'DELETE',
+      failureMessage: 'Failed to remove photo',
+    });
+  }
+
+  // Publishes the draft as last saved, returning the post's { key, slug,
+  // photos } -- the draft itself is deleted.
+  async publishDraft(draftId) {
+    return this.adminRequest(`/admin/drafts/${draftId}/publish`, {
+      method: 'POST',
+      failureMessage: 'Failed to publish',
+    });
+  }
+
+  async putToPresignedUrl(url, headers, file, onProgress) {
     // XMLHttpRequest rather than fetch, which can't report upload progress.
     await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();

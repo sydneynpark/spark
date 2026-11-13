@@ -24,7 +24,7 @@ resource "aws_s3_bucket" "content" {
 }
 
 # Private: CloudFront (site_cdn.tf) serves photos, thumbnails, and books, and
-# the API serves blog posts.
+# the API serves blog posts (and to the admin page, drafts).
 resource "aws_s3_bucket_public_access_block" "content" {
   for_each = aws_s3_bucket.content
 
@@ -48,6 +48,19 @@ resource "aws_s3_bucket_ownership_controls" "content" {
 # from the API.
 resource "aws_s3_bucket_cors_configuration" "photos" {
   bucket = aws_s3_bucket.content["photos"].id
+
+  cors_rule {
+    allowed_headers = ["Content-Type"]
+    allowed_methods = ["PUT"]
+    allowed_origins = ["https://spark.wiki", "https://www.spark.wiki"]
+    max_age_seconds = 3000
+  }
+}
+
+# And photos for blog post drafts, straight to the blog bucket, where they
+# wait until the post's published (backend/src/utils/draft_util.py).
+resource "aws_s3_bucket_cors_configuration" "blog" {
+  bucket = aws_s3_bucket.content["blog"].id
 
   cors_rule {
     allowed_headers = ["Content-Type"]
@@ -160,5 +173,36 @@ resource "aws_dynamodb_table" "normal_photos" {
 
   lifecycle {
     prevent_destroy = true
+  }
+}
+
+# Each blog post's metadata, but its body, which UpdateBlogPostMetadata keeps
+# in step with the blog bucket, for the API to list posts, and find one by its
+# slug, without reading every post. Nothing but the bucket's posts is in it,
+# so unlike the tables above, it can be rebuilt from them, with
+# scripts/refreshBlogPosts.py.
+resource "aws_dynamodb_table" "posts" {
+  name         = "spark.wiki.posts"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "s3_uri"
+
+  attribute {
+    name = "s3_uri"
+    type = "S"
+  }
+
+  attribute {
+    name = "slug"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "slug-index"
+    projection_type = "ALL"
+
+    key_schema {
+      attribute_name = "slug"
+      key_type       = "HASH"
+    }
   }
 }
