@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import ApiService from '../../services/api';
 import PostContent, { PostDates } from '../PostContent';
-import { monthName } from '../../utils/photoDate';
+import PhotoFolderTree, { usePhotoFolders } from './PhotoFolderTree';
 import { usePageTitle } from '../../utils/pageTitle';
 import { tagsInUse } from '../../utils/postTags';
 import TagInput from '../TagInput';
@@ -48,101 +48,71 @@ function refFilename(ref) {
   return ref.split('/').pop();
 }
 
-function folderLabel(name, kind) {
-  return kind === 'month' && monthName(name) !== name ? `${name} · ${monthName(name)}` : name;
-}
-
 // Browses the photos already on the site, as PhotoManager does, to embed
 // one in the post.
 function ExistingPhotoPicker({ onInsert }) {
   const [collection, setCollection] = useState('birds');
-  const [prefix, setPrefix] = useState('');
-  const [listing, setListing] = useState(null);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setError(null);
-    ApiService.fetchPhotoFolder(collection, prefix)
-      .then(data => { if (!cancelled) setListing({ ...data, collection }); })
-      .catch(err => { if (!cancelled) setError(err.message); });
-    return () => { cancelled = true; };
-  }, [collection, prefix]);
-
-  const current = listing && listing.collection === collection && listing.prefix === prefix ? listing : null;
-  const segments = prefix.split('/').filter(Boolean);
-  const crumbs = [
-    { label: COLLECTIONS[collection].label, prefix: '' },
-    ...segments.map((segment, i) => ({ label: segment, prefix: `${segments.slice(0, i + 1).join('/')}/` })),
-  ];
-
-  function chooseCollection(name) {
-    setCollection(name);
-    setPrefix('');
-  }
 
   return (
     <div className="admin-existing-photos">
       <div className="admin-editor-choice">
         {Object.entries(COLLECTIONS).map(([name, { label }]) => (
           <label key={name} className="admin-checkbox-label">
-            <input type="radio" checked={collection === name} onChange={() => chooseCollection(name)} />
+            <input type="radio" checked={collection === name} onChange={() => setCollection(name)} />
             {label}
           </label>
         ))}
       </div>
-
-      <nav className="admin-photo-breadcrumb" aria-label="Folder">
-        {crumbs.map((crumb, i) => (
-          <span key={crumb.prefix}>
-            {i > 0 && <span className="admin-photo-breadcrumb-separator">/</span>}
-            {i === crumbs.length - 1
-              ? <span className="admin-photo-breadcrumb-current">{crumb.label}</span>
-              : <button type="button" onClick={() => setPrefix(crumb.prefix)}>{crumb.label}</button>}
-          </span>
-        ))}
-      </nav>
-
-      {error && <p className="error">{error}</p>}
-      {!current && !error && <p className="admin-form-hint">Loading...</p>}
-      {current && (
-        <>
-          {current.folders.length > 0 && (
-            <div className="admin-photo-folders">
-              {current.folders.map(name => (
-                <button key={name} type="button" className="admin-photo-folder" onClick={() => setPrefix(`${prefix}${name}/`)}>
-                  {folderLabel(name, current.child_folder_kind)}
-                </button>
-              ))}
-            </div>
-          )}
-          {current.photos.length > 0 && (
-            <ul className="admin-editor-photo-grid">
-              {current.photos.map(photo => (
-                <li key={photo.name}>
-                  <button
-                    type="button"
-                    title={`Insert ${photo.name}`}
-                    onClick={() => onInsert(`photo://${photo.s3_uri.replace(/^s3:\/\/[^/]+\//, '')}`)}
-                  >
-                    <img
-                      src={ApiService.getThumbnailUrl(photo.s3_uri)}
-                      alt=""
-                      loading="lazy"
-                      onError={e => { e.target.src = '/images/placeholder-unknown.jpg'; }}
-                    />
-                    <span>{photo.name}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {current.folders.length === 0 && current.photos.length === 0 && (
-            <p className="admin-form-hint">Nothing in this folder.</p>
-          )}
-        </>
-      )}
+      {/* Keyed so each collection starts over, at its root. */}
+      <CollectionPhotoBrowser key={collection} collection={collection} onInsert={onInsert} />
     </div>
+  );
+}
+
+// One collection's folder tree, and the photos in the folder picked in it.
+function CollectionPhotoBrowser({ collection, onInsert }) {
+  const folders = usePhotoFolders(collection);
+  const [prefix, setPrefix] = useState('');
+  const listing = folders.listings[prefix];
+
+  return (
+    <>
+      <PhotoFolderTree
+        folders={folders}
+        rootLabel={COLLECTIONS[collection].label}
+        selected={prefix}
+        onSelect={setPrefix}
+      />
+
+      {listing?.error && <p className="error">{listing.error}</p>}
+      {listing && !listing.error && listing.photos.length > 0 && (
+        <ul className="admin-editor-photo-grid">
+          {listing.photos.map(photo => (
+            <li key={photo.name}>
+              <button
+                type="button"
+                title={`Insert ${photo.name}`}
+                onClick={() => onInsert(`photo://${photo.s3_uri.replace(/^s3:\/\/[^/]+\//, '')}`)}
+              >
+                <img
+                  src={ApiService.getThumbnailUrl(photo.s3_uri)}
+                  alt=""
+                  loading="lazy"
+                  onError={e => { e.target.src = '/images/placeholder-unknown.jpg'; }}
+                />
+                <span>{photo.name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {listing && !listing.error && listing.photos.length === 0 && listing.accepts_uploads && (
+        <p className="admin-form-hint">No photos in this folder.</p>
+      )}
+      {listing && !listing.error && !listing.accepts_uploads && (
+        <p className="admin-form-hint">Open a day folder in the tree to see its photos.</p>
+      )}
+    </>
   );
 }
 

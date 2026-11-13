@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import ApiService from '../../services/api';
-import { monthName } from '../../utils/photoDate';
 import { usePageTitle } from '../../utils/pageTitle';
+import PhotoFolderTree, { folderLabel, prefixesDownTo, usePhotoFolders } from './PhotoFolderTree';
 
 // How many photos upload to S3 at once.
 const UPLOAD_CONCURRENCY = 3;
@@ -33,10 +33,6 @@ function formatSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function folderLabel(name, kind) {
-  return kind === 'month' && monthName(name) !== name ? `${name} · ${monthName(name)}` : name;
-}
-
 function statusLabel(item) {
   switch (item.status) {
     case 'uploading': return `${Math.round(item.progress * 100)}%`;
@@ -62,15 +58,22 @@ function fileWarnings(file, listing, folderDate) {
   return warnings;
 }
 
-// A photo collection's YYYY/MM/DD folders, to upload photos into, and
-// delete photos (and empty folders) from.
+// The selected folder's name, from the collection down: "birds / 2026 /
+// 05 · May / 23".
+function folderTitle(rootLabel, segments) {
+  const kinds = ['year', 'month', 'day'];
+  return [rootLabel, ...segments.map((segment, i) => folderLabel(segment, kinds[i]))].join(' / ');
+}
+
+// A photo collection's YYYY/MM/DD folders, as a tree to pick one from, and
+// the one picked: to upload photos into, and delete photos (and empty
+// folders) from.
 function PhotoManager({ collection }) {
   const { title, folderName, processing } = COLLECTIONS[collection];
   usePageTitle(title);
   const [searchParams, setSearchParams] = useSearchParams();
   const prefix = searchParams.get('folder') || '';
-  const [listing, setListing] = useState(null);
-  const [refreshCount, setRefreshCount] = useState(0);
+  const folders = usePhotoFolders(collection);
   const [error, setError] = useState(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [creatingFolder, setCreatingFolder] = useState(false);
@@ -80,26 +83,10 @@ function PhotoManager({ collection }) {
   const [deleting, setDeleting] = useState(null);
   const [notice, setNotice] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    setError(null);
-    ApiService.fetchPhotoFolder(collection, prefix)
-      .then(data => { if (!cancelled) setListing(data); })
-      .catch(err => {
-        if (cancelled) return;
-        setListing(null);
-        setError(err.message);
-      });
-    return () => { cancelled = true; };
-  }, [collection, prefix, refreshCount]);
-
-  // Until the folder that's open has loaded, rather than the last one.
-  const current = listing && listing.prefix === prefix ? listing : null;
+  // The selected folder's listing, once it's loaded (the tree loads it).
+  const listing = folders.listings[prefix];
+  const current = listing && !listing.error ? listing : null;
   const segments = prefix.split('/').filter(Boolean);
-  const crumbs = [
-    { label: folderName, prefix: '' },
-    ...segments.map((segment, i) => ({ label: segment, prefix: `${segments.slice(0, i + 1).join('/')}/` })),
-  ];
   const folderDate = segments.join('-');
   const toUpload = files.filter(f => f.status === 'pending' || f.status === 'error');
 
@@ -112,6 +99,7 @@ function PhotoManager({ collection }) {
   function openFolder(target) {
     setNewFolderName('');
     setNotice(null);
+    setError(null);
     setSearchParams(target ? { folder: target } : {});
   }
 
@@ -121,6 +109,7 @@ function PhotoManager({ collection }) {
     setCreatingFolder(true);
     try {
       const created = await ApiService.createPhotoFolder(collection, prefix, newFolderName);
+      folders.reload(prefix);
       openFolder(created.prefix);
     } catch (err) {
       setError(err.message);
@@ -136,9 +125,11 @@ function PhotoManager({ collection }) {
     setDeleting(photo.name);
     try {
       await ApiService.deletePhoto(collection, prefix, photo.name);
-      setListing(prev => (prev && prev.prefix === prefix
-        ? { ...prev, photos: prev.photos.filter(p => p.name !== photo.name) }
-        : prev));
+      folders.update(prefix, prev => ({ ...prev, photos: prev.photos.filter(p => p.name !== photo.name) }));
+      // A folder there only because of its photos is gone with the last one.
+      if (current && current.photos.length === 1) {
+        prefixesDownTo(parentPrefix).forEach(folders.reload);
+      }
       setNotice(`Deleted "${photo.name}". It's off the site once that's been processed, in a few seconds.`);
     } catch (err) {
       setError(err.message);
@@ -152,6 +143,8 @@ function PhotoManager({ collection }) {
     setDeleting('/');
     try {
       await ApiService.deletePhotoFolder(collection, prefix);
+      // The folders above it too, which may have been there only for it.
+      prefixesDownTo(parentPrefix).forEach(folders.reload);
       openFolder(parentPrefix);
     } catch (err) {
       setError(err.message);
@@ -201,7 +194,7 @@ function PhotoManager({ collection }) {
 
     await Promise.all(Array.from({ length: Math.min(UPLOAD_CONCURRENCY, queue.length) }, uploadNext));
     setUploading(false);
-    setRefreshCount(count => count + 1);
+    folders.reload(folder);
   }
 
   return (
@@ -209,56 +202,31 @@ function PhotoManager({ collection }) {
       <Link to="/admin" className="back-link">← Back to Admin</Link>
       <h2>{title}</h2>
       <p className="admin-form-hint">
-        Photos are filed by the day they were taken, in YYYY/MM/DD folders. Open that day's folder -- creating it, if it's new -- to upload into it, or to delete photos from it.
+        Photos are filed by the day they were taken, in YYYY/MM/DD folders. Pick that day's folder -- creating it, if it's new -- to upload into it, or to delete photos from it.
       </p>
 
-      {error && <p className="error">{error}</p>}
-      {notice && <p className="admin-success">{notice}</p>}
+      <div className="admin-photo-browser">
+        <div className="admin-form admin-photo-tree-panel">
+          <PhotoFolderTree
+            folders={folders}
+            rootLabel={folderName}
+            selected={prefix}
+            onSelect={openFolder}
+            disabled={busy}
+          />
+        </div>
 
-      <div className="admin-form">
-        <nav className="admin-photo-breadcrumb" aria-label="Folder">
-          {crumbs.map((crumb, i) => (
-            <span key={crumb.prefix}>
-              {i > 0 && <span className="admin-photo-breadcrumb-separator">/</span>}
-              {i === crumbs.length - 1
-                ? <span className="admin-photo-breadcrumb-current">{crumb.label}</span>
-                : <button type="button" onClick={() => openFolder(crumb.prefix)} disabled={busy}>{crumb.label}</button>}
-            </span>
-          ))}
-        </nav>
+        <div className="admin-form admin-photo-folder-panel">
+          <h3 className="admin-photo-folder-title">{folderTitle(folderName, segments)}</h3>
 
-        {!current && !error && <p className="admin-form-hint">Loading...</p>}
+          {error && <p className="error">{error}</p>}
+          {notice && <p className="admin-success">{notice}</p>}
+          {listing?.error && <p className="error">{listing.error}</p>}
+          {!listing && <p className="admin-form-hint">Loading...</p>}
 
-        {current && (
-          <>
-            {canDeleteFolder && (
-              <div className="admin-photo-folder-actions">
-                <span className="admin-form-hint">This folder is empty.</span>
-                <button type="button" className="admin-remove-button" onClick={handleDeleteFolder} disabled={busy}>
-                  {deleting === '/' ? 'Deleting...' : 'Delete Folder'}
-                </button>
-              </div>
-            )}
-
-            {current.folders.length > 0 && (
-              <div className="admin-photo-folders">
-                {current.folders.map(name => (
-                  <button
-                    key={name}
-                    type="button"
-                    className="admin-photo-folder"
-                    onClick={() => openFolder(`${prefix}${name}/`)}
-                    disabled={busy}
-                  >
-                    {folderLabel(name, current.child_folder_kind)}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {current.child_folder_kind && (
-              <>
-                {current.folders.length === 0 && <p className="admin-form-hint">No folders here yet.</p>}
+          {current && (
+            <>
+              {current.child_folder_kind && (
                 <form className="admin-photo-new-folder" onSubmit={handleCreateFolder}>
                   <label>
                     New {current.child_folder_kind} folder
@@ -271,104 +239,117 @@ function PhotoManager({ collection }) {
                       required
                     />
                   </label>
-                  <button type="submit" className="admin-add-button" disabled={creatingFolder}>
+                  <button type="submit" className="admin-add-button" disabled={creatingFolder || busy}>
                     {creatingFolder ? 'Creating...' : 'Create & Open'}
                   </button>
                 </form>
-              </>
-            )}
+              )}
 
-            {!current.child_folder_kind && !current.accepts_uploads && (
-              <p className="admin-form-hint">This folder is outside the YYYY/MM/DD structure, so photos can't be uploaded here.</p>
-            )}
+              {current.child_folder_kind && !canDeleteFolder && (
+                <p className="admin-form-hint">Photos go in a day folder: open one in the tree, or create it.</p>
+              )}
 
-            {current.accepts_uploads && (
-              <>
-                <section className="admin-form-section">
-                  <h3>In This Folder</h3>
-                  {current.photos.length === 0 ? (
-                    <p className="admin-form-hint">No photos yet.</p>
-                  ) : (
-                    <ul className="admin-photo-existing">
-                      {current.photos.map(photo => (
-                        <li key={photo.name}>
-                          <img
-                            src={ApiService.getThumbnailUrl(photo.s3_uri)}
-                            alt=""
-                            loading="lazy"
-                            onError={e => { e.target.src = '/images/placeholder-unknown.jpg'; }}
-                          />
-                          <a href={ApiService.getFullsizeUrl(photo.s3_uri)} target="_blank" rel="noreferrer">{photo.name}</a>
-                          <button
-                            type="button"
-                            className="admin-remove-button"
-                            onClick={() => handleDeletePhoto(photo)}
-                            disabled={busy}
-                          >
-                            {deleting === photo.name ? 'Deleting...' : 'Delete'}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
+              {canDeleteFolder && (
+                <div className="admin-photo-folder-actions">
+                  <span className="admin-form-hint">This folder is empty.</span>
+                  <button type="button" className="admin-remove-button" onClick={handleDeleteFolder} disabled={busy}>
+                    {deleting === '/' ? 'Deleting...' : 'Delete Folder'}
+                  </button>
+                </div>
+              )}
 
-                <section className="admin-form-section">
-                  <h3>Upload</h3>
-                  <label className={`admin-photo-picker${uploading ? ' is-disabled' : ''}`}>
-                    Choose JPEGs...
-                    <input type="file" accept=".jpg,.jpeg,image/jpeg" multiple onChange={handleFilesChosen} disabled={uploading} />
-                  </label>
+              {!current.child_folder_kind && !current.accepts_uploads && (
+                <p className="admin-form-hint">This folder is outside the YYYY/MM/DD structure, so photos can't be uploaded here.</p>
+              )}
 
-                  {files.length > 0 && (
-                    <ul className="admin-photo-queue">
-                      {files.map(item => (
-                        <li key={item.id} className={`admin-photo-queue-item is-${item.status}`}>
-                          <div className="admin-photo-queue-row">
-                            <span className="admin-photo-queue-name">{item.file.name}</span>
-                            <span className="admin-photo-queue-size">{formatSize(item.file.size)}</span>
-                            <span className="admin-photo-queue-status">{statusLabel(item)}</span>
-                            {!uploading && item.status !== 'done' && (
-                              <button type="button" className="admin-remove-button" onClick={() => removeFile(item.id)}>Remove</button>
-                            )}
-                          </div>
-                          {item.status === 'uploading' && <progress value={item.progress} max="1" />}
-                          {item.status === 'error' && <p className="admin-photo-queue-error">{item.error}</p>}
-                          {(item.status === 'pending' || item.status === 'error') &&
-                            fileWarnings(item.file, current, folderDate).map(warning => (
-                              <p key={warning} className="admin-photo-queue-warning">⚠ {warning}</p>
-                            ))}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+              {current.accepts_uploads && (
+                <>
+                  <section className="admin-form-section">
+                    <h3>In This Folder</h3>
+                    {current.photos.length === 0 ? (
+                      <p className="admin-form-hint">No photos yet.</p>
+                    ) : (
+                      <ul className="admin-photo-existing">
+                        {current.photos.map(photo => (
+                          <li key={photo.name}>
+                            <img
+                              src={ApiService.getThumbnailUrl(photo.s3_uri)}
+                              alt=""
+                              loading="lazy"
+                              onError={e => { e.target.src = '/images/placeholder-unknown.jpg'; }}
+                            />
+                            <a href={ApiService.getFullsizeUrl(photo.s3_uri)} target="_blank" rel="noreferrer">{photo.name}</a>
+                            <button
+                              type="button"
+                              className="admin-remove-button"
+                              onClick={() => handleDeletePhoto(photo)}
+                              disabled={busy}
+                            >
+                              {deleting === photo.name ? 'Deleting...' : 'Delete'}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
 
-                  <div className="admin-form-actions">
-                    <button
-                      type="button"
-                      className="admin-back-button"
-                      onClick={() => setFiles([])}
-                      disabled={uploading || files.length === 0}
-                    >
-                      Clear List
-                    </button>
-                    <button
-                      type="button"
-                      className="admin-submit-button"
-                      onClick={handleUpload}
-                      disabled={uploading || toUpload.length === 0}
-                    >
-                      {uploading ? 'Uploading...' : `Upload ${toUpload.length} Photo${toUpload.length === 1 ? '' : 's'}`}
-                    </button>
-                  </div>
-                  <p className="admin-form-hint">
-                    Uploaded photos are processed in the background ({processing}), and show up on the site a few seconds later.
-                  </p>
-                </section>
-              </>
-            )}
-          </>
-        )}
+                  <section className="admin-form-section">
+                    <h3>Upload</h3>
+                    <label className={`admin-photo-picker${uploading ? ' is-disabled' : ''}`}>
+                      Choose JPEGs...
+                      <input type="file" accept=".jpg,.jpeg,image/jpeg" multiple onChange={handleFilesChosen} disabled={uploading} />
+                    </label>
+
+                    {files.length > 0 && (
+                      <ul className="admin-photo-queue">
+                        {files.map(item => (
+                          <li key={item.id} className={`admin-photo-queue-item is-${item.status}`}>
+                            <div className="admin-photo-queue-row">
+                              <span className="admin-photo-queue-name">{item.file.name}</span>
+                              <span className="admin-photo-queue-size">{formatSize(item.file.size)}</span>
+                              <span className="admin-photo-queue-status">{statusLabel(item)}</span>
+                              {!uploading && item.status !== 'done' && (
+                                <button type="button" className="admin-remove-button" onClick={() => removeFile(item.id)}>Remove</button>
+                              )}
+                            </div>
+                            {item.status === 'uploading' && <progress value={item.progress} max="1" />}
+                            {item.status === 'error' && <p className="admin-photo-queue-error">{item.error}</p>}
+                            {(item.status === 'pending' || item.status === 'error') &&
+                              fileWarnings(item.file, current, folderDate).map(warning => (
+                                <p key={warning} className="admin-photo-queue-warning">⚠ {warning}</p>
+                              ))}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    <div className="admin-form-actions">
+                      <button
+                        type="button"
+                        className="admin-back-button"
+                        onClick={() => setFiles([])}
+                        disabled={uploading || files.length === 0}
+                      >
+                        Clear List
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-submit-button"
+                        onClick={handleUpload}
+                        disabled={uploading || toUpload.length === 0}
+                      >
+                        {uploading ? 'Uploading...' : `Upload ${toUpload.length} Photo${toUpload.length === 1 ? '' : 's'}`}
+                      </button>
+                    </div>
+                    <p className="admin-form-hint">
+                      Uploaded photos are processed in the background ({processing}), and show up on the site a few seconds later.
+                    </p>
+                  </section>
+                </>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
