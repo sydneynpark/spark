@@ -10,6 +10,12 @@ import os
 import re
 from datetime import date
 
+# Each photo collection's folder in the bucket: bird photos, and the rest.
+PHOTO_COLLECTIONS = {
+    'birds': 'birds/',
+    'photos': 'photos/',
+}
+
 DATE_LEVELS = ('year', 'month', 'day')
 _DATE_SEGMENT_PATTERNS = (r'\d{4}', r'\d{2}', r'\d{2}')
 _FOLDER_NAME_HINTS = (
@@ -92,17 +98,21 @@ def new_folder_prefix(parent, name):
     return prefix
 
 
-def photo_key(folder, filename):
-    """The S3 key a photo named `filename` is uploaded to in `folder`.
-    Raises UploadPathError if `folder` isn't a day folder or `filename`
-    isn't a plain JPEG filename."""
-    if not accepts_uploads(folder):
-        raise UploadPathError('Photos can only be uploaded into a day folder (YYYY/MM/DD/).')
-
+def validate_photo_filename(filename):
+    """Raises UploadPathError if `filename` isn't a plain JPEG filename."""
     filename = filename or ''
     if (not filename.strip() or filename.startswith('.') or len(filename) > 255
             or any(c in filename for c in '/\\') or any(ord(c) < 32 for c in filename)):
         raise UploadPathError(f'Invalid filename: {filename!r}')
     if os.path.splitext(filename)[1].lower() not in PHOTO_EXTENSIONS:
         raise UploadPathError(f'"{filename}" isn\'t a JPEG -- only .jpg/.jpeg photos are supported.')
+
+
+def photo_key(folder, filename):
+    """The S3 key a photo named `filename` is uploaded to in `folder`.
+    Raises UploadPathError if `folder` isn't a day folder or `filename`
+    isn't a plain JPEG filename."""
+    if not accepts_uploads(folder):
+        raise UploadPathError('Photos can only be uploaded into a day folder (YYYY/MM/DD/).')
+    validate_photo_filename(filename)
     return f'{folder}{filename}'

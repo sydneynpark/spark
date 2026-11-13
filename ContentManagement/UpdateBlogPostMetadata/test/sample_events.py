@@ -33,14 +33,14 @@ UploadSamplePost = {
         "s3SchemaVersion": "1.0",
         "configurationId": "testConfigRule",
         "bucket": {
-          "name": "spark.wiki.posts",
+          "name": "spark.wiki.blog",
           "ownerIdentity": {
             "principalId": "EXAMPLE"
           },
-          "arn": "arn:aws:s3:::spark.wiki.posts"
+          "arn": "arn:aws:s3:::spark.wiki.blog"
         },
         "object": {
-          "key": "posts%2F2025-07-29-hello-world.md",
+          "key": "2025%2F07%2F29%2Fhello-world.md",
           "size": 630,
           "eTag": "d41d8cd98f00b204e9800998ecf8427e",
           "sequencer": "0A1B2C3D4E5F678901"

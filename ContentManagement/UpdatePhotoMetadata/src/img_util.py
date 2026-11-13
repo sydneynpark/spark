@@ -1,4 +1,4 @@
-from PIL import Image, ExifTags
+from PIL import Image, ExifTags, ImageOps
 from datetime import datetime
 import io
 
@@ -31,6 +31,10 @@ class ImageUtil:
 
     def create_thumbnail(self, jpg_stream, min_dimension=300):
         with Image.open(jpg_stream) as img:
+            # Phone photos are often stored sideways, with an EXIF Orientation
+            # tag saying how to turn them upright, as browsers do. The
+            # thumbnail doesn't keep the tag, so it's turned upright here.
+            img = ImageOps.exif_transpose(img)
             w, h = img.size
             if w <= h:
                 new_w = min_dimension
