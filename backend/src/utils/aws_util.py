@@ -365,6 +365,14 @@ class PhotosAdminUtil:
         off the site: its metadata, and its thumbnail."""
         self.s3.delete_object(Bucket=PHOTOS_BUCKET, Key=key)
 
+    def rename_photo(self, key, new_key):
+        """S3 has no renaming, so copy it to `new_key` and delete it.
+        UpdatePhotoMetadata's S3 triggers then process the copy as a new
+        photo (its species and date come from the file, so they're the same)
+        and take the old one off the site."""
+        self.s3.copy_object(Bucket=PHOTOS_BUCKET, Key=new_key, CopySource={'Bucket': PHOTOS_BUCKET, 'Key': key})
+        self.s3.delete_object(Bucket=PHOTOS_BUCKET, Key=key)
+
     def delete_folder(self, collection, prefix):
         """Delete an empty folder's placeholder object (see create_folder).
         A folder with none, there only because a photo was in it, is

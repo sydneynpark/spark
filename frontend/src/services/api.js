@@ -270,6 +270,16 @@ class ApiService {
     });
   }
 
+  // Renames a photo within its folder, returning its new { name, s3_uri }.
+  // Refused, like deletePhoto, for one a blog post or draft embeds.
+  async renamePhoto(collection, folder, filename, newFilename) {
+    return this.adminRequest('/admin/photos/rename', {
+      method: 'POST',
+      body: { collection, folder, filename, new_filename: newFilename },
+      failureMessage: 'Failed to rename the photo',
+    });
+  }
+
   // Only an empty year, month, or day folder.
   async deletePhotoFolder(collection, prefix) {
     return this.adminRequest('/admin/photos/folders', {

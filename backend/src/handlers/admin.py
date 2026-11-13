@@ -14,11 +14,13 @@ from utils.draft_util import (
 )
 from utils.photo_upload_util import (
     PHOTO_COLLECTIONS, PHOTO_CONTENT_TYPE, UploadPathError, accepts_uploads, child_folder_kind,
-    deletable_folder, new_folder_prefix, photo_key, validate_prefix,
+    deletable_folder, new_folder_prefix, photo_key, renamed_photo_keys, validate_prefix,
 )
 from utils.response_util import handle_error
 
-from utils.aws_util import BooksAdminUtil, DraftsAdminUtil, DynamoUtil, PhotosAdminUtil, PublishConflict
+from utils.aws_util import (
+    PHOTOS_BUCKET, BooksAdminUtil, DraftsAdminUtil, DynamoUtil, PhotosAdminUtil, PublishConflict,
+)
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 books_admin = BooksAdminUtil()
@@ -262,6 +264,41 @@ def delete_photo():
 
         photos_admin.delete_photo(key)
         return '', 204
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/photos/rename', methods=['POST'])
+@require_admin_auth
+def rename_photo():
+    """Rename a photo, within its folder. Not one a blog post or draft
+    embeds, which refers to it by its name: it has to come out of the post
+    first."""
+    try:
+        data = request.get_json(silent=True) or {}
+        collection = data.get('collection')
+        if collection not in PHOTO_COLLECTIONS:
+            return unknown_collection(collection)
+        filename = data.get('filename', '')
+        try:
+            key, new_key = (PHOTO_COLLECTIONS[collection] + k for k in renamed_photo_keys(
+                data.get('folder', ''), filename, data.get('new_filename')))
+        except UploadPathError as e:
+            return jsonify({'error': str(e)}), 400
+        new_filename = new_key.rsplit('/', 1)[1]
+
+        if not photos_admin.photo_exists(key):
+            return jsonify({'error': f'"{filename}" isn\'t in this folder anymore.'}), 404
+        if photos_admin.photo_exists(new_key):
+            return jsonify({'error': f'There\'s already a photo named "{new_filename}" in this folder.'}), 409
+        posts = photos_admin.posts_using_photo(key)
+        if posts:
+            return jsonify({
+                'error': f'"{filename}" is in the blog post {" and ".join(posts)}, which would lose it. Take it out of the post before renaming it.',
+            }), 409
+
+        photos_admin.rename_photo(key, new_key)
+        return jsonify({'name': new_filename, 's3_uri': f's3://{PHOTOS_BUCKET}/{new_key}'})
     except Exception as e:
         return handle_error(e)
 

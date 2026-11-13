@@ -2314,6 +2314,29 @@ button.admin-folder-toggle:hover {
   color: var(--color-text-primary);
 }
 
+.admin-photo-existing .admin-back-button {
+  padding: 0.4rem 0.8rem;
+}
+
+.admin-photo-rename {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-photo-rename input {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.admin-photo-rename .admin-add-button,
+.admin-photo-rename .admin-back-button {
+  padding: 0.4rem 0.8rem;
+}
+
 .admin-photo-folder-actions {
   display: flex;
   align-items: center;

@@ -81,6 +81,9 @@ function PhotoManager({ collection }) {
   const [uploading, setUploading] = useState(false);
   // The name of the photo being deleted, or '/' for the folder itself.
   const [deleting, setDeleting] = useState(null);
+  // The photo being renamed: { name, value } while its new name is typed,
+  // with saving set once it's sent.
+  const [renaming, setRenaming] = useState(null);
   const [notice, setNotice] = useState(null);
 
   // The selected folder's listing, once it's loaded (the tree loads it).
@@ -94,10 +97,11 @@ function PhotoManager({ collection }) {
   // An empty year, month, or day folder, which can be deleted.
   const canDeleteFolder = current && prefix !== '' && current.folders.length === 0 && current.photos.length === 0
     && (current.child_folder_kind || current.accepts_uploads);
-  const busy = uploading || deleting !== null;
+  const busy = uploading || deleting !== null || Boolean(renaming?.saving);
 
   function openFolder(target) {
     setNewFolderName('');
+    setRenaming(null);
     setNotice(null);
     setError(null);
     setSearchParams(target ? { folder: target } : {});
@@ -136,6 +140,40 @@ function PhotoManager({ collection }) {
     } finally {
       setDeleting(null);
     }
+  }
+
+  async function handleRename(e) {
+    e.preventDefault();
+    const { name, value } = renaming;
+    setError(null);
+    setNotice(null);
+    setRenaming({ name, value, saving: true });
+    try {
+      const renamed = await ApiService.renamePhoto(collection, prefix, name, value);
+      folders.update(prefix, prev => ({
+        ...prev,
+        photos: prev.photos
+          .map(p => (p.name === name ? {
+            ...p,
+            ...renamed,
+            // The new name's thumbnail takes a few seconds to be made, and the
+            // old one is deleted, so keep showing the one already loaded.
+            thumbnail_s3_uri: p.thumbnail_s3_uri || p.s3_uri,
+          } : p))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      }));
+      setRenaming(null);
+      setNotice(`Renamed "${name}" to "${renamed.name}".`);
+    } catch (err) {
+      setError(err.message);
+      setRenaming({ name, value });
+    }
+  }
+
+  // Selects the name but not its extension, which is usually what changes.
+  function selectBaseName(e) {
+    const dot = e.target.value.lastIndexOf('.');
+    e.target.setSelectionRange(0, dot > 0 ? dot : e.target.value.length);
   }
 
   async function handleDeleteFolder() {
@@ -202,7 +240,7 @@ function PhotoManager({ collection }) {
       <Link to="/admin" className="back-link">← Back to Admin</Link>
       <h2>{title}</h2>
       <p className="admin-form-hint">
-        Photos are filed by the day they were taken, in YYYY/MM/DD folders. Pick that day's folder -- creating it, if it's new -- to upload into it, or to delete photos from it.
+        Photos are filed by the day they were taken, in YYYY/MM/DD folders. Pick that day's folder -- creating it, if it's new -- to upload into it, or to rename or delete photos in it.
       </p>
 
       <div className="admin-photo-browser">
@@ -273,20 +311,57 @@ function PhotoManager({ collection }) {
                         {current.photos.map(photo => (
                           <li key={photo.name}>
                             <img
-                              src={ApiService.getThumbnailUrl(photo.s3_uri)}
+                              src={ApiService.getThumbnailUrl(photo.thumbnail_s3_uri || photo.s3_uri)}
                               alt=""
                               loading="lazy"
                               onError={e => { e.target.src = '/images/placeholder-unknown.jpg'; }}
                             />
-                            <a href={ApiService.getFullsizeUrl(photo.s3_uri)} target="_blank" rel="noreferrer">{photo.name}</a>
-                            <button
-                              type="button"
-                              className="admin-remove-button"
-                              onClick={() => handleDeletePhoto(photo)}
-                              disabled={busy}
-                            >
-                              {deleting === photo.name ? 'Deleting...' : 'Delete'}
-                            </button>
+                            {renaming?.name === photo.name ? (
+                              <form className="admin-photo-rename" onSubmit={handleRename}>
+                                <input
+                                  type="text"
+                                  aria-label={`New name for ${photo.name}`}
+                                  value={renaming.value}
+                                  onChange={e => setRenaming({ name: photo.name, value: e.target.value })}
+                                  onFocus={selectBaseName}
+                                  onKeyDown={e => { if (e.key === 'Escape' && !renaming.saving) setRenaming(null); }}
+                                  disabled={renaming.saving}
+                                  autoFocus
+                                  required
+                                />
+                                <button type="submit" className="admin-add-button" disabled={renaming.saving}>
+                                  {renaming.saving ? 'Saving...' : 'Save'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-back-button"
+                                  onClick={() => setRenaming(null)}
+                                  disabled={renaming.saving}
+                                >
+                                  Cancel
+                                </button>
+                              </form>
+                            ) : (
+                              <>
+                                <a href={ApiService.getFullsizeUrl(photo.s3_uri)} target="_blank" rel="noreferrer">{photo.name}</a>
+                                <button
+                                  type="button"
+                                  className="admin-back-button"
+                                  onClick={() => { setError(null); setRenaming({ name: photo.name, value: photo.name }); }}
+                                  disabled={busy}
+                                >
+                                  Rename
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-remove-button"
+                                  onClick={() => handleDeletePhoto(photo)}
+                                  disabled={busy}
+                                >
+                                  {deleting === photo.name ? 'Deleting...' : 'Delete'}
+                                </button>
+                              </>
+                            )}
                           </li>
                         ))}
                       </ul>

@@ -115,6 +115,21 @@ def deletable_folder(prefix):
         raise UploadPathError('Only a year, month, or day folder (YYYY/MM/DD/) can be deleted.')
 
 
+def renamed_photo_keys(folder, filename, new_filename):
+    """The keys, within the collection, of a photo in day folder `folder`
+    before and after renaming it from `filename` to `new_filename`, which
+    stays in that folder. Raises UploadPathError if either name isn't a
+    plain JPEG filename, or they're the same."""
+    if not accepts_uploads(folder):
+        raise UploadPathError('Only a photo in a day folder (YYYY/MM/DD/) can be renamed.')
+    new_filename = (new_filename or '').strip()
+    validate_photo_filename(filename)
+    validate_photo_filename(new_filename)
+    if new_filename == filename:
+        raise UploadPathError('That\'s the name it already has.')
+    return f'{folder}{filename}', f'{folder}{new_filename}'
+
+
 def photo_key(folder, filename):
     """The S3 key a photo named `filename` is uploaded to in `folder`.
     Raises UploadPathError if `folder` isn't a day folder or `filename`
