@@ -13,15 +13,15 @@ const NEW_FOLDER_PLACEHOLDERS = { year: 'e.g. 2026', month: '1-12', day: '1-31' 
 // so a filename's leading date says which day folder it belongs in.
 const FILENAME_DATE = /^(\d{4})-(\d{2})-(\d{2})/;
 
-// The photo collections this uploads to (see the API's PHOTO_COLLECTIONS).
+// The photo collections this manages (see the API's PHOTO_COLLECTIONS).
 const COLLECTIONS = {
   birds: {
-    title: 'Upload Bird Photos',
+    title: 'Bird Photos',
     folderName: 'birds',
     processing: 'species from their keywords, plus a thumbnail',
   },
   photos: {
-    title: 'Upload Photos',
+    title: 'Photos',
     folderName: 'photos',
     processing: 'their dates, plus a thumbnail',
   },
@@ -62,7 +62,9 @@ function fileWarnings(file, listing, folderDate) {
   return warnings;
 }
 
-function PhotoUploader({ collection }) {
+// A photo collection's YYYY/MM/DD folders, to upload photos into, and
+// delete photos (and empty folders) from.
+function PhotoManager({ collection }) {
   const { title, folderName, processing } = COLLECTIONS[collection];
   usePageTitle(title);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -74,6 +76,9 @@ function PhotoUploader({ collection }) {
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [files, setFiles] = useState([]); // { id, file, status, progress, error }
   const [uploading, setUploading] = useState(false);
+  // The name of the photo being deleted, or '/' for the folder itself.
+  const [deleting, setDeleting] = useState(null);
+  const [notice, setNotice] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,8 +103,15 @@ function PhotoUploader({ collection }) {
   const folderDate = segments.join('-');
   const toUpload = files.filter(f => f.status === 'pending' || f.status === 'error');
 
+  const parentPrefix = segments.length > 1 ? `${segments.slice(0, -1).join('/')}/` : '';
+  // An empty year, month, or day folder, which can be deleted.
+  const canDeleteFolder = current && prefix !== '' && current.folders.length === 0 && current.photos.length === 0
+    && (current.child_folder_kind || current.accepts_uploads);
+  const busy = uploading || deleting !== null;
+
   function openFolder(target) {
     setNewFolderName('');
+    setNotice(null);
     setSearchParams(target ? { folder: target } : {});
   }
 
@@ -114,6 +126,37 @@ function PhotoUploader({ collection }) {
       setError(err.message);
     } finally {
       setCreatingFolder(false);
+    }
+  }
+
+  async function handleDeletePhoto(photo) {
+    if (!window.confirm(`Delete "${photo.name}" for good? It comes off the site too, and this can't be undone.`)) return;
+    setError(null);
+    setNotice(null);
+    setDeleting(photo.name);
+    try {
+      await ApiService.deletePhoto(collection, prefix, photo.name);
+      setListing(prev => (prev && prev.prefix === prefix
+        ? { ...prev, photos: prev.photos.filter(p => p.name !== photo.name) }
+        : prev));
+      setNotice(`Deleted "${photo.name}". It's off the site once that's been processed, in a few seconds.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  async function handleDeleteFolder() {
+    setError(null);
+    setDeleting('/');
+    try {
+      await ApiService.deletePhotoFolder(collection, prefix);
+      openFolder(parentPrefix);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDeleting(null);
     }
   }
 
@@ -166,10 +209,11 @@ function PhotoUploader({ collection }) {
       <Link to="/admin" className="back-link">← Back to Admin</Link>
       <h2>{title}</h2>
       <p className="admin-form-hint">
-        Photos are filed by the day they were taken, in YYYY/MM/DD folders. Open that day's folder -- creating it, if it's new -- to upload into it.
+        Photos are filed by the day they were taken, in YYYY/MM/DD folders. Open that day's folder -- creating it, if it's new -- to upload into it, or to delete photos from it.
       </p>
 
       {error && <p className="error">{error}</p>}
+      {notice && <p className="admin-success">{notice}</p>}
 
       <div className="admin-form">
         <nav className="admin-photo-breadcrumb" aria-label="Folder">
@@ -178,7 +222,7 @@ function PhotoUploader({ collection }) {
               {i > 0 && <span className="admin-photo-breadcrumb-separator">/</span>}
               {i === crumbs.length - 1
                 ? <span className="admin-photo-breadcrumb-current">{crumb.label}</span>
-                : <button type="button" onClick={() => openFolder(crumb.prefix)} disabled={uploading}>{crumb.label}</button>}
+                : <button type="button" onClick={() => openFolder(crumb.prefix)} disabled={busy}>{crumb.label}</button>}
             </span>
           ))}
         </nav>
@@ -187,6 +231,15 @@ function PhotoUploader({ collection }) {
 
         {current && (
           <>
+            {canDeleteFolder && (
+              <div className="admin-photo-folder-actions">
+                <span className="admin-form-hint">This folder is empty.</span>
+                <button type="button" className="admin-remove-button" onClick={handleDeleteFolder} disabled={busy}>
+                  {deleting === '/' ? 'Deleting...' : 'Delete Folder'}
+                </button>
+              </div>
+            )}
+
             {current.folders.length > 0 && (
               <div className="admin-photo-folders">
                 {current.folders.map(name => (
@@ -195,7 +248,7 @@ function PhotoUploader({ collection }) {
                     type="button"
                     className="admin-photo-folder"
                     onClick={() => openFolder(`${prefix}${name}/`)}
-                    disabled={uploading}
+                    disabled={busy}
                   >
                     {folderLabel(name, current.child_folder_kind)}
                   </button>
@@ -245,7 +298,15 @@ function PhotoUploader({ collection }) {
                             loading="lazy"
                             onError={e => { e.target.src = '/images/placeholder-unknown.jpg'; }}
                           />
-                          <span>{photo.name}</span>
+                          <a href={ApiService.getFullsizeUrl(photo.s3_uri)} target="_blank" rel="noreferrer">{photo.name}</a>
+                          <button
+                            type="button"
+                            className="admin-remove-button"
+                            onClick={() => handleDeletePhoto(photo)}
+                            disabled={busy}
+                          >
+                            {deleting === photo.name ? 'Deleting...' : 'Delete'}
+                          </button>
                         </li>
                       ))}
                     </ul>
@@ -313,4 +374,4 @@ function PhotoUploader({ collection }) {
   );
 }
 
-export default PhotoUploader;
+export default PhotoManager;

@@ -9,6 +9,8 @@ The photos bucket, `spark.wiki.photos`, has two collections, and each photo's th
 
 Anything else in the bucket, like `archive/`, is skipped.
 
+When a photo is deleted (from the admin page's Photos or Bird Photos, or in the console), its items in those tables and its thumbnail are deleted too, taking it off the site.
+
 
 ## Local development
 

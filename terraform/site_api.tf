@@ -122,8 +122,19 @@ data "aws_iam_policy_document" "admin_api" {
     ]
   }
 
+  # Deleting a photo, or an empty folder, from the photos page. Only in the
+  # collections: not anything else in the bucket, like archive/.
+  statement {
+    sid     = "DeletePhotos"
+    actions = ["s3:DeleteObject"]
+    resources = [
+      "${aws_s3_bucket.content["photos"].arn}/birds/*",
+      "${aws_s3_bucket.content["photos"].arn}/photos/*",
+    ]
+  }
+
   # Deleting a draft, or a photo uploaded to one, and a draft once it's
-  # published. Nothing on the site.
+  # published. Nothing else on the site.
   statement {
     sid       = "DeleteDrafts"
     actions   = ["s3:DeleteObject"]

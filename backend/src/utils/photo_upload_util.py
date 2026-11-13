@@ -108,6 +108,13 @@ def validate_photo_filename(filename):
         raise UploadPathError(f'"{filename}" isn\'t a JPEG -- only .jpg/.jpeg photos are supported.')
 
 
+def deletable_folder(prefix):
+    """Raises UploadPathError unless `prefix` is a year, month, or day
+    folder: the folders the admin page can delete (once they're empty)."""
+    if validate_prefix(prefix) is not None or _date_depth(prefix) not in (1, 2, 3):
+        raise UploadPathError('Only a year, month, or day folder (YYYY/MM/DD/) can be deleted.')
+
+
 def photo_key(folder, filename):
     """The S3 key a photo named `filename` is uploaded to in `folder`.
     Raises UploadPathError if `folder` isn't a day folder or `filename`

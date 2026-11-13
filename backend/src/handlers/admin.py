@@ -14,7 +14,7 @@ from utils.draft_util import (
 )
 from utils.photo_upload_util import (
     PHOTO_COLLECTIONS, PHOTO_CONTENT_TYPE, UploadPathError, accepts_uploads, child_folder_kind,
-    new_folder_prefix, photo_key, validate_prefix,
+    deletable_folder, new_folder_prefix, photo_key, validate_prefix,
 )
 from utils.response_util import handle_error
 
@@ -205,6 +205,63 @@ def create_photo_folder():
 
         photos_admin.create_folder(collection, prefix)
         return jsonify({'prefix': prefix}), 201
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/photos/folders', methods=['DELETE'])
+@require_admin_auth
+def delete_photo_folder():
+    """Delete an empty year, month, or day folder, `prefix`."""
+    try:
+        data = request.get_json(silent=True) or {}
+        collection = data.get('collection')
+        if collection not in PHOTO_COLLECTIONS:
+            return unknown_collection(collection)
+        prefix = data.get('prefix', '')
+        try:
+            deletable_folder(prefix)
+        except UploadPathError as e:
+            return jsonify({'error': str(e)}), 400
+
+        folders, photos = photos_admin.list_folder(collection, prefix)
+        if folders or photos:
+            return jsonify({'error': 'Only an empty folder can be deleted. Delete what\'s in it first.'}), 409
+        photos_admin.delete_folder(collection, prefix)
+        return '', 204
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/photos', methods=['DELETE'])
+@require_admin_auth
+def delete_photo():
+    """Delete a photo for good (the bucket isn't versioned), and so take it
+    off the site. Not one a blog post or draft embeds, which it would
+    break: it has to come out of the post first."""
+    try:
+        data = request.get_json(silent=True) or {}
+        collection = data.get('collection')
+        if collection not in PHOTO_COLLECTIONS:
+            return unknown_collection(collection)
+        folder, filename = data.get('folder', ''), data.get('filename', '')
+        if not accepts_uploads(folder):
+            return jsonify({'error': 'Only a photo in a day folder (YYYY/MM/DD/) can be deleted.'}), 400
+        try:
+            key = PHOTO_COLLECTIONS[collection] + photo_key(folder, filename)
+        except UploadPathError as e:
+            return jsonify({'error': str(e)}), 400
+
+        if not photos_admin.photo_exists(key):
+            return jsonify({'error': f'"{filename}" isn\'t in this folder anymore.'}), 404
+        posts = photos_admin.posts_using_photo(key)
+        if posts:
+            return jsonify({
+                'error': f'"{filename}" is in the blog post {" and ".join(posts)}. Take it out of the post before deleting it.',
+            }), 409
+
+        photos_admin.delete_photo(key)
+        return '', 204
     except Exception as e:
         return handle_error(e)
 

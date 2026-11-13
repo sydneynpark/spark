@@ -49,6 +49,20 @@ def lambda_handler(event, context):
             print(f'Skipping: not in {BIRDS_PREFIX} or {PHOTOS_PREFIX}')
             return []
 
+        thumbnail_key = f'thumbnail/{key}'
+
+        # Deleted (by the admin page, or in the console): take it off the
+        # site -- its metadata, and its thumbnail.
+        if event_type.startswith('ObjectRemoved'):
+            s3_uri = f's3://{bucket}/{key}'
+            if key.startswith(PHOTOS_PREFIX):
+                aws.delete_photo_metadata(s3_uri)
+            else:
+                aws.delete_bird_metadata(s3_uri)
+            aws.delete_s3_object(THUMBNAILS_BUCKET, thumbnail_key)
+            print(f'Deleted the metadata and thumbnail of {s3_uri}')
+            return {'deleted': s3_uri}
+
         response = aws.get_s3_object(bucket, key)
         photo_bytes = response['Body'].read()
         date_captured = img.get_date_captured(io.BytesIO(photo_bytes)) or _date_from_key(key)
@@ -69,7 +83,6 @@ def lambda_handler(event, context):
         print(f'Stored metadata in DynamoDB')
 
         thumbnail = img.create_thumbnail(io.BytesIO(photo_bytes))
-        thumbnail_key = f'thumbnail/{key}'
         aws.put_s3_object(THUMBNAILS_BUCKET, thumbnail_key, thumbnail)
         print(f'Saved thumbnail to {THUMBNAILS_BUCKET}/{thumbnail_key}')
 

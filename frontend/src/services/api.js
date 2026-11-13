@@ -260,6 +260,25 @@ class ApiService {
     });
   }
 
+  // Deletes a photo for good, which takes it off the site. Refused (with a
+  // message saying which) for one a blog post or draft embeds.
+  async deletePhoto(collection, folder, filename) {
+    return this.adminRequest('/admin/photos', {
+      method: 'DELETE',
+      body: { collection, folder, filename },
+      failureMessage: 'Failed to delete the photo',
+    });
+  }
+
+  // Only an empty year, month, or day folder.
+  async deletePhotoFolder(collection, prefix) {
+    return this.adminRequest('/admin/photos/folders', {
+      method: 'DELETE',
+      body: { collection, prefix },
+      failureMessage: 'Failed to delete the folder',
+    });
+  }
+
   // Uploads straight to S3 through a presigned URL from the API (photos are
   // too big to send through it), reporting progress from 0 to 1.
   async uploadPhoto(collection, folder, file, onProgress) {

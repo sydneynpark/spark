@@ -69,7 +69,10 @@ review's `cover_image` field. Photos go from the browser straight to `spark.wiki
 (into `birds/` or `photos/`), through presigned PUT URLs (full-size photos
 are bigger than API Gateway and Lambda accept in a request), and
 `UpdatePhotoMetadata`'s S3 trigger processes each one, as it would one
-uploaded in the console.
+uploaded in the console. The same pages delete photos, and empty date
+folders: `UpdatePhotoMetadata` takes a deleted photo off the site. As the
+bucket isn't versioned, that's for good, so the API refuses to delete a
+photo a blog post or draft embeds, which would break it.
 
 Locally, both go to the emulated buckets, whose triggers run the same
 Lambdas, so they show up on the local site the same way.

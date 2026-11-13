@@ -20,8 +20,8 @@ function AdminDashboard() {
       <div className="admin-action-list">
         <Link className="admin-action-button" to="/admin/posts">Blog Posts</Link>
         <Link className="admin-action-button" to="/admin/books">Books</Link>
-        <Link className="admin-action-button" to="/admin/photos/upload">Upload Photos</Link>
-        <Link className="admin-action-button" to="/admin/birds/upload">Upload Bird Photos</Link>
+        <Link className="admin-action-button" to="/admin/photos">Photos</Link>
+        <Link className="admin-action-button" to="/admin/birds">Bird Photos</Link>
       </div>
     </div>
   );

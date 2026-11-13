@@ -1,4 +1,5 @@
 import boto3
+from boto3.dynamodb.conditions import Key
 
 
 def bird_items(s3_uri, taxonomies, date_captured=None):
@@ -52,6 +53,19 @@ class AWSUtil:
         item = photo_item(s3_uri, date_captured)
         self.dynamodb.Table('spark.wiki.normal-photos').put_item(Item=item)
         return item
+
+    def delete_bird_metadata(self, s3_uri):
+        # One item per species in the photo, keyed (s3_uri, species).
+        table = self.dynamodb.Table('spark.wiki.photos')
+        response = table.query(KeyConditionExpression=Key('s3_uri').eq(s3_uri))
+        for item in response.get('Items', []):
+            table.delete_item(Key={'s3_uri': s3_uri, 'species': item['species']})
+
+    def delete_photo_metadata(self, s3_uri):
+        self.dynamodb.Table('spark.wiki.normal-photos').delete_item(Key={'s3_uri': s3_uri})
+
+    def delete_s3_object(self, bucket, key):
+        self.s3.delete_object(Bucket=bucket, Key=key)
 
     def put_s3_object(self, bucket, key, body, content_type='image/jpeg'):
         self.s3.put_object(Bucket=bucket, Key=key, Body=body, ContentType=content_type)

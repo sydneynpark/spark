@@ -7,7 +7,7 @@ import { usePageTitle } from '../../utils/pageTitle';
 import { tagsInUse } from '../../utils/postTags';
 import TagInput from '../TagInput';
 
-// How many photos upload to S3 at once, as in PhotoUploader.
+// How many photos upload to S3 at once, as in PhotoManager.
 const UPLOAD_CONCURRENCY = 3;
 
 // The photo collections a draft's photos are published to (see the API's
@@ -52,7 +52,7 @@ function folderLabel(name, kind) {
   return kind === 'month' && monthName(name) !== name ? `${name} · ${monthName(name)}` : name;
 }
 
-// Browses the photos already on the site, as PhotoUploader does, to embed
+// Browses the photos already on the site, as PhotoManager does, to embed
 // one in the post.
 function ExistingPhotoPicker({ onInsert }) {
   const [collection, setCollection] = useState('birds');
