@@ -1958,46 +1958,10 @@ footer {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Admin book review list */
+/* Admin book review list (its rows are the blog drafts list's) */
 .admin-book-list-page input[type="text"] {
+  width: 100%;
   margin-bottom: 1rem;
-}
-
-.admin-book-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.admin-book-list a {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  background: var(--color-card-background);
-  border: 1px solid #e1e8ed;
-  border-radius: 8px;
-  color: var(--color-text-primary);
-  text-decoration: none;
-  transition: box-shadow 0.2s;
-}
-
-.admin-book-list a:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.admin-book-list-title {
-  font-weight: 600;
-}
-
-.admin-book-list-meta {
-  font-size: 0.875rem;
-  opacity: 0.7;
-  text-align: right;
 }
 
 /* Admin book review form */
@@ -2384,7 +2348,8 @@ footer {
   color: var(--color-text-primary);
 }
 
-.admin-drafts-page .admin-submit-button {
+.admin-drafts-page .admin-submit-button,
+.admin-book-list-page .admin-submit-button {
   text-decoration: none;
 }
 

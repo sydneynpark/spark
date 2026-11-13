@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import ApiService from '../../services/api';
 import CoverPicker from './CoverPicker';
 import FacetWeightSliders from './FacetWeightSliders';
@@ -121,8 +121,9 @@ function BookReviewForm() {
   const [liveCoverKey, setLiveCoverKey] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-  usePageTitle(isEditing ? 'Edit Book Review' : 'Upload Book Review');
+  const heading = isEditing ? 'Edit Book Review' : 'New Book Review';
+  usePageTitle(heading);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!isEditing) return undefined;
@@ -213,19 +214,6 @@ function BookReviewForm() {
     setTimeline(timeline.filter(t => t.id !== id));
   }
 
-  function resetForm() {
-    setStep(1);
-    setTitle('');
-    setAuthor('');
-    setDateReviewed(todayIso());
-    setFacets(makeDefaultFacets());
-    setTimelineEnabled(false);
-    setTimeline([]);
-    setOverallReview('');
-    setCoverImage(null);
-    replaceNewCover(null);
-  }
-
   function handleNext(e) {
     e.preventDefault();
     setError(null);
@@ -243,7 +231,6 @@ function BookReviewForm() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
-    setSuccess(null);
 
     const weights = roundWeightsToTotal(facets.map(f => Number(f.weight)));
     const payload = {
@@ -270,34 +257,25 @@ function BookReviewForm() {
         : coverImage;
 
       if (isEditing) {
-        // Stays on the form as saved, so further changes can follow.
-        const result = await ApiService.updateBookReview(editingTitle, {
+        await ApiService.updateBookReview(editingTitle, {
           ...payload,
           refresh_book_details: refreshBookDetails,
         });
-        setSuccess(result.message || `Changes to "${payload.title}" were saved.`);
-        // Regenerating is a one-off, not something every later save repeats.
-        setRefreshBookDetails(false);
-        setCoverImage(payload.cover_image);
-        // A looked-up cover only shows up once the lambda has found it.
-        if (payload.cover_image) setLiveCoverKey(payload.cover_image);
-        replaceNewCover(null);
       } else {
-        const result = await ApiService.submitBookReview(payload);
-        setSuccess(result.message || `"${payload.title}" was submitted.`);
-        resetForm();
+        await ApiService.submitBookReview(payload);
       }
     } catch (err) {
       setError(err.message);
-    } finally {
       setSubmitting(false);
+      return;
     }
+
+    // Back to the list, as the blog's editor does once it publishes.
+    replaceNewCover(null);
+    navigate('/admin/books', { state: { saved: { title: payload.title, edited: isEditing } } });
   }
 
-  const backLink = isEditing
-    ? <Link to="/admin/books" className="back-link">← Back to Reviews</Link>
-    : <Link to="/admin" className="back-link">← Back to Admin</Link>;
-  const heading = isEditing ? 'Edit Book Review' : 'Upload Book Review';
+  const backLink = <Link to="/admin/books" className="back-link">← Back to Books</Link>;
 
   if (loading || loadError) {
     return (
@@ -316,7 +294,6 @@ function BookReviewForm() {
       <p className="admin-form-hint">Step {step} of 2: {step === 1 ? 'Define & weight facets' : 'Rate facets & add commentary'}</p>
 
       {error && <p className="error">{error}</p>}
-      {success && <p className="admin-success">{success}</p>}
 
       {step === 1 && (
         <form className="admin-form" onSubmit={handleNext}>
@@ -467,7 +444,7 @@ function BookReviewForm() {
           <div className="admin-form-actions">
             <button type="button" className="admin-back-button" onClick={() => setStep(1)}>← Back</button>
             <button type="submit" className="admin-submit-button" disabled={submitting}>
-              {submitting ? (isEditing ? 'Saving...' : 'Submitting...') : (isEditing ? 'Save Changes' : 'Submit Review')}
+              {submitting ? (isEditing ? 'Saving...' : 'Publishing...') : (isEditing ? 'Save Changes' : 'Publish Review')}
             </button>
           </div>
         </form>

@@ -37,7 +37,7 @@ function CoverPicker({ isEditing, coverImage, liveCoverKey, newCover, onNewCover
   let action = null;
   if (newCover) {
     src = newCover.url;
-    caption = `New cover, uploaded when you ${isEditing ? 'save' : 'submit'}.`;
+    caption = `New cover, uploaded when you ${isEditing ? 'save' : 'publish'}.`;
     action = <button type="button" className="admin-remove-button" onClick={() => onNewCover(null)}>Discard</button>;
   } else if (coverImage) {
     src = ApiService.getBookCoverUrl(coverImage);
@@ -55,7 +55,7 @@ function CoverPicker({ isEditing, coverImage, liveCoverKey, newCover, onNewCover
   } else if (isEditing) {
     caption = 'Google Books had no cover for this book.';
   } else {
-    caption = 'Looked up on Google Books when you submit, unless you upload one.';
+    caption = 'Looked up on Google Books when you publish, unless you upload one.';
   }
 
   return (
