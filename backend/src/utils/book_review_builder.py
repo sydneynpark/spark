@@ -6,7 +6,16 @@ existing UpdateBookReview lambda exactly like a hand-authored review.
 See ContentManagement/UpdateBookReview/src/book_review.py for the reader
 side of this format.
 """
+import re
+
 import yaml
+
+FRONT_MATTER_PATTERN = re.compile(r'\A---\s*\n(.*?)\n---\s*(?:\n|\Z)', re.DOTALL)
+# The same commentary headings book_review.py reads: `### <percentage>%` for
+# a point in the book, anything else (by convention `Overall`) for the book
+# as a whole.
+COMMENTARY_HEADING_PATTERN = re.compile(r'^###\s+(.+?)\s*$', re.MULTILINE)
+COMMENTARY_POINT_PATTERN = re.compile(r'^(\d+(?:\.\d+)?)\s*%$')
 
 
 def validate_review_payload(payload):
@@ -32,6 +41,8 @@ def validate_review_payload(payload):
         rating = element.get('rating')
         if not isinstance(rating, (int, float)) or isinstance(rating, bool) or not (0 <= rating <= 10):
             return 'Each facet rating must be a number between 0 and 10'
+        if not isinstance(element.get('elaboration') or '', str):
+            return 'A facet elaboration must be text'
 
     commentary = payload.get('commentary') or []
     if not isinstance(commentary, list):
@@ -54,14 +65,7 @@ def build_review_markdown(payload):
         'title': payload['title'].strip(),
         'author': payload['author'].strip(),
         'date_reviewed': payload['date_reviewed'].strip(),
-        'rating_elements': [
-            {
-                'name': element['name'].strip(),
-                'weight': element['weight'],
-                'rating': element['rating'],
-            }
-            for element in payload['rating_elements']
-        ],
+        'rating_elements': [_rating_element(element) for element in payload['rating_elements']],
     }
     front_matter = yaml.safe_dump(metadata, sort_keys=False, allow_unicode=True)
 
@@ -78,3 +82,61 @@ def build_review_markdown(payload):
     body = '\n## Commentary\n' + '\n\n'.join(sections) + '\n' if sections else ''
 
     return f'---\n{front_matter}---\n{body}'
+
+
+def _rating_element(element):
+    built = {
+        'name': element['name'].strip(),
+        'weight': element['weight'],
+        'rating': element['rating'],
+    }
+    # The form has no field for these, but hand-written reviews can have
+    # them, so editing one passes them back through rather than losing them.
+    elaboration = (element.get('elaboration') or '').strip()
+    if elaboration:
+        built['elaboration'] = elaboration
+    return built
+
+
+def parse_review_markdown(markdown):
+    """The reverse of build_review_markdown: a review file's content, as
+    the payload that would build it. Used to fill in the admin form when
+    editing a review, including ones written by hand."""
+    match = FRONT_MATTER_PATTERN.match(markdown)
+    metadata = (yaml.safe_load(match.group(1)) if match else None) or {}
+    body = markdown[match.end():] if match else markdown
+
+    rating_elements = []
+    for element in metadata.get('rating_elements') or []:
+        parsed = {
+            'name': str(element.get('name') or ''),
+            'weight': element.get('weight') or 0,
+            'rating': element.get('rating') or 0,
+        }
+        if element.get('elaboration'):
+            parsed['elaboration'] = str(element['elaboration']).strip()
+        rating_elements.append(parsed)
+
+    commentary = []
+    overall = []
+    headings = list(COMMENTARY_HEADING_PATTERN.finditer(body))
+    for index, heading in enumerate(headings):
+        end = headings[index + 1].start() if index + 1 < len(headings) else len(body)
+        text = body[heading.end():end].strip()
+        point_match = COMMENTARY_POINT_PATTERN.match(heading.group(1).strip())
+        if point_match:
+            point = float(point_match.group(1))
+            commentary.append({'point': int(point) if point.is_integer() else point, 'text': text})
+        else:
+            overall.append(text)
+
+    return {
+        # `or ''` as in book_review.py: a key present but empty is None.
+        'title': str(metadata.get('title') or ''),
+        'author': str(metadata.get('author') or ''),
+        # Unquoted YYYY-MM-DD comes back from YAML as a date object.
+        'date_reviewed': str(metadata.get('date_reviewed') or ''),
+        'rating_elements': rating_elements,
+        'commentary': commentary,
+        'overall_review': '\n\n'.join(overall),
+    }

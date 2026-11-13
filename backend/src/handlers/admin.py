@@ -2,7 +2,7 @@
 from flask import Blueprint, jsonify, request
 
 from utils.auth_util import verify_credentials, issue_token, require_admin_auth, TOKEN_TTL_SECONDS
-from utils.book_review_builder import validate_review_payload, build_review_markdown
+from utils.book_review_builder import validate_review_payload, build_review_markdown, parse_review_markdown
 from utils.photo_upload_util import (
     PHOTO_CONTENT_TYPE, UploadPathError, accepts_uploads, child_folder_kind,
     new_folder_prefix, photo_key, validate_prefix,
@@ -60,6 +60,53 @@ def create_book_review():
         return jsonify({
             'status': 'processing',
             'message': f'"{title}" was uploaded and is being processed. It should appear on the site shortly.',
+        }), 202
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/book-reviews/<title>', methods=['GET'])
+@require_admin_auth
+def get_book_review(title):
+    """A review as the payload create_book_review takes, read back from its
+    markdown file (the source of truth, rather than the DynamoDB item built
+    from it), for the admin form to edit."""
+    try:
+        markdown = books_admin.get_book_review_markdown(title)
+        if markdown is None:
+            return jsonify({'error': 'Book review not found'}), 404
+        return jsonify(parse_review_markdown(markdown))
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/book-reviews/<title>', methods=['PUT'])
+@require_admin_auth
+def update_book_review(title):
+    """Replace an existing review's markdown file, which UpdateBookReview
+    then reprocesses just as it does a new one -- except that it keeps the
+    book's cover, genres and synopsis unless `refresh_book_details` is true,
+    since looking them up again costs a Google Books and a Gemini call and
+    can change them. The title can't change: it's the file's name, and
+    renaming would mean deleting the old file, which this role isn't
+    allowed to do."""
+    try:
+        payload = request.get_json(silent=True) or {}
+        error = validate_review_payload(payload)
+        if error:
+            return jsonify({'error': error}), 400
+        if payload['title'].strip() != title:
+            return jsonify({'error': "A review's title can't be changed"}), 400
+        if books_admin.get_book_review_markdown(title) is None:
+            return jsonify({'error': 'Book review not found'}), 404
+
+        refresh_book_details = payload.get('refresh_book_details') is True
+        books_admin.publish_book_review(
+            title, build_review_markdown(payload), payload, keep_book_details=not refresh_book_details)
+
+        return jsonify({
+            'status': 'processing',
+            'message': f'Changes to "{title}" were uploaded and are being processed. They should appear on the site shortly.',
         }), 202
     except Exception as e:
         return handle_error(e)

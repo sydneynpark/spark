@@ -88,9 +88,10 @@ class ApiService {
     }
   }
 
-  async fetchBooks() {
+  async fetchBooks(limit) {
     try {
-      const response = await fetch(`${API_BASE_URL}/books`);
+      const query = limit ? `?limit=${limit}` : '';
+      const response = await fetch(`${API_BASE_URL}/books${query}`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       return data.books || [];
@@ -194,6 +195,21 @@ class ApiService {
       method: 'POST',
       body: payload,
       failureMessage: 'Failed to submit book review',
+    });
+  }
+
+  // An existing review, in the same shape submitBookReview takes.
+  async fetchBookReviewForEdit(title) {
+    return this.adminRequest(`/admin/book-reviews/${encodeURIComponent(title)}`, {
+      failureMessage: 'Failed to load book review',
+    });
+  }
+
+  async updateBookReview(title, payload) {
+    return this.adminRequest(`/admin/book-reviews/${encodeURIComponent(title)}`, {
+      method: 'PUT',
+      body: payload,
+      failureMessage: 'Failed to save book review',
     });
   }
 

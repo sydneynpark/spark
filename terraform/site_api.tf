@@ -67,11 +67,22 @@ data "aws_iam_policy_document" "admin_api" {
     ]
   }
 
-  # The photo uploader's folder browser.
+  # The photo uploader's folder browser. And books' so that reading a review
+  # that doesn't exist is a NoSuchKey (a 404), not an AccessDenied.
   statement {
-    sid       = "ListPhotos"
-    actions   = ["s3:ListBucket"]
-    resources = [aws_s3_bucket.content["photos"].arn]
+    sid     = "ListContent"
+    actions = ["s3:ListBucket"]
+    resources = [
+      aws_s3_bucket.content["books"].arn,
+      aws_s3_bucket.content["photos"].arn,
+    ]
+  }
+
+  # Loading a review into the admin form to edit it.
+  statement {
+    sid       = "ReadReviews"
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.content["books"].arn}/*"]
   }
 
   # Review publishing, and photo uploads (whose presigned URLs carry this

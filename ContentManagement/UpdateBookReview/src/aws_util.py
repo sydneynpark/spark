@@ -34,7 +34,30 @@ class AWSUtil:
 
     def store_book_review(self, s3_uri, book_review):
         table = self.dynamodb.Table('spark.wiki.books')
-        table.put_item(Item=book_review.to_item(s3_uri))
+        item = book_review.to_item(s3_uri)
+        table.put_item(Item=item)
+
+        # The table's key is (title, date), but each title has just the one
+        # <title>.md file. So a re-upload whose date_reviewed changed (e.g. an
+        # edit from the admin page) would otherwise leave the old item behind
+        # next to the new one -- and if the date moved earlier, the stale
+        # item would win as the "latest" review.
+        response = table.query(KeyConditionExpression=Key('title').eq(item['title']))
+        for stale in response.get('Items', []):
+            if stale['date'] != item['date']:
+                table.delete_item(Key={'title': item['title'], 'date': stale['date']})
+
+    def get_book_review(self, title):
+        """The stored review for a title, or None. The most recent one, if
+        there's somehow more than one."""
+        table = self.dynamodb.Table('spark.wiki.books')
+        response = table.query(
+            KeyConditionExpression=Key('title').eq(title),
+            ScanIndexForward=False,
+            Limit=1,
+        )
+        items = response.get('Items', [])
+        return items[0] if items else None
 
     def delete_book_review(self, title):
         # The table's primary key is (title, date). A delete event only

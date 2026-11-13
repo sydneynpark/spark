@@ -1,5 +1,6 @@
 # The images only install dependencies (see devstack/python.Dockerfile), so
 # that's all they're sent.
 *
-!backend/src/requirements.txt
+!backend/pyproject.toml
+!backend/uv.lock
 !ContentManagement/*/src/requirements.txt

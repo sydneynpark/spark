@@ -4,35 +4,38 @@
 
 ## Local development
 
-Requirements: 
-* Python version 3.12
+To run the site, backend included, use `./dev up` from the repo root (see
+the [README](../README.md)).
 
-```ps
-python -m venv .env
-.env\Scripts\Activate.ps1
-pip install -U pip wheel
-pip install -r src/requirements.txt
+For an editor or a quick script outside that, a virtualenv with the locked
+dependencies: from this directory, with [uv](https://docs.astral.sh/uv/)
+(which installs Python 3.12, from `.python-version`, if needed),
+
+```sh
+uv sync    # creates .venv
 ```
 
 ## Running Tests
 
-```ps
-$env:PYTHONPATH = ".\src"
-python -m unittest test\test_markdown_util.py
+```sh
+PYTHONPATH=src uv run python -m unittest discover test
 ```
 
 ## Dependencies
 
-`src/requirements.in` lists the direct dependencies. `src/requirements.txt` is
-generated from it, pinning every package (including transitive ones) to an
-exact version and hash; local installs and the deployed Lambda both use it.
-After editing `requirements.in`, regenerate it from this directory:
+`pyproject.toml` lists the direct dependencies. `uv.lock` pins every package
+(including transitive ones) to an exact version and hash; local installs and
+the deployed Lambda both use it. `scripts/build_lambda.py` exports it to a
+hashed requirements file when packaging the Lambda.
 
-```
-uv pip compile src/requirements.in --universal --python-version 3.12 --generate-hashes -o src/requirements.txt
+```sh
+uv add <package>          # add a dependency (and lock it)
+uv lock --upgrade         # move everything to the latest versions
+uv lock --upgrade-package <package>
 ```
 
-Add `--upgrade` to also move everything to the latest versions.
+Commit `uv.lock` along with `pyproject.toml`: the build uses `--frozen`, so it
+fails if they disagree rather than locking anew.
 
 ## Deploying
 

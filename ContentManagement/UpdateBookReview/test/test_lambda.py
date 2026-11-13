@@ -160,6 +160,45 @@ class TestLambda(unittest.TestCase):
         self.assertIsNone(book_review.synopsis)
         self.assertIsNone(book_review.cover_key)
 
+    def test_lambda_keeps_existing_details_when_asked(self):
+        event = sample_events.UploadSampleBookReview
+
+        self.mock_aws.get_s3_object = MagicMock(return_value=sample_events.SampleBookReviewS3Object(
+            {'keep-book-details': 'true'}))
+        self.mock_aws.get_book_review = MagicMock(return_value={
+            'title': 'Project Hail Mary',
+            'cover_key': 'covers/Project Hail Mary.jpg',
+            'genres': ['Science Fiction'],
+            'synopsis': 'The synopsis from last time.',
+        })
+        self.mock_aws.put_s3_object = MagicMock()
+        self.mock_aws.store_book_review = MagicMock()
+
+        lambda_function.lambda_handler(event, None)
+
+        self.mock_aws.get_book_review.assert_called_once_with('Project Hail Mary')
+        self.mock_google_books.find_volume_info.assert_not_called()
+        self.mock_gemini.paraphrase_synopsis.assert_not_called()
+        self.mock_aws.put_s3_object.assert_not_called()
+        args, _ = self.mock_aws.store_book_review.call_args
+        _, book_review = args
+        self.assertEqual(book_review.cover_key, 'covers/Project Hail Mary.jpg')
+        self.assertEqual(book_review.genres, ['Science Fiction'])
+        self.assertEqual(book_review.synopsis, 'The synopsis from last time.')
+
+    def test_lambda_looks_up_details_when_there_are_none_to_keep(self):
+        event = sample_events.UploadSampleBookReview
+
+        self.mock_aws.get_s3_object = MagicMock(return_value=sample_events.SampleBookReviewS3Object(
+            {'keep-book-details': 'true'}))
+        self.mock_aws.get_book_review = MagicMock(return_value=None)
+        self.mock_aws.store_book_review = MagicMock()
+
+        lambda_function.lambda_handler(event, None)
+
+        self.mock_google_books.find_volume_info.assert_called_once_with('Project Hail Mary', 'Andy Weir')
+        self.mock_aws.store_book_review.assert_called_once()
+
     def test_lambda_ignores_cover_image_it_wrote_into_the_same_bucket(self):
         # The cover upload lands in the same spark.wiki.books bucket this
         # lambda is triggered from, so it must not try to process its own

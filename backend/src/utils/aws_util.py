@@ -214,7 +214,7 @@ BOOKS_BUCKET = 'spark.wiki.books'
 
 
 class BooksAdminUtil:
-    """Publishes admin-authored reviews into the same S3 bucket (and same
+    """Reads and publishes admin-authored reviews into the same S3 bucket (and same
     <title>.md key convention) that a manually-uploaded review would use, so
     the existing UpdateBookReview lambda's S3 trigger does the rest (cover
     art, genres, synopsis, and the actual DynamoDB write)."""
@@ -222,12 +222,24 @@ class BooksAdminUtil:
     def __init__(self):
         self.s3 = boto3.client('s3')
 
-    def publish_book_review(self, title, markdown, payload):
+    def get_book_review_markdown(self, title):
+        """The review's <title>.md file content, or None if there isn't one."""
+        try:
+            response = self.s3.get_object(Bucket=BOOKS_BUCKET, Key=f'{title}.md')
+        except self.s3.exceptions.NoSuchKey:
+            return None
+        return response['Body'].read().decode('utf-8')
+
+    def publish_book_review(self, title, markdown, payload, keep_book_details=False):
+        """keep_book_details tells UpdateBookReview to reuse the cover,
+        genres and synopsis it already stored for this title, rather than
+        looking them up again (see its KEEP_DETAILS_METADATA)."""
         self.s3.put_object(
             Bucket=BOOKS_BUCKET,
             Key=f'{title}.md',
             Body=markdown.encode('utf-8'),
             ContentType='text/markdown; charset=utf-8',
+            Metadata={'keep-book-details': 'true'} if keep_book_details else {},
         )
 
 
