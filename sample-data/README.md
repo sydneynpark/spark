@@ -9,7 +9,7 @@ filling the tables, and making the photos' thumbnails.
 | Path | Uploaded to | Processed by |
 | --- | --- | --- |
 | `books/markdown/` | `spark.wiki.books` (`<title>.md`) | `UpdateBookReview`, unless in `books/table/` |
-| `photos/originals/` | `spark.wiki.photos` (`YYYY/MM/DD/<photo>.jpg`) | `UpdatePhotoMetadata` |
+| `photos/originals/` | `spark.wiki.photos` (`birds/YYYY/MM/DD/<photo>.jpg`, and the rest in `photos/`) | `UpdatePhotoMetadata` |
 | `posts/` | `spark.wiki.blog` (`YYYY/MM/DD/<post>.md`) | `UpdateBlogPostMetadata` |
 
 The book reviews are a snapshot of the ones live on spark.wiki, already
@@ -26,11 +26,15 @@ Refresh them from the live site with `./dev snapshot-books`, then
 the live item, in the admin page's format, for any live review whose file is
 missing or out of date.
 
-The photos are a selection of the ones live on spark.wiki, shrunk to at most
+The bird photos are a selection of the ones live on spark.wiki, shrunk to at most
 2048 pixels across, but with the keywords and capture dates
 `UpdatePhotoMetadata` reads still in them. Change the selection in
-[devstack/snapshot_live_photos.py](../devstack/snapshot_live_photos.py), and
-copy it with `./dev snapshot-photos`, then `./dev reseed` to load it.
+[devstack/snapshot_live_birds.py](../devstack/snapshot_live_birds.py), and
+copy it with `./dev snapshot-birds`, then `./dev reseed` to load it.
+
+The other (non-bird) photos, in `originals/photos/`, are placeholders, drawn
+rather than taken. Only the first has a capture date (EXIF); the rest get
+theirs from their folders.
 
 Content added locally, e.g. through the admin page, goes to the emulated
 buckets, not here, so it's gone once the stack stops.

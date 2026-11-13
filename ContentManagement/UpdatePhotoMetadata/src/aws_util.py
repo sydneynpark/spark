@@ -1,7 +1,7 @@
 import boto3
 
 
-def photo_items(s3_uri, taxonomies, date_captured=None):
+def bird_items(s3_uri, taxonomies, date_captured=None):
     # taxonomies is a list of dicts, each containing taxonomic classification
     # for a species found in the photo (class, order, family, genus, species)
     items = []
@@ -27,6 +27,13 @@ def photo_items(s3_uri, taxonomies, date_captured=None):
     return items
 
 
+def photo_item(s3_uri, date_captured=None):
+    item = {'s3_uri': s3_uri}
+    if date_captured:
+        item['date'] = date_captured
+    return item
+
+
 class AWSUtil:
 
     def __init__(self):
@@ -36,10 +43,15 @@ class AWSUtil:
     def get_s3_object(self, bucket, key):
         return self.s3.get_object(Bucket=bucket, Key=key)
 
-    def store_photo_metadata(self, s3_uri, taxonomies, date_captured=None):
+    def store_bird_metadata(self, s3_uri, taxonomies, date_captured=None):
         table = self.dynamodb.Table('spark.wiki.photos')
-        for item in photo_items(s3_uri, taxonomies, date_captured):
+        for item in bird_items(s3_uri, taxonomies, date_captured):
             table.put_item(Item=item)
+
+    def store_photo_metadata(self, s3_uri, date_captured=None):
+        item = photo_item(s3_uri, date_captured)
+        self.dynamodb.Table('spark.wiki.normal-photos').put_item(Item=item)
+        return item
 
     def put_s3_object(self, bucket, key, body, content_type='image/jpeg'):
         self.s3.put_object(Bucket=bucket, Key=key, Body=body, ContentType=content_type)

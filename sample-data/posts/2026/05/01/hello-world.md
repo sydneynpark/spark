@@ -19,6 +19,6 @@ Here's what I'm planning to write about:
 
 A while back I found a pair of Wood Ducks perched together on a branch above the creek. The light was soft and even, and they sat still long enough for me to get a few frames. The drake's colors barely look real up close.
 
-`photo://2026/02/27/2026-02-27 - 864A3942.jpg`
+`photo://birds/2026/02/27/2026-02-27 - 864A3942.jpg`
 
 More soon.

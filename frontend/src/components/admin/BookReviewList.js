@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ApiService from '../../services/api';
+import { usePageTitle } from '../../utils/pageTitle';
 
 // The public /books endpoint only returns its first 50 by default.
 const BOOK_LIMIT = 1000;
@@ -8,6 +9,7 @@ const BOOK_LIMIT = 1000;
 // Picks which review to edit, from the same list the public Books page shows
 // (most recently reviewed first).
 function BookReviewList() {
+  usePageTitle('Edit Book Review');
   const [books, setBooks] = useState(null);
   const [filter, setFilter] = useState('');
   const [error, setError] = useState(null);

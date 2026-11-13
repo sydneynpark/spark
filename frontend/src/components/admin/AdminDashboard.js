@@ -1,7 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom';
 import ApiService from '../../services/api';
+import { usePageTitle } from '../../utils/pageTitle';
 
 function AdminDashboard() {
+  usePageTitle('Admin');
   const navigate = useNavigate();
 
   function handleLogout() {
@@ -18,7 +20,8 @@ function AdminDashboard() {
       <div className="admin-action-list">
         <Link className="admin-action-button" to="/admin/books/new">Upload Book Review</Link>
         <Link className="admin-action-button" to="/admin/books">Edit Book Review</Link>
-        <Link className="admin-action-button" to="/admin/photos/upload">Upload Bird Photos</Link>
+        <Link className="admin-action-button" to="/admin/photos/upload">Upload Photos</Link>
+        <Link className="admin-action-button" to="/admin/birds/upload">Upload Bird Photos</Link>
       </div>
     </div>
   );

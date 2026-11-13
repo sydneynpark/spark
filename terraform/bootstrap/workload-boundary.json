@@ -51,7 +51,8 @@
         "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.books",
         "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.books/index/*",
         "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.photos",
-        "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.photos/index/*"
+        "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.photos/index/*",
+        "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/spark.wiki.normal-photos"
       ]
     },
     {

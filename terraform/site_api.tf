@@ -23,6 +23,7 @@ data "aws_iam_policy_document" "content_api" {
       aws_dynamodb_table.books.arn,
       aws_dynamodb_table.photos.arn,
       "${aws_dynamodb_table.photos.arn}/index/*",
+      aws_dynamodb_table.normal_photos.arn,
     ]
   }
 

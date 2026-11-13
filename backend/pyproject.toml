@@ -8,6 +8,7 @@ dependencies = [
     "flask",
     "serverless-wsgi",
     "pyyaml",
+    "python-frontmatter",
 ]
 
 [tool.uv]

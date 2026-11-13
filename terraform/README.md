@@ -15,8 +15,8 @@ hand.
   the CloudFront distributions serving photos, thumbnails, and book covers
   from their private buckets, and their WAF web ACLs.
 - `site_dns.tf`: the `spark.wiki` Route 53 zone, and the TLS certificates.
-- `content_storage.tf`: the content buckets (photos, thumbnails, book reviews
-  and covers, blog posts) and DynamoDB tables.
+- `content_storage.tf`: the content buckets (photos -- birds/ and photos/ --
+  thumbnails, book reviews and covers, blog posts) and DynamoDB tables.
 - `content_lambdas.tf`: the Lambdas that process uploaded content, and the
   S3 triggers that invoke them.
 - `modules/python_lambda`: one of this repo's Lambda projects, deployed as a
