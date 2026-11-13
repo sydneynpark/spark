@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import ApiService from '../../services/api';
+import CoverPicker from './CoverPicker';
 import FacetWeightSliders from './FacetWeightSliders';
 import { usePageTitle } from '../../utils/pageTitle';
 
@@ -113,6 +114,11 @@ function BookReviewForm() {
   // Editing only: whether to look up the book's cover, genres and synopsis
   // again (a Google Books and a Gemini call) rather than keep the ones it has.
   const [refreshBookDetails, setRefreshBookDetails] = useState(false);
+  // The custom cover saved in the review (an S3 key), if any; one chosen to
+  // replace it, not yet uploaded; and (editing) the cover the site shows now.
+  const [coverImage, setCoverImage] = useState(null);
+  const [newCover, setNewCover] = useState(null);
+  const [liveCoverKey, setLiveCoverKey] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -135,6 +141,7 @@ function BookReviewForm() {
         setTimelineEnabled(review.commentary.length > 0);
         setTimeline(review.commentary.map(entry => ({ id: newId('timeline'), point: entry.point, text: entry.text })));
         setOverallReview(review.overall_review);
+        setCoverImage(review.cover_image);
       })
       .catch(err => {
         if (!cancelled) setLoadError(err.message);
@@ -142,8 +149,19 @@ function BookReviewForm() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+    // Just for showing the current cover, so it's fine if this fails.
+    ApiService.fetchBook(editingTitle)
+      .then(book => { if (!cancelled) setLiveCoverKey(book.cover_key || null); })
+      .catch(() => {});
     return () => { cancelled = true; };
   }, [isEditing, editingTitle]);
+
+  function replaceNewCover(cover) {
+    setNewCover(prev => {
+      if (prev) URL.revokeObjectURL(prev.url);
+      return cover;
+    });
+  }
 
   function updateFacetName(id, name) {
     setFacets(prev => prev.map(f => (f.id === id ? { ...f, name } : f)));
@@ -204,6 +222,8 @@ function BookReviewForm() {
     setTimelineEnabled(false);
     setTimeline([]);
     setOverallReview('');
+    setCoverImage(null);
+    replaceNewCover(null);
   }
 
   function handleNext(e) {
@@ -244,6 +264,11 @@ function BookReviewForm() {
 
     setSubmitting(true);
     try {
+      // Uploaded only now, so it's filed under the title being saved.
+      payload.cover_image = newCover
+        ? (await ApiService.uploadBookCover(payload.title, newCover.blob)).key
+        : coverImage;
+
       if (isEditing) {
         // Stays on the form as saved, so further changes can follow.
         const result = await ApiService.updateBookReview(editingTitle, {
@@ -253,6 +278,10 @@ function BookReviewForm() {
         setSuccess(result.message || `Changes to "${payload.title}" were saved.`);
         // Regenerating is a one-off, not something every later save repeats.
         setRefreshBookDetails(false);
+        setCoverImage(payload.cover_image);
+        // A looked-up cover only shows up once the lambda has found it.
+        if (payload.cover_image) setLiveCoverKey(payload.cover_image);
+        replaceNewCover(null);
       } else {
         const result = await ApiService.submitBookReview(payload);
         setSuccess(result.message || `"${payload.title}" was submitted.`);
@@ -305,6 +334,15 @@ function BookReviewForm() {
               <input type="date" value={dateReviewed} onChange={e => setDateReviewed(e.target.value)} required />
             </label>
           </div>
+
+          <CoverPicker
+            isEditing={isEditing}
+            coverImage={coverImage}
+            liveCoverKey={liveCoverKey}
+            newCover={newCover}
+            onNewCover={replaceNewCover}
+            onUseLookedUpCover={() => setCoverImage(null)}
+          />
 
           <section className="admin-form-section">
             <h3>Facets</h3>
@@ -422,7 +460,7 @@ function BookReviewForm() {
                 />
                 Regenerate cover, genres &amp; synopsis
               </label>
-              <p className="admin-form-hint">Looks the book up on Google Books and rewrites the synopsis with Gemini again. Leave unchecked to keep the current ones.</p>
+              <p className="admin-form-hint">Looks the book up on Google Books and rewrites the synopsis with Gemini again. Leave unchecked to keep the current ones. A custom cover is kept either way.</p>
             </section>
           )}
 

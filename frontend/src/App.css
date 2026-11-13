@@ -1823,6 +1823,49 @@ footer {
 }
 
 /* Admin book review form */
+.admin-cover-picker {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.admin-cover-preview {
+  width: 120px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border: 1px solid #e1e8ed;
+  border-radius: 6px;
+  background: var(--color-card-background);
+  flex-shrink: 0;
+}
+
+.admin-cover-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.admin-cover-details .admin-form-hint {
+  margin: 0;
+}
+
+.admin-cover-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.admin-page label.admin-cover-upload {
+  display: inline-block;
+  cursor: pointer;
+}
+
+.admin-cover-upload input {
+  display: none;
+}
+
 .admin-book-review-page .back-link,
 .admin-book-list-page .back-link,
 .admin-photo-upload-page .back-link {

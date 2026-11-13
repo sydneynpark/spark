@@ -29,8 +29,25 @@ class AWSUtil:
     def put_s3_object(self, bucket, key, body, content_type='image/jpeg'):
         self.s3.put_object(Bucket=bucket, Key=key, Body=body, ContentType=content_type)
 
+    def s3_object_exists(self, bucket, key):
+        try:
+            self.s3.head_object(Bucket=bucket, Key=key)
+        except self.s3.exceptions.ClientError as e:
+            if e.response['Error']['Code'] in ('404', 'NoSuchKey'):
+                return False
+            raise
+        return True
+
     def delete_s3_object(self, bucket, key):
         self.s3.delete_object(Bucket=bucket, Key=key)
+
+    def delete_s3_objects_under(self, bucket, prefix, keep=None):
+        """Delete every object whose key starts with `prefix`, but `keep`."""
+        paginator = self.s3.get_paginator('list_objects_v2')
+        for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+            for obj in page.get('Contents', []):
+                if obj['Key'] != keep:
+                    self.s3.delete_object(Bucket=bucket, Key=obj['Key'])
 
     def store_book_review(self, s3_uri, book_review):
         table = self.dynamodb.Table('spark.wiki.books')

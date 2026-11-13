@@ -5,6 +5,12 @@ COMMENTARY_HEADING_PATTERN = re.compile(r'^###\s+(.+?)\s*$', re.MULTILINE)
 COMMENTARY_POINT_PATTERN = re.compile(r'^(\d+(?:\.\d+)?)\s*%$')
 
 
+def custom_cover_prefix(title):
+    """Where the admin page uploads a book's own cover images, in this
+    bucket: a new key for each upload, as the covers CDN caches by key."""
+    return f'covers/custom/{title}/'
+
+
 class BookReview:
     def __init__(self, post):
         metadata_dict = post.metadata
@@ -19,6 +25,9 @@ class BookReview:
         # unquoted in review files.
         self.date_reviewed = str(metadata_dict.get('date_reviewed', '') or '')
         self.rating_elements = metadata_dict.get('rating_elements', [])
+        # A cover image of the review's own (see custom_cover_prefix), used
+        # instead of looking one up.
+        self.cover_image = metadata_dict.get('cover_image') or None
         self.commentary = self._parse_commentary(post.content)
         # Set by the lambda after successfully downloading and storing an
         # Open Library cover image -- not something the review file itself

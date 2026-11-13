@@ -1,6 +1,7 @@
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from botocore.config import Config
+from botocore.exceptions import ClientError
 from itertools import groupby
 from operator import itemgetter
 
@@ -240,6 +241,18 @@ class BooksAdminUtil:
         except self.s3.exceptions.NoSuchKey:
             return None
         return response['Body'].read().decode('utf-8')
+
+    def object_exists(self, key):
+        try:
+            self.s3.head_object(Bucket=BOOKS_BUCKET, Key=key)
+        except ClientError as e:
+            if e.response['Error']['Code'] in ('404', 'NoSuchKey'):
+                return False
+            raise
+        return True
+
+    def upload_cover_image(self, key, image_bytes):
+        self.s3.put_object(Bucket=BOOKS_BUCKET, Key=key, Body=image_bytes, ContentType='image/jpeg')
 
     def publish_book_review(self, title, markdown, payload, keep_book_details=False):
         """keep_book_details tells UpdateBookReview to reuse the cover,

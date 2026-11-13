@@ -7,6 +7,7 @@ See ContentManagement/UpdateBookReview/src/book_review.py for the reader
 side of this format.
 """
 import re
+import uuid
 
 import yaml
 
@@ -16,6 +17,30 @@ FRONT_MATTER_PATTERN = re.compile(r'\A---\s*\n(.*?)\n---\s*(?:\n|\Z)', re.DOTALL
 # as a whole.
 COMMENTARY_HEADING_PATTERN = re.compile(r'^###\s+(.+?)\s*$', re.MULTILINE)
 COMMENTARY_POINT_PATTERN = re.compile(r'^(\d+(?:\.\d+)?)\s*%$')
+
+# Largest cover image upload accepted, in bytes. The admin page shrinks them
+# well below this; it's what fits in a Lambda request body once API Gateway
+# has base64-encoded it.
+MAX_COVER_IMAGE_BYTES = 4 * 1024 * 1024
+JPEG_MAGIC = b'\xff\xd8\xff'
+
+
+def custom_cover_prefix(title):
+    """Where a book's own cover images go in the books bucket: a new key for
+    each upload, as the covers CDN caches by key. UpdateBookReview's
+    book_review.py has the same, to use and clean them up."""
+    return f'covers/custom/{title}/'
+
+
+def is_custom_cover_key(title, key):
+    """Whether `key` is a cover image uploaded for `title` (see
+    new_custom_cover_key), not some other object in the bucket."""
+    return isinstance(key, str) and re.fullmatch(
+        re.escape(custom_cover_prefix(title)) + r'[0-9a-f]{32}\.jpg', key) is not None
+
+
+def new_custom_cover_key(title):
+    return f'{custom_cover_prefix(title)}{uuid.uuid4().hex}.jpg'
 
 
 def validate_review_payload(payload):
@@ -44,6 +69,10 @@ def validate_review_payload(payload):
         if not isinstance(element.get('elaboration') or '', str):
             return 'A facet elaboration must be text'
 
+    cover_image = payload.get('cover_image')
+    if cover_image is not None and not is_custom_cover_key(payload['title'].strip(), cover_image):
+        return 'The cover image must be one uploaded for this book'
+
     commentary = payload.get('commentary') or []
     if not isinstance(commentary, list):
         return 'Timeline entries must be a list'
@@ -67,6 +96,8 @@ def build_review_markdown(payload):
         'date_reviewed': payload['date_reviewed'].strip(),
         'rating_elements': [_rating_element(element) for element in payload['rating_elements']],
     }
+    if payload.get('cover_image'):
+        metadata['cover_image'] = payload['cover_image']
     front_matter = yaml.safe_dump(metadata, sort_keys=False, allow_unicode=True)
 
     sections = []
@@ -139,4 +170,5 @@ def parse_review_markdown(markdown):
         'rating_elements': rating_elements,
         'commentary': commentary,
         'overall_review': '\n\n'.join(overall),
+        'cover_image': str(metadata['cover_image']) if metadata.get('cover_image') else None,
     }

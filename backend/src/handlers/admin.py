@@ -2,7 +2,10 @@
 from flask import Blueprint, jsonify, request
 
 from utils.auth_util import verify_credentials, issue_token, require_admin_auth, TOKEN_TTL_SECONDS
-from utils.book_review_builder import validate_review_payload, build_review_markdown, parse_review_markdown
+from utils.book_review_builder import (
+    JPEG_MAGIC, MAX_COVER_IMAGE_BYTES, build_review_markdown, new_custom_cover_key,
+    parse_review_markdown, validate_review_payload,
+)
 from utils.photo_upload_util import (
     PHOTO_CONTENT_TYPE, UploadPathError, accepts_uploads, child_folder_kind,
     new_folder_prefix, photo_key, validate_prefix,
@@ -56,7 +59,7 @@ def create_book_review():
     upload succeeds rather than waiting for the review to land in DynamoDB."""
     try:
         payload = request.get_json(silent=True) or {}
-        error = validate_review_payload(payload)
+        error = validate_review_payload(payload) or cover_image_error(payload)
         if error:
             return jsonify({'error': error}), 400
 
@@ -68,6 +71,37 @@ def create_book_review():
             'status': 'processing',
             'message': f'"{title}" was uploaded and is being processed. It should appear on the site shortly.',
         }), 202
+    except Exception as e:
+        return handle_error(e)
+
+
+def cover_image_error(payload):
+    """An error message if the payload names a cover image that was never
+    uploaded (validate_review_payload has checked it's one of this book's)."""
+    if payload.get('cover_image') and not books_admin.object_exists(payload['cover_image']):
+        return 'The cover image was not found; try uploading it again'
+    return None
+
+
+@admin_bp.route('/book-reviews/<title>/cover', methods=['POST'])
+@require_admin_auth
+def upload_book_cover(title):
+    """Store a cover image for a book, sent as the request body, to use
+    instead of the one looked up on Google Books. It takes effect when a
+    review is saved with its key as `cover_image`. The admin page uploads
+    one just before saving, so that there's a title to file it under."""
+    try:
+        image = request.get_data()
+        if request.mimetype != 'image/jpeg' or not image.startswith(JPEG_MAGIC):
+            return jsonify({'error': 'The cover must be a JPEG image'}), 400
+        if len(image) > MAX_COVER_IMAGE_BYTES:
+            return jsonify({'error': 'The cover image is too large'}), 413
+        if not title.strip():
+            return jsonify({'error': 'Title is required'}), 400
+
+        key = new_custom_cover_key(title.strip())
+        books_admin.upload_cover_image(key, image)
+        return jsonify({'key': key}), 201
     except Exception as e:
         return handle_error(e)
 
@@ -99,7 +133,7 @@ def update_book_review(title):
     allowed to do."""
     try:
         payload = request.get_json(silent=True) or {}
-        error = validate_review_payload(payload)
+        error = validate_review_payload(payload) or cover_image_error(payload)
         if error:
             return jsonify({'error': error}), 400
         if payload['title'].strip() != title:

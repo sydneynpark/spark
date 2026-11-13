@@ -189,14 +189,16 @@ class ApiService {
 
   // An authenticated admin API call, returning its JSON body. A 401 means
   // the session expired, so the stored token is dropped too.
+  // body is sent as JSON, or as-is if it's a Blob (e.g. an image).
   async adminRequest(path, { method = 'GET', body, failureMessage } = {}) {
+    const isBlob = body instanceof Blob;
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers: {
-        ...(body !== undefined && { 'Content-Type': 'application/json' }),
+        ...(body !== undefined && { 'Content-Type': isBlob ? body.type : 'application/json' }),
         'Authorization': `Bearer ${this.getAdminToken()}`,
       },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined || isBlob ? body : JSON.stringify(body),
     });
     const data = await response.json().catch(() => ({}));
     if (response.status === 401) {
@@ -220,6 +222,16 @@ class ApiService {
   async fetchBookReviewForEdit(title) {
     return this.adminRequest(`/admin/book-reviews/${encodeURIComponent(title)}`, {
       failureMessage: 'Failed to load book review',
+    });
+  }
+
+  // Stores a JPEG to use as the book's cover, returning its key, for a
+  // review's cover_image when it's saved.
+  async uploadBookCover(title, jpegBlob) {
+    return this.adminRequest(`/admin/book-reviews/${encodeURIComponent(title)}/cover`, {
+      method: 'POST',
+      body: jpegBlob,
+      failureMessage: 'Failed to upload the cover',
     });
   }
 
