@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import ApiService from '../services/api';
+import seededRandom from '../utils/seededRandom';
 
 // photo://<key> embeds name a photo by its key in this bucket, e.g.
 // photo://birds/2026/05/23/<photo>.jpg or photo://photos/2026/07/04/<photo>.jpg.
@@ -32,22 +33,90 @@ export function PostDates({ date, written }) {
 
 const SWIPE_THRESHOLD = 50;
 
+// Embeds are laid out like a scrapbook: each photo tilts a little (leaning
+// the other way from its neighbor in a row; see App.css), is drawn a little
+// bigger or smaller, and sits a little higher or lower -- by amounts seeded
+// from its key, so it lands the same way on every load.
+const MIN_TILT = 1; // degrees
+const MAX_TILT = 6;
+const MIN_SCALE = 0.88;
+const MAX_SCALE = 1.08;
+
+function scrapbookStyle(key) {
+  const random = seededRandom(key);
+  const tilt = MIN_TILT + random() * (MAX_TILT - MIN_TILT);
+  const scale = MIN_SCALE + random() * (MAX_SCALE - MIN_SCALE);
+  const nudge = random() * 2 - 1;
+  return {
+    '--tilt': `${tilt}deg`,
+    '--photo-scale': scale,
+    '--nudge': nudge,
+  };
+}
+
+// Photos of every shape are drawn about the same area, so a portrait doesn't
+// look smaller than a landscape beside it: the size a 3:2 landscape is drawn
+// at is scaled by how much taller or shorter the photo is for the same area,
+// within limits for extreme panoramas or verticals. Until a photo has loaded
+// and its shape is known, it's drawn as a 3:2 landscape.
+const BASE_ASPECT = 3 / 2;
+const MIN_SIZE = 0.7;
+const MAX_SIZE = 1.5;
+
+function sizeForAspect(aspect) {
+  return Math.min(MAX_SIZE, Math.max(MIN_SIZE, Math.sqrt(BASE_ASPECT / aspect)));
+}
+
+// Each photo's width / height by its URL, once loaded. Embeds are re-created
+// whenever the post re-renders (e.g. when the lightbox opens); remembering
+// their shapes keeps them from jumping back to the 3:2 size meanwhile.
+const aspectsBySrc = new Map();
+
+// One photo embed: its thumbnail, scrapbook style, which opens it full size.
+function PhotoEmbed({ photoKey, src, fullsize, onOpen }) {
+  const [aspect, setAspect] = useState(() => aspectsBySrc.get(src));
+
+  const handleLoad = (e) => {
+    const { naturalWidth, naturalHeight } = e.currentTarget;
+    if (!naturalWidth || !naturalHeight) return;
+    const loaded = naturalWidth / naturalHeight;
+    aspectsBySrc.set(src, loaded);
+    setAspect(loaded);
+  };
+
+  const style = {
+    ...scrapbookStyle(photoKey),
+    '--photo-size': aspect ? sizeForAspect(aspect) : 1,
+  };
+  return (
+    <span
+      className="blog-photo-embed"
+      style={style}
+      data-fullsize={fullsize}
+      onClick={e => onOpen(e.currentTarget)}
+    >
+      <img src={src} alt="Photo" onLoad={handleLoad} />
+    </span>
+  );
+}
+
 function isPhotoEmbed(node) {
   return node.type === 'element' && node.tagName === 'code' && node.children.length === 1
     && node.children[0].type === 'text' && node.children[0].value.trim().startsWith('photo://');
 }
 
 // A paragraph of nothing but photo embeds, e.g. one per line: laid out as a
-// row of tiles rather than as text.
+// scrapbook row of photos rather than as text.
 function isPhotoRow(node) {
   const embeds = node.children.filter(child => !(child.type === 'text' && !child.value.trim()));
   return embeds.length > 0 && embeds.every(isPhotoEmbed);
 }
 
-// A post's body: its markdown, with each photo:// embed shown as a tile of the
-// photo's thumbnail, which opens it full size, from where you can page through
-// the post's photos in order. photoUrls gives a URL to show instead, by key,
-// for photos the CDN doesn't serve -- a draft's, until it's published.
+// A post's body: its markdown, with each photo:// embed shown as the photo's
+// thumbnail, scrapbook style, which opens it full size, from where you can
+// page through the post's photos in order. photoUrls gives a URL to show
+// instead, by key, for photos the CDN doesn't serve -- a draft's, until it's
+// published.
 function PostContent({ content, photoUrls = {} }) {
   const contentRef = useRef(null);
   const touchStartRef = useRef(null);
@@ -118,13 +187,12 @@ function PostContent({ content, photoUrls = {} }) {
         const s3Uri = `s3://${PHOTOS_BUCKET}/${key}`;
         const url = photoUrls[key];
         return (
-          <span
-            className="blog-photo-embed"
-            data-fullsize={url || ApiService.getFullsizeUrl(s3Uri)}
-            onClick={e => openLightbox(e.currentTarget)}
-          >
-            <img src={url || ApiService.getThumbnailUrl(s3Uri)} alt="Photo" />
-          </span>
+          <PhotoEmbed
+            photoKey={key}
+            src={url || ApiService.getThumbnailUrl(s3Uri)}
+            fullsize={url || ApiService.getFullsizeUrl(s3Uri)}
+            onOpen={openLightbox}
+          />
         );
       }
       return <code className={className}>{children}</code>;
