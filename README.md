@@ -88,3 +88,20 @@ GOOGLE_BOOKS_API_KEY=... GEMINI_API_KEY=... ./dev reseed
 As of March 2026, LocalStack needs an account and an auth token to run, and
 its free plan is for non-commercial use only. Moto is open source (Apache 2.0),
 needs neither, and covers every service the site uses locally.
+
+## Development
+
+### Creating a worktree for parallel development
+
+Original repo and all of the worktree repos sit as neighboring folders inside a shared parent. The main repo is at `spark` and each worktree repo using branch name XYZ will lives in folder `wt-XYZ`.
+
+From inside the primary repo, run: 
+
+```
+git worktree add -b branchname ../wt-branchname
+```
+
+Then open a new instance of vscode in that worktree
+```
+code ../wt-branchname
+```

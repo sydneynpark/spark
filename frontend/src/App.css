@@ -876,55 +876,81 @@ footer {
   margin: 0.5rem 0;
 }
 
-/* A photo embed: a square tile like the gallery's, the photo filling it, which
-   opens the photo full size. A paragraph of only embeds is a row of them,
-   three across; one in a paragraph of text is on a line of its own, as wide as
-   one of the row's. */
-.post-content {
-  --blog-photo-gap: 1rem;
-}
-
+/* A photo embed, laid out like a print in a scrapbook: the whole photo in a
+   thin white border, tilted a little and drawn a little bigger or smaller
+   (by amounts PostContent.js seeds from its key), which straightens up and
+   lifts while hovered and opens the photo full size. A paragraph of only
+   embeds is a row of them, about three across, sized by height so photos of
+   any shape line up, and overlapping a little; neighbors lean opposite ways.
+   One in a paragraph of text is on a line of its own. */
 .blog-photo-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--blog-photo-gap);
-  margin: 1.25rem 0;
+  container-type: inline-size;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  margin: 1.75rem 0;
+  padding: 0 2cqi;
 }
 
 .blog-photo-embed {
+  --tilt-sign: 1;
+  position: relative;
   display: block;
-  margin: 0.75rem 0;
-  width: calc((100% - 2 * var(--blog-photo-gap)) / 3);
-  overflow: hidden;
-  background: var(--color-background);
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  width: 30%;
+  margin: 1.25rem 0 1.25rem 1rem;
+  padding: 4px;
+  background: var(--color-white);
+  border-radius: 2px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
   cursor: pointer;
+  transform: rotate(calc(var(--tilt-sign) * var(--tilt, 0deg)));
+  transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .blog-photo-row .blog-photo-embed {
   width: auto;
-  margin: 0;
+  margin: 0 -1.2cqi;
+  transform:
+    translateY(calc(var(--nudge, 0) * 1.5cqi))
+    rotate(calc(var(--tilt-sign) * var(--tilt, 0deg)));
+}
+
+.blog-photo-row .blog-photo-embed:nth-child(even) {
+  --tilt-sign: -1;
+}
+
+.blog-photo-embed:hover,
+.blog-photo-row .blog-photo-embed:hover {
+  z-index: 1;
+  transform: rotate(0deg) scale(1.06);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
 }
 
 .post-content .blog-photo-embed img {
   display: block;
   width: 100%;
-  aspect-ratio: 1;
-  object-fit: contain;
+  height: auto;
   margin: 0;
   border-radius: 0;
-  transition: opacity 0.2s;
 }
 
+.post-content .blog-photo-row .blog-photo-embed img {
+  width: auto;
+  height: calc(var(--photo-scale, 1) * 20cqi);
+  max-width: 90cqi;
+}
+
+/* On a narrow screen, photos are drawn bigger: about two across, not three. */
 @media (max-width: 640px) {
-  .post-content {
-    --blog-photo-gap: 0.5rem;
+  .blog-photo-embed {
+    width: 45%;
+    padding: 3px;
   }
-}
 
-.blog-photo-embed:hover img {
-  opacity: 0.85;
+  .post-content .blog-photo-row .blog-photo-embed img {
+    height: calc(var(--photo-scale, 1) * 30cqi);
+  }
 }
 
 .post-content hr {

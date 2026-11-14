@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import ApiService from '../services/api';
+import seededRandom from '../utils/seededRandom';
 
 // photo://<key> embeds name a photo by its key in this bucket, e.g.
 // photo://birds/2026/05/23/<photo>.jpg or photo://photos/2026/07/04/<photo>.jpg.
@@ -32,22 +33,41 @@ export function PostDates({ date, written }) {
 
 const SWIPE_THRESHOLD = 50;
 
+// Embeds are laid out like a scrapbook: each photo tilts a little (leaning
+// the other way from its neighbor in a row), is drawn a little bigger or
+// smaller, and sits a little higher or lower -- by amounts seeded from its
+// key, so it lands the same way on every load.
+const MIN_TILT = 1.5; // degrees
+const MAX_TILT = 4;
+const MIN_SCALE = 0.88;
+const MAX_SCALE = 1.08;
+
+function scrapbookStyle(key) {
+  const random = seededRandom(key);
+  return {
+    '--tilt': `${MIN_TILT + random() * (MAX_TILT - MIN_TILT)}deg`,
+    '--photo-scale': MIN_SCALE + random() * (MAX_SCALE - MIN_SCALE),
+    '--nudge': random() * 2 - 1,
+  };
+}
+
 function isPhotoEmbed(node) {
   return node.type === 'element' && node.tagName === 'code' && node.children.length === 1
     && node.children[0].type === 'text' && node.children[0].value.trim().startsWith('photo://');
 }
 
 // A paragraph of nothing but photo embeds, e.g. one per line: laid out as a
-// row of tiles rather than as text.
+// scrapbook row of photos rather than as text.
 function isPhotoRow(node) {
   const embeds = node.children.filter(child => !(child.type === 'text' && !child.value.trim()));
   return embeds.length > 0 && embeds.every(isPhotoEmbed);
 }
 
-// A post's body: its markdown, with each photo:// embed shown as a tile of the
-// photo's thumbnail, which opens it full size, from where you can page through
-// the post's photos in order. photoUrls gives a URL to show instead, by key,
-// for photos the CDN doesn't serve -- a draft's, until it's published.
+// A post's body: its markdown, with each photo:// embed shown as the photo's
+// thumbnail, scrapbook style, which opens it full size, from where you can
+// page through the post's photos in order. photoUrls gives a URL to show
+// instead, by key, for photos the CDN doesn't serve -- a draft's, until it's
+// published.
 function PostContent({ content, photoUrls = {} }) {
   const contentRef = useRef(null);
   const touchStartRef = useRef(null);
@@ -120,6 +140,7 @@ function PostContent({ content, photoUrls = {} }) {
         return (
           <span
             className="blog-photo-embed"
+            style={scrapbookStyle(key)}
             data-fullsize={url || ApiService.getFullsizeUrl(s3Uri)}
             onClick={e => openLightbox(e.currentTarget)}
           >

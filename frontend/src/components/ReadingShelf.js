@@ -1,6 +1,7 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ApiService from '../services/api';
+import seededRandom from '../utils/seededRandom';
 
 // A cover's area scales with its 0-5 star rating, from MIN_AREA x the base
 // cover at 1 star or below up to MAX_AREA x at 5 stars. Scaling area rather
@@ -62,20 +63,6 @@ function formatShortDate(dateStr) {
   return `${MONTHS[month - 1]} ${day}, ${year}`;
 }
 
-// Seeded from the title, so each book lands in the same spot on every load.
-function seededRandom(str) {
-  let seed = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    seed = Math.imul(seed ^ str.charCodeAt(i), 16777619);
-  }
-  return () => {
-    seed = (seed + 0x6D2B79F5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 function overlapShare(a, b) {
   const w = Math.min(a.left + a.w, b.left + b.w) - Math.max(a.left, b.left);
   const h = Math.min(a.top + a.h, b.top + b.h) - Math.max(a.top, b.top);
@@ -97,7 +84,7 @@ function coverTop(side, offset, h) {
 function scatter(dated) {
   const placed = [];
   dated.forEach(({ book, x }) => {
-    const random = seededRandom(book.title);
+    const random = seededRandom(book.title); // the same spot on every load
     const tilt = (random() * 2 - 1) * MAX_TILT;
     const { w, h } = coverSize(book.star_rating);
     const left = x - w / 2;
