@@ -82,26 +82,29 @@ data "aws_iam_policy_document" "admin_api" {
     ]
   }
 
-  # The photo uploader's folder browser, and the blog post drafts (and,
-  # when publishing one, the posts it mustn't overwrite). Without
-  # ListBucket, checking for an object that isn't there is AccessDenied
-  # rather than NotFound.
+  # The photo uploader's folder browser, the blog post drafts (and, when
+  # publishing one, the posts it mustn't overwrite), and book reviews being
+  # edited, and their cover uploads. Without ListBucket, checking for an
+  # object that isn't there is AccessDenied rather than NotFound.
   statement {
     sid     = "ListContent"
     actions = ["s3:ListBucket"]
     resources = [
+      aws_s3_bucket.content["books"].arn,
       aws_s3_bucket.content["photos"].arn,
       aws_s3_bucket.content["blog"].arn,
     ]
   }
 
   # Drafts and their photos (whose view URLs carry this role's
-  # permissions), and the posts and photos publishing one mustn't overwrite.
+  # permissions), the posts and photos publishing one mustn't overwrite, and
+  # book reviews to edit (and whether a cover upload is there).
   statement {
     sid     = "ReadContent"
     actions = ["s3:GetObject"]
     resources = [
       "${aws_s3_bucket.content["blog"].arn}/*",
+      "${aws_s3_bucket.content["books"].arn}/*",
       "${aws_s3_bucket.content["photos"].arn}/*",
     ]
   }
@@ -119,8 +122,19 @@ data "aws_iam_policy_document" "admin_api" {
     ]
   }
 
+  # Deleting a photo, or an empty folder, from the photos page. Only in the
+  # collections: not anything else in the bucket, like archive/.
+  statement {
+    sid     = "DeletePhotos"
+    actions = ["s3:DeleteObject"]
+    resources = [
+      "${aws_s3_bucket.content["photos"].arn}/birds/*",
+      "${aws_s3_bucket.content["photos"].arn}/photos/*",
+    ]
+  }
+
   # Deleting a draft, or a photo uploaded to one, and a draft once it's
-  # published. Nothing on the site.
+  # published. Nothing else on the site.
   statement {
     sid       = "DeleteDrafts"
     actions   = ["s3:DeleteObject"]

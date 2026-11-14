@@ -1,8 +1,21 @@
-from PIL import Image, ExifTags, ImageOps
+from PIL import Image, ExifTags
 from datetime import datetime
 import io
+import math
 
 EXIF_DATE_FORMAT = '%Y:%m:%d %H:%M:%S'
+
+# How to turn a photo upright for each EXIF Orientation, as
+# ImageOps.exif_transpose does.
+_ORIENTATION_TRANSPOSES = {
+    2: Image.Transpose.FLIP_LEFT_RIGHT,
+    3: Image.Transpose.ROTATE_180,
+    4: Image.Transpose.FLIP_TOP_BOTTOM,
+    5: Image.Transpose.TRANSPOSE,
+    6: Image.Transpose.ROTATE_270,
+    7: Image.Transpose.TRANSVERSE,
+    8: Image.Transpose.ROTATE_90,
+}
 
 class ImageUtil:
 
@@ -31,10 +44,23 @@ class ImageUtil:
 
     def create_thumbnail(self, jpg_stream, min_dimension=300):
         with Image.open(jpg_stream) as img:
+            # Decoded at full size, a large photo takes more memory than the
+            # Lambda has (a 45 MP one is 135 MB, twice that once turned
+            # upright). So the JPEG decoder is asked to shrink it as it
+            # decodes, by up to 1/8, to no smaller than the thumbnail. The
+            # shorter side is the same whichever way up it's stored.
+            w, h = img.size
+            scale = min_dimension / min(w, h)
+            if scale < 1:
+                img.draft(None, (math.ceil(w * scale), math.ceil(h * scale)))
             # Phone photos are often stored sideways, with an EXIF Orientation
             # tag saying how to turn them upright, as browsers do. The
-            # thumbnail doesn't keep the tag, so it's turned upright here.
-            img = ImageOps.exif_transpose(img)
+            # thumbnail doesn't keep the tag (or any EXIF), so it's turned
+            # upright here -- not with ImageOps.exif_transpose, which also
+            # rewrites the EXIF, and fails on some, like a 0/0 fraction.
+            transpose = _ORIENTATION_TRANSPOSES.get(img.getexif().get(ExifTags.Base.Orientation))
+            if transpose is not None:
+                img = img.transpose(transpose)
             w, h = img.size
             if w <= h:
                 new_w = min_dimension

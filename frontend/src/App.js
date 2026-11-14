@@ -16,7 +16,8 @@ import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
 import AdminRoute from './components/admin/AdminRoute';
 import BookReviewForm from './components/admin/BookReviewForm';
-import PhotoUploader from './components/admin/PhotoUploader';
+import BookReviewList from './components/admin/BookReviewList';
+import PhotoManager from './components/admin/PhotoManager';
 import DraftList from './components/admin/DraftList';
 import PostEditor from './components/admin/PostEditor';
 import { usePageTitle } from './utils/pageTitle';
@@ -56,9 +57,14 @@ function App() {
             <Route path="/books/:title" element={<BookReview />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-            <Route path="/admin/books/new" element={<AdminRoute><BookReviewForm /></AdminRoute>} />
-            <Route path="/admin/photos/upload" element={<AdminRoute><PhotoUploader key="photos" collection="photos" /></AdminRoute>} />
-            <Route path="/admin/birds/upload" element={<AdminRoute><PhotoUploader key="birds" collection="birds" /></AdminRoute>} />
+            <Route path="/admin/books/new" element={<AdminRoute><BookReviewForm key="new" /></AdminRoute>} />
+            <Route path="/admin/books" element={<AdminRoute><BookReviewList /></AdminRoute>} />
+            <Route path="/admin/books/:title/edit" element={<AdminRoute><BookReviewForm key="edit" /></AdminRoute>} />
+            <Route path="/admin/photos" element={<AdminRoute><PhotoManager key="photos" collection="photos" /></AdminRoute>} />
+            <Route path="/admin/birds" element={<AdminRoute><PhotoManager key="birds" collection="birds" /></AdminRoute>} />
+            {/* Where the photo pages were when they only uploaded. */}
+            <Route path="/admin/photos/upload" element={<Navigate to="/admin/photos" replace />} />
+            <Route path="/admin/birds/upload" element={<Navigate to="/admin/birds" replace />} />
             <Route path="/admin/posts" element={<AdminRoute><DraftList /></AdminRoute>} />
             {/* :draftId is "new" for a post not saved yet. */}
             <Route path="/admin/posts/:draftId" element={<AdminRoute><PostEditor /></AdminRoute>} />

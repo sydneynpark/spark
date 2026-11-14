@@ -106,9 +106,10 @@ class ApiService {
     }
   }
 
-  async fetchBooks() {
+  async fetchBooks(limit) {
     try {
-      const response = await fetch(`${API_BASE_URL}/books`);
+      const query = limit ? `?limit=${limit}` : '';
+      const response = await fetch(`${API_BASE_URL}/books${query}`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       return data.books || [];
@@ -188,14 +189,16 @@ class ApiService {
 
   // An authenticated admin API call, returning its JSON body. A 401 means
   // the session expired, so the stored token is dropped too.
+  // body is sent as JSON, or as-is if it's a Blob (e.g. an image).
   async adminRequest(path, { method = 'GET', body, failureMessage } = {}) {
+    const isBlob = body instanceof Blob;
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers: {
-        ...(body !== undefined && { 'Content-Type': 'application/json' }),
+        ...(body !== undefined && { 'Content-Type': isBlob ? body.type : 'application/json' }),
         'Authorization': `Bearer ${this.getAdminToken()}`,
       },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined || isBlob ? body : JSON.stringify(body),
     });
     const data = await response.json().catch(() => ({}));
     if (response.status === 401) {
@@ -215,6 +218,31 @@ class ApiService {
     });
   }
 
+  // An existing review, in the same shape submitBookReview takes.
+  async fetchBookReviewForEdit(title) {
+    return this.adminRequest(`/admin/book-reviews/${encodeURIComponent(title)}`, {
+      failureMessage: 'Failed to load book review',
+    });
+  }
+
+  // Stores a JPEG to use as the book's cover, returning its key, for a
+  // review's cover_image when it's saved.
+  async uploadBookCover(title, jpegBlob) {
+    return this.adminRequest(`/admin/book-reviews/${encodeURIComponent(title)}/cover`, {
+      method: 'POST',
+      body: jpegBlob,
+      failureMessage: 'Failed to upload the cover',
+    });
+  }
+
+  async updateBookReview(title, payload) {
+    return this.adminRequest(`/admin/book-reviews/${encodeURIComponent(title)}`, {
+      method: 'PUT',
+      body: payload,
+      failureMessage: 'Failed to save book review',
+    });
+  }
+
   // collection is the photo collection: 'birds' or 'photos'. prefix is a
   // folder in it: '' for its root, else e.g. '2025/05/17/'.
   async fetchPhotoFolder(collection, prefix) {
@@ -229,6 +257,35 @@ class ApiService {
       method: 'POST',
       body: { collection, parent, name },
       failureMessage: 'Failed to create folder',
+    });
+  }
+
+  // Deletes a photo for good, which takes it off the site. Refused (with a
+  // message saying which) for one a blog post or draft embeds.
+  async deletePhoto(collection, folder, filename) {
+    return this.adminRequest('/admin/photos', {
+      method: 'DELETE',
+      body: { collection, folder, filename },
+      failureMessage: 'Failed to delete the photo',
+    });
+  }
+
+  // Renames a photo within its folder, returning its new { name, s3_uri }.
+  // Refused, like deletePhoto, for one a blog post or draft embeds.
+  async renamePhoto(collection, folder, filename, newFilename) {
+    return this.adminRequest('/admin/photos/rename', {
+      method: 'POST',
+      body: { collection, folder, filename, new_filename: newFilename },
+      failureMessage: 'Failed to rename the photo',
+    });
+  }
+
+  // Only an empty year, month, or day folder.
+  async deletePhotoFolder(collection, prefix) {
+    return this.adminRequest('/admin/photos/folders', {
+      method: 'DELETE',
+      body: { collection, prefix },
+      failureMessage: 'Failed to delete the folder',
     });
   }
 

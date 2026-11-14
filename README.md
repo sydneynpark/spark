@@ -60,7 +60,7 @@ page, or with `./dev aws s3 cp` -- is processed as it is in production: a
 photo gets its taxonomy, thumbnail, and table item, and a book review its
 table item. The Python services run from the checkout's source, so edits
 apply without a restart (or, for a Lambda, on its next event). Rebuild with
-`./dev up` after changing a `requirements.txt`.
+`./dev up` after changing a `requirements.txt` or `uv.lock`.
 
 Nothing in the emulator is kept once it stops: each start sets it up again
 from `sample-data/`.

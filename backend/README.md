@@ -4,20 +4,21 @@
 
 ## Local development
 
-Requirements: 
-* Python version 3.12
+To run the site, backend included, use `./dev up` from the repo root (see
+the [README](../README.md)).
 
-```ps
-python -m venv .env
-.env\Scripts\Activate.ps1
-pip install -U pip wheel
-pip install -r src/requirements.txt
+For an editor or a quick script outside that, a virtualenv with the locked
+dependencies: from this directory, with [uv](https://docs.astral.sh/uv/)
+(which installs Python 3.12, from `.python-version`, if needed),
+
+```sh
+uv sync    # creates .venv
 ```
 
 ## Running Tests
 
-```ps
-python -m unittest discover -s test
+```sh
+uv run python -m unittest discover -s test
 ```
 
 Or, in the local stack (see the [README](../README.md)):
@@ -25,16 +26,19 @@ Or, in the local stack (see the [README](../README.md)):
 
 ## Dependencies
 
-`src/requirements.in` lists the direct dependencies. `src/requirements.txt` is
-generated from it, pinning every package (including transitive ones) to an
-exact version and hash; local installs and the deployed Lambda both use it.
-After editing `requirements.in`, regenerate it from this directory:
+`pyproject.toml` lists the direct dependencies. `uv.lock` pins every package
+(including transitive ones) to an exact version and hash; local installs and
+the deployed Lambda both use it. `scripts/build_lambda.py` exports it to a
+hashed requirements file when packaging the Lambda.
 
-```
-uv pip compile src/requirements.in --universal --python-version 3.12 --generate-hashes -o src/requirements.txt
+```sh
+uv add <package>          # add a dependency (and lock it)
+uv lock --upgrade         # move everything to the latest versions
+uv lock --upgrade-package <package>
 ```
 
-Add `--upgrade` to also move everything to the latest versions.
+Commit `uv.lock` along with `pyproject.toml`: the build uses `--frozen`, so it
+fails if they disagree rather than locking anew.
 
 ## Deploying
 
@@ -58,11 +62,19 @@ container, and the stack's edge proxy routes between them the same way.
 The admin page publishes a book review by uploading it to the
 `spark.wiki.books` bucket as `<title>.md`, in the exact format a manual
 upload would use, so `UpdateBookReview`'s S3 trigger enriches it and writes
-it to DynamoDB. Photos go from the browser straight to `spark.wiki.photos`
+it to DynamoDB. A custom cover for it is sent to the API first
+(`POST /admin/book-reviews/<title>/cover`, a JPEG the browser has already
+shrunk), which stores it under `covers/custom/` and returns its key for the
+review's `cover_image` field. Photos go from the browser straight to `spark.wiki.photos`
 (into `birds/` or `photos/`), through presigned PUT URLs (full-size photos
 are bigger than API Gateway and Lambda accept in a request), and
 `UpdatePhotoMetadata`'s S3 trigger processes each one, as it would one
-uploaded in the console.
+uploaded in the console. The same pages rename and delete photos, and
+delete empty date folders: `UpdatePhotoMetadata` takes a deleted photo off
+the site, and a renamed one is copied to its new name (which it processes
+like an upload) and deleted. As the bucket isn't versioned, deleting is for
+good, so the API refuses to delete or rename a photo a blog post or draft
+embeds, which would break it.
 
 Locally, both go to the emulated buckets, whose triggers run the same
 Lambdas, so they show up on the local site the same way.

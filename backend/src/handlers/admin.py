@@ -4,18 +4,23 @@ from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request
 
 from utils.auth_util import verify_credentials, issue_token, require_admin_auth, TOKEN_TTL_SECONDS
-from utils.book_review_builder import validate_review_payload, build_review_markdown
+from utils.book_review_builder import (
+    JPEG_MAGIC, MAX_COVER_IMAGE_BYTES, build_review_markdown, new_custom_cover_key,
+    parse_review_markdown, validate_review_payload,
+)
 from utils.draft_util import (
     DRAFTS_PREFIX, DraftError, build_markdown, draft_fields, draft_photo, draft_photo_key, is_draft_id,
     new_draft_id, plan_publish,
 )
 from utils.photo_upload_util import (
     PHOTO_COLLECTIONS, PHOTO_CONTENT_TYPE, UploadPathError, accepts_uploads, child_folder_kind,
-    new_folder_prefix, photo_key, validate_prefix,
+    deletable_folder, new_folder_prefix, photo_key, renamed_photo_keys, validate_prefix,
 )
 from utils.response_util import handle_error
 
-from utils.aws_util import BooksAdminUtil, DraftsAdminUtil, DynamoUtil, PhotosAdminUtil, PublishConflict
+from utils.aws_util import (
+    PHOTOS_BUCKET, BooksAdminUtil, DraftsAdminUtil, DynamoUtil, PhotosAdminUtil, PublishConflict,
+)
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 books_admin = BooksAdminUtil()
@@ -64,7 +69,7 @@ def create_book_review():
     upload succeeds rather than waiting for the review to land in DynamoDB."""
     try:
         payload = request.get_json(silent=True) or {}
-        error = validate_review_payload(payload)
+        error = validate_review_payload(payload) or cover_image_error(payload)
         if error:
             return jsonify({'error': error}), 400
 
@@ -75,6 +80,84 @@ def create_book_review():
         return jsonify({
             'status': 'processing',
             'message': f'"{title}" was uploaded and is being processed. It should appear on the site shortly.',
+        }), 202
+    except Exception as e:
+        return handle_error(e)
+
+
+def cover_image_error(payload):
+    """An error message if the payload names a cover image that was never
+    uploaded (validate_review_payload has checked it's one of this book's)."""
+    if payload.get('cover_image') and not books_admin.object_exists(payload['cover_image']):
+        return 'The cover image was not found; try uploading it again'
+    return None
+
+
+@admin_bp.route('/book-reviews/<title>/cover', methods=['POST'])
+@require_admin_auth
+def upload_book_cover(title):
+    """Store a cover image for a book, sent as the request body, to use
+    instead of the one looked up on Google Books. It takes effect when a
+    review is saved with its key as `cover_image`. The admin page uploads
+    one just before saving, so that there's a title to file it under."""
+    try:
+        image = request.get_data()
+        if request.mimetype != 'image/jpeg' or not image.startswith(JPEG_MAGIC):
+            return jsonify({'error': 'The cover must be a JPEG image'}), 400
+        if len(image) > MAX_COVER_IMAGE_BYTES:
+            return jsonify({'error': 'The cover image is too large'}), 413
+        if not title.strip():
+            return jsonify({'error': 'Title is required'}), 400
+
+        key = new_custom_cover_key(title.strip())
+        books_admin.upload_cover_image(key, image)
+        return jsonify({'key': key}), 201
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/book-reviews/<title>', methods=['GET'])
+@require_admin_auth
+def get_book_review(title):
+    """A review as the payload create_book_review takes, read back from its
+    markdown file (the source of truth, rather than the DynamoDB item built
+    from it), for the admin form to edit."""
+    try:
+        markdown = books_admin.get_book_review_markdown(title)
+        if markdown is None:
+            return jsonify({'error': 'Book review not found'}), 404
+        return jsonify(parse_review_markdown(markdown))
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/book-reviews/<title>', methods=['PUT'])
+@require_admin_auth
+def update_book_review(title):
+    """Replace an existing review's markdown file, which UpdateBookReview
+    then reprocesses just as it does a new one -- except that it keeps the
+    book's cover, genres and synopsis unless `refresh_book_details` is true,
+    since looking them up again costs a Google Books and a Gemini call and
+    can change them. The title can't change: it's the file's name, and
+    renaming would mean deleting the old file, which this role isn't
+    allowed to do."""
+    try:
+        payload = request.get_json(silent=True) or {}
+        error = validate_review_payload(payload) or cover_image_error(payload)
+        if error:
+            return jsonify({'error': error}), 400
+        if payload['title'].strip() != title:
+            return jsonify({'error': "A review's title can't be changed"}), 400
+        if books_admin.get_book_review_markdown(title) is None:
+            return jsonify({'error': 'Book review not found'}), 404
+
+        refresh_book_details = payload.get('refresh_book_details') is True
+        books_admin.publish_book_review(
+            title, build_review_markdown(payload), payload, keep_book_details=not refresh_book_details)
+
+        return jsonify({
+            'status': 'processing',
+            'message': f'Changes to "{title}" were uploaded and are being processed. They should appear on the site shortly.',
         }), 202
     except Exception as e:
         return handle_error(e)
@@ -124,6 +207,98 @@ def create_photo_folder():
 
         photos_admin.create_folder(collection, prefix)
         return jsonify({'prefix': prefix}), 201
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/photos/folders', methods=['DELETE'])
+@require_admin_auth
+def delete_photo_folder():
+    """Delete an empty year, month, or day folder, `prefix`."""
+    try:
+        data = request.get_json(silent=True) or {}
+        collection = data.get('collection')
+        if collection not in PHOTO_COLLECTIONS:
+            return unknown_collection(collection)
+        prefix = data.get('prefix', '')
+        try:
+            deletable_folder(prefix)
+        except UploadPathError as e:
+            return jsonify({'error': str(e)}), 400
+
+        folders, photos = photos_admin.list_folder(collection, prefix)
+        if folders or photos:
+            return jsonify({'error': 'Only an empty folder can be deleted. Delete what\'s in it first.'}), 409
+        photos_admin.delete_folder(collection, prefix)
+        return '', 204
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/photos', methods=['DELETE'])
+@require_admin_auth
+def delete_photo():
+    """Delete a photo for good (the bucket isn't versioned), and so take it
+    off the site. Not one a blog post or draft embeds, which it would
+    break: it has to come out of the post first."""
+    try:
+        data = request.get_json(silent=True) or {}
+        collection = data.get('collection')
+        if collection not in PHOTO_COLLECTIONS:
+            return unknown_collection(collection)
+        folder, filename = data.get('folder', ''), data.get('filename', '')
+        if not accepts_uploads(folder):
+            return jsonify({'error': 'Only a photo in a day folder (YYYY/MM/DD/) can be deleted.'}), 400
+        try:
+            key = PHOTO_COLLECTIONS[collection] + photo_key(folder, filename)
+        except UploadPathError as e:
+            return jsonify({'error': str(e)}), 400
+
+        if not photos_admin.photo_exists(key):
+            return jsonify({'error': f'"{filename}" isn\'t in this folder anymore.'}), 404
+        posts = photos_admin.posts_using_photo(key)
+        if posts:
+            return jsonify({
+                'error': f'"{filename}" is in the blog post {" and ".join(posts)}. Take it out of the post before deleting it.',
+            }), 409
+
+        photos_admin.delete_photo(key)
+        return '', 204
+    except Exception as e:
+        return handle_error(e)
+
+
+@admin_bp.route('/photos/rename', methods=['POST'])
+@require_admin_auth
+def rename_photo():
+    """Rename a photo, within its folder. Not one a blog post or draft
+    embeds, which refers to it by its name: it has to come out of the post
+    first."""
+    try:
+        data = request.get_json(silent=True) or {}
+        collection = data.get('collection')
+        if collection not in PHOTO_COLLECTIONS:
+            return unknown_collection(collection)
+        filename = data.get('filename', '')
+        try:
+            key, new_key = (PHOTO_COLLECTIONS[collection] + k for k in renamed_photo_keys(
+                data.get('folder', ''), filename, data.get('new_filename')))
+        except UploadPathError as e:
+            return jsonify({'error': str(e)}), 400
+        new_filename = new_key.rsplit('/', 1)[1]
+
+        if not photos_admin.photo_exists(key):
+            return jsonify({'error': f'"{filename}" isn\'t in this folder anymore.'}), 404
+        if photos_admin.photo_exists(new_key):
+            return jsonify({'error': f'There\'s already a photo named "{new_filename}" in this folder.'}), 409
+        posts = photos_admin.posts_using_photo(key)
+        if posts:
+            return jsonify({
+                'error': f'"{filename}" is in the blog post {" and ".join(posts)}, which would lose it. Take it out of the post before renaming it.',
+            }), 409
+
+        photos_admin.rename_photo(key, new_key)
+        return jsonify({'name': new_filename, 's3_uri': f's3://{PHOTOS_BUCKET}/{new_key}'})
     except Exception as e:
         return handle_error(e)
 

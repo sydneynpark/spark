@@ -29,12 +29,52 @@ class AWSUtil:
     def put_s3_object(self, bucket, key, body, content_type='image/jpeg'):
         self.s3.put_object(Bucket=bucket, Key=key, Body=body, ContentType=content_type)
 
+    def s3_object_exists(self, bucket, key):
+        try:
+            self.s3.head_object(Bucket=bucket, Key=key)
+        except self.s3.exceptions.ClientError as e:
+            if e.response['Error']['Code'] in ('404', 'NoSuchKey'):
+                return False
+            raise
+        return True
+
     def delete_s3_object(self, bucket, key):
         self.s3.delete_object(Bucket=bucket, Key=key)
 
+    def delete_s3_objects_under(self, bucket, prefix, keep=None):
+        """Delete every object whose key starts with `prefix`, but `keep`."""
+        paginator = self.s3.get_paginator('list_objects_v2')
+        for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+            for obj in page.get('Contents', []):
+                if obj['Key'] != keep:
+                    self.s3.delete_object(Bucket=bucket, Key=obj['Key'])
+
     def store_book_review(self, s3_uri, book_review):
         table = self.dynamodb.Table('spark.wiki.books')
-        table.put_item(Item=book_review.to_item(s3_uri))
+        item = book_review.to_item(s3_uri)
+        table.put_item(Item=item)
+
+        # The table's key is (title, date), but each title has just the one
+        # <title>.md file. So a re-upload whose date_reviewed changed (e.g. an
+        # edit from the admin page) would otherwise leave the old item behind
+        # next to the new one -- and if the date moved earlier, the stale
+        # item would win as the "latest" review.
+        response = table.query(KeyConditionExpression=Key('title').eq(item['title']))
+        for stale in response.get('Items', []):
+            if stale['date'] != item['date']:
+                table.delete_item(Key={'title': item['title'], 'date': stale['date']})
+
+    def get_book_review(self, title):
+        """The stored review for a title, or None. The most recent one, if
+        there's somehow more than one."""
+        table = self.dynamodb.Table('spark.wiki.books')
+        response = table.query(
+            KeyConditionExpression=Key('title').eq(title),
+            ScanIndexForward=False,
+            Limit=1,
+        )
+        items = response.get('Items', [])
+        return items[0] if items else None
 
     def delete_book_review(self, title):
         # The table's primary key is (title, date). A delete event only

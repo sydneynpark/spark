@@ -1,0 +1,16 @@
+[project]
+name = "spark-wiki-backend"
+version = "0.0.0"
+description = "ContentAPI and AdminAPI, the Lambdas behind api.spark.wiki"
+requires-python = "==3.12.*"
+dependencies = [
+    "boto3",
+    "flask",
+    "serverless-wsgi",
+    "pyyaml",
+    "python-frontmatter",
+]
+
+[tool.uv]
+# Not an installable package: just the dependencies src/ runs with.
+package = false

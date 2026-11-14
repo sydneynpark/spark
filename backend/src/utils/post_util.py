@@ -52,6 +52,13 @@ def extract_preview(markdown_text, max_chars=160):
     return text
 
 
+def photo_refs(markdown_text):
+    """The keys of the photos a post (or draft) embeds, in its body or as
+    its frontmatter `photo`: the photos bucket keys of published ones, or
+    drafts/... keys of ones uploaded to a draft."""
+    return {ref.strip() for ref in PHOTO_REF_PATTERN.findall(markdown_text)}
+
+
 def photo_uri(ref):
     """The S3 URI of a photo given as `photo://<key>` or just <key>."""
     key = ref.strip()

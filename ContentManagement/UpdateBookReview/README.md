@@ -11,6 +11,10 @@ For each review, the lambda also looks the book up on the Google Books API -- on
 * `GoogleBooksAPIKey`
 * `GeminiAPIKey`
 
+An upload whose S3 object has the user metadata `keep-book-details: true` skips that lookup and keeps the cover, genres and synopsis already stored for the title (or looks them up if there aren't any yet). The admin page sets it when editing a review, unless "Regenerate cover, genres & synopsis" is checked.
+
+A review can have a cover of its own instead: a `cover_image:` frontmatter field naming a JPEG under `covers/custom/<title>/` in this bucket, which the admin page uploads with a new key each time (the covers CDN caches by key). The lambda then uses it, and doesn't look up a cover. Each time it processes a review, it deletes that title's other custom covers -- all of them if the review no longer has one, in which case it goes back to the cover looked up before (or looks one up). Deleting a review deletes its custom covers too.
+
 (`GeminiProjectNumber` is not currently used -- the Gemini call uses the simple API-key-based Gemini Developer API, not Vertex AI, so no GCP project is needed.)
 
 Locally, the stack in the [README](../../README.md) runs this lambda on each review uploaded to its emulated `spark.wiki.books` bucket. It starts with the live site's reviews already processed (see `sample-data/README.md`), and only enriches new ones when it's given the API keys (see the README's "Book reviews").

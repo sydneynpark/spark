@@ -26,16 +26,18 @@ data "aws_iam_policy_document" "update_photo_metadata" {
     resources = ["${aws_s3_bucket.content["photos"].arn}/*"]
   }
 
+  # Made when a photo is processed, deleted along with it.
   statement {
     sid       = "WriteThumbnails"
-    actions   = ["s3:PutObject"]
+    actions   = ["s3:PutObject", "s3:DeleteObject"]
     resources = ["${aws_s3_bucket.content["thumbnails"].arn}/*"]
   }
 
-  # Bird photos' taxonomy, and the rest's dates.
+  # Bird photos' taxonomy, and the rest's dates; and deleting them, which
+  # for a bird photo means finding its items (one per species).
   statement {
     sid     = "WritePhotoMetadata"
-    actions = ["dynamodb:PutItem"]
+    actions = ["dynamodb:PutItem", "dynamodb:Query", "dynamodb:DeleteItem"]
     resources = [
       aws_dynamodb_table.photos.arn,
       aws_dynamodb_table.normal_photos.arn,

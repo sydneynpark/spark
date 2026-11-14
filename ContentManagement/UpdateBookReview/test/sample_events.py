@@ -128,12 +128,13 @@ UploadCoverImage = {
   ]
 }
 
-def SampleBookReviewS3Object():
+def SampleBookReviewS3Object(metadata=None):
   # A function rather than a static dict: StreamingBody wraps a single-use
   # file handle (like a real S3 get_object response), so a shared instance
   # would come back empty for every test after the first one that reads it.
   return {
     'Body': file_to_streamingbody('sample-book-review'),
+    'Metadata': metadata or {},
     'DeleteMarker': False,
     'AcceptRanges': 'string',
     'Expiration': 'string',

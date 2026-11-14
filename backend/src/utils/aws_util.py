@@ -12,7 +12,7 @@ from utils.draft_util import (
     draft_prefix, editing_key, new_draft_id, parse_draft,
 )
 from utils.photo_upload_util import PHOTO_COLLECTIONS, PHOTO_CONTENT_TYPE
-from utils.post_util import BLOG_BUCKET, POSTS_SLUG_INDEX, POSTS_TABLE, parse_post, post_item
+from utils.post_util import BLOG_BUCKET, POSTS_SLUG_INDEX, POSTS_TABLE, parse_post, photo_refs, post_item
 
 def review_date(book):
     return book.get('date', 0)
@@ -264,20 +264,44 @@ BOOKS_BUCKET = 'spark.wiki.books'
 
 
 class BooksAdminUtil:
-    """Publishes admin-authored reviews into the same S3 bucket (and same
-    <title>.md key convention) that a manually-uploaded review would use, so
-    the existing UpdateBookReview lambda's S3 trigger does the rest (cover
-    art, genres, synopsis, and the actual DynamoDB write)."""
+    """Reads and publishes admin-authored reviews in the same S3 bucket (and
+    same <title>.md key convention) that a manually-uploaded review would
+    use, so the existing UpdateBookReview lambda's S3 trigger does the rest
+    (cover art, genres, synopsis, and the actual DynamoDB write)."""
 
     def __init__(self):
         self.s3 = boto3.client('s3')
 
-    def publish_book_review(self, title, markdown, payload):
+    def get_book_review_markdown(self, title):
+        """The review's <title>.md file content, or None if there isn't one."""
+        try:
+            response = self.s3.get_object(Bucket=BOOKS_BUCKET, Key=f'{title}.md')
+        except self.s3.exceptions.NoSuchKey:
+            return None
+        return response['Body'].read().decode('utf-8')
+
+    def object_exists(self, key):
+        try:
+            self.s3.head_object(Bucket=BOOKS_BUCKET, Key=key)
+        except ClientError as e:
+            if e.response['Error']['Code'] in ('404', 'NoSuchKey'):
+                return False
+            raise
+        return True
+
+    def upload_cover_image(self, key, image_bytes):
+        self.s3.put_object(Bucket=BOOKS_BUCKET, Key=key, Body=image_bytes, ContentType='image/jpeg')
+
+    def publish_book_review(self, title, markdown, payload, keep_book_details=False):
+        """keep_book_details tells UpdateBookReview to reuse the cover,
+        genres and synopsis it already stored for this title, rather than
+        looking them up again (see its KEEP_DETAILS_METADATA)."""
         self.s3.put_object(
             Bucket=BOOKS_BUCKET,
             Key=f'{title}.md',
             Body=markdown.encode('utf-8'),
             ContentType='text/markdown; charset=utf-8',
+            Metadata={'keep-book-details': 'true'} if keep_book_details else {},
         )
 
 
@@ -326,6 +350,49 @@ class PhotosAdminUtil:
         empty placeholder object the S3 console's "Create folder" does, so
         the folder exists before anything is uploaded into it."""
         self.s3.put_object(Bucket=PHOTOS_BUCKET, Key=f'{PHOTO_COLLECTIONS[collection]}{prefix}', Body=b'')
+
+    def photo_exists(self, key):
+        try:
+            self.s3.head_object(Bucket=PHOTOS_BUCKET, Key=key)
+        except ClientError as e:
+            if e.response['Error']['Code'] in ('404', 'NoSuchKey'):
+                return False
+            raise
+        return True
+
+    def delete_photo(self, key):
+        """Delete a photo. UpdatePhotoMetadata's S3 trigger then takes it
+        off the site: its metadata, and its thumbnail."""
+        self.s3.delete_object(Bucket=PHOTOS_BUCKET, Key=key)
+
+    def rename_photo(self, key, new_key):
+        """S3 has no renaming, so copy it to `new_key` and delete it.
+        UpdatePhotoMetadata's S3 triggers then process the copy as a new
+        photo (its species and date come from the file, so they're the same)
+        and take the old one off the site."""
+        self.s3.copy_object(Bucket=PHOTOS_BUCKET, Key=new_key, CopySource={'Bucket': PHOTOS_BUCKET, 'Key': key})
+        self.s3.delete_object(Bucket=PHOTOS_BUCKET, Key=key)
+
+    def delete_folder(self, collection, prefix):
+        """Delete an empty folder's placeholder object (see create_folder).
+        A folder with none, there only because a photo was in it, is
+        already gone once its last photo is."""
+        self.s3.delete_object(Bucket=PHOTOS_BUCKET, Key=f'{PHOTO_COLLECTIONS[collection]}{prefix}')
+
+    def posts_using_photo(self, key):
+        """The titles of the blog posts, and drafts, that embed the photo at
+        `key`, which deleting it would break."""
+        titles = []
+        paginator = self.s3.get_paginator('list_objects_v2')
+        for page in paginator.paginate(Bucket=BLOG_BUCKET):
+            for obj in page.get('Contents', []):
+                if not obj['Key'].endswith('.md'):
+                    continue
+                markdown = self.s3.get_object(Bucket=BLOG_BUCKET, Key=obj['Key'])['Body'].read().decode('utf-8')
+                if key in photo_refs(markdown):
+                    title = parse_post(obj['Key'], markdown)['title'] or 'Untitled'
+                    titles.append(f'the draft "{title}"' if obj['Key'].startswith('drafts/') else f'"{title}"')
+        return titles
 
     def presign_upload(self, key, content_type):
         """A URL the browser can PUT the photo to directly, at bucket key

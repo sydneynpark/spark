@@ -1,7 +1,8 @@
 
 import io
+import struct
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from PIL import Image
 import test.sample_events as sample_events
 import img_util
@@ -43,6 +44,55 @@ class TestImageUtil(unittest.TestCase):
         with Image.open(self.img_util.create_thumbnail(stored, min_dimension=300)) as thumbnail:
             assert thumbnail.size == (300, 400)
             # The corner turned clockwise to the top right.
+            r, g, b = thumbnail.getpixel((290, 10))
+            assert r > 200 and b < 50
+
+    def test_create_thumbnail_shrinks_a_large_photo_as_it_decodes(self):
+        # 4000x3000, stored sideways, as a camera's portrait photo is.
+        img = Image.new('RGB', (4000, 3000), 'blue')
+        img.paste('red', (0, 0, 1000, 1000))
+        exif = Image.Exif()
+        exif[0x0112] = 6
+        stored = io.BytesIO()
+        img.save(stored, format='JPEG', exif=exif)
+        stored.seek(0)
+
+        resized_from = []
+        resize = Image.Image.resize
+
+        def spy(image, size, *args, **kwargs):
+            resized_from.append(image.size)
+            return resize(image, size, *args, **kwargs)
+
+        with patch.object(Image.Image, 'resize', spy):
+            thumbnail_stream = self.img_util.create_thumbnail(stored, min_dimension=300)
+
+        # Decoded at 1/8 scale, and turned upright, rather than all 12 MP.
+        assert resized_from == [(375, 500)]
+        with Image.open(thumbnail_stream) as thumbnail:
+            assert thumbnail.size == (300, 400)
+            r, g, b = thumbnail.getpixel((290, 10))
+            assert r > 200 and b < 50
+
+    def test_create_thumbnail_of_a_sideways_photo_with_a_zero_over_zero_exif_value(self):
+        # EXIF with two tags: Orientation 6, and an XResolution of 0/0, which
+        # Pillow can read but fails to write back out. Little-endian TIFF:
+        # the header, then the IFD at offset 8, then the fraction's data
+        # after it, at offset 8 + 2 + 2 * 12 + 4 = 38.
+        tiff = b'II*\x00' + struct.pack('<I', 8)
+        tiff += struct.pack('<H', 2)
+        tiff += struct.pack('<HHIHH', 0x0112, 3, 1, 6, 0)
+        tiff += struct.pack('<HHII', 0x011A, 5, 1, 38)
+        tiff += struct.pack('<I', 0)
+        tiff += struct.pack('<II', 0, 0)
+        img = Image.new('RGB', (40, 30), 'blue')
+        img.paste('red', (0, 0, 10, 10))
+        stored = io.BytesIO()
+        img.save(stored, format='JPEG', exif=b'Exif\x00\x00' + tiff)
+        stored.seek(0)
+
+        with Image.open(self.img_util.create_thumbnail(stored, min_dimension=300)) as thumbnail:
+            assert thumbnail.size == (300, 400)
             r, g, b = thumbnail.getpixel((290, 10))
             assert r > 200 and b < 50
 

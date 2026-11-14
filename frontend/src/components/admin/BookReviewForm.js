@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import ApiService from '../../services/api';
+import CoverPicker from './CoverPicker';
 import FacetWeightSliders from './FacetWeightSliders';
 import { usePageTitle } from '../../utils/pageTitle';
 
@@ -43,6 +44,21 @@ function makeDefaultFacets() {
   }));
 }
 
+// An existing review's facets, for editing it. Hand-written reviews weight
+// facets on any scale (e.g. 2-5 each), so they're rescaled onto the 100-point
+// budget -- same proportions, so the same overall rating. Elaborations have
+// no field in the form, but are carried along so saving doesn't drop them.
+function facetsFromReview(ratingElements) {
+  const facets = ratingElements.map(element => ({
+    id: newId('facet'),
+    name: element.name,
+    weight: Number(element.weight),
+    rating: Number(element.rating),
+    elaboration: element.elaboration,
+  }));
+  return facets.length === 0 ? facets : scaleWeightsTo(facets, TOTAL_WEIGHT);
+}
+
 // Every submitted facet keeps at least this much weight, so it always gets a
 // visible slice on the review's rating chart -- a facet dragged to 0 would
 // otherwise show up in the chart's legend with a rating but no slice.
@@ -79,7 +95,14 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Both uploads new reviews (/admin/books/new) and edits existing ones
+// (/admin/books/:title/edit). A review's title is its file's name in S3, so
+// it can't be changed when editing.
 function BookReviewForm() {
+  const { title: editingTitle } = useParams();
+  const isEditing = editingTitle !== undefined;
+  const [loading, setLoading] = useState(isEditing);
+  const [loadError, setLoadError] = useState(null);
   const [step, setStep] = useState(1);
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
@@ -88,10 +111,58 @@ function BookReviewForm() {
   const [timelineEnabled, setTimelineEnabled] = useState(false);
   const [timeline, setTimeline] = useState([]);
   const [overallReview, setOverallReview] = useState('');
+  // Editing only: whether to look up the book's cover, genres and synopsis
+  // again (a Google Books and a Gemini call) rather than keep the ones it has.
+  const [refreshBookDetails, setRefreshBookDetails] = useState(false);
+  // The custom cover saved in the review (an S3 key), if any; one chosen to
+  // replace it, not yet uploaded; and (editing) the cover the site shows now.
+  const [coverImage, setCoverImage] = useState(null);
+  const [newCover, setNewCover] = useState(null);
+  const [liveCoverKey, setLiveCoverKey] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-  usePageTitle('Upload Book Review');
+  const heading = isEditing ? 'Edit Book Review' : 'New Book Review';
+  usePageTitle(heading);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isEditing) return undefined;
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    ApiService.fetchBookReviewForEdit(editingTitle)
+      .then(review => {
+        if (cancelled) return;
+        setStep(1);
+        setTitle(review.title);
+        setAuthor(review.author);
+        // Some hand-written reviews have no date; it's required to save.
+        setDateReviewed(review.date_reviewed);
+        setFacets(facetsFromReview(review.rating_elements));
+        setTimelineEnabled(review.commentary.length > 0);
+        setTimeline(review.commentary.map(entry => ({ id: newId('timeline'), point: entry.point, text: entry.text })));
+        setOverallReview(review.overall_review);
+        setCoverImage(review.cover_image);
+      })
+      .catch(err => {
+        if (!cancelled) setLoadError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    // Just for showing the current cover, so it's fine if this fails.
+    ApiService.fetchBook(editingTitle)
+      .then(book => { if (!cancelled) setLiveCoverKey(book.cover_key || null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [isEditing, editingTitle]);
+
+  function replaceNewCover(cover) {
+    setNewCover(prev => {
+      if (prev) URL.revokeObjectURL(prev.url);
+      return cover;
+    });
+  }
 
   function updateFacetName(id, name) {
     setFacets(prev => prev.map(f => (f.id === id ? { ...f, name } : f)));
@@ -143,17 +214,6 @@ function BookReviewForm() {
     setTimeline(timeline.filter(t => t.id !== id));
   }
 
-  function resetForm() {
-    setStep(1);
-    setTitle('');
-    setAuthor('');
-    setDateReviewed(todayIso());
-    setFacets(makeDefaultFacets());
-    setTimelineEnabled(false);
-    setTimeline([]);
-    setOverallReview('');
-  }
-
   function handleNext(e) {
     e.preventDefault();
     setError(null);
@@ -171,7 +231,6 @@ function BookReviewForm() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
-    setSuccess(null);
 
     const weights = roundWeightsToTotal(facets.map(f => Number(f.weight)));
     const payload = {
@@ -182,6 +241,7 @@ function BookReviewForm() {
         name: f.name.trim(),
         weight: weights[index],
         rating: Number(f.rating),
+        ...(f.elaboration && { elaboration: f.elaboration }),
       })),
       commentary: timelineEnabled
         ? timeline.map(t => ({ point: Number(t.point), text: t.text.trim() })).filter(t => t.text)
@@ -191,31 +251,56 @@ function BookReviewForm() {
 
     setSubmitting(true);
     try {
-      const result = await ApiService.submitBookReview(payload);
-      setSuccess(result.message || `"${payload.title}" was submitted.`);
-      resetForm();
+      // Uploaded only now, so it's filed under the title being saved.
+      payload.cover_image = newCover
+        ? (await ApiService.uploadBookCover(payload.title, newCover.blob)).key
+        : coverImage;
+
+      if (isEditing) {
+        await ApiService.updateBookReview(editingTitle, {
+          ...payload,
+          refresh_book_details: refreshBookDetails,
+        });
+      } else {
+        await ApiService.submitBookReview(payload);
+      }
     } catch (err) {
       setError(err.message);
-    } finally {
       setSubmitting(false);
+      return;
     }
+
+    // Back to the list, as the blog's editor does once it publishes.
+    replaceNewCover(null);
+    navigate('/admin/books', { state: { saved: { title: payload.title, edited: isEditing } } });
+  }
+
+  const backLink = <Link to="/admin/books" className="back-link">← Back to Books</Link>;
+
+  if (loading || loadError) {
+    return (
+      <div className="admin-page admin-book-review-page">
+        {backLink}
+        <h2>{heading}</h2>
+        {loadError ? <p className="error">{loadError}</p> : <p>Loading review...</p>}
+      </div>
+    );
   }
 
   return (
     <div className="admin-page admin-book-review-page">
-      <Link to="/admin" className="back-link">← Back to Admin</Link>
-      <h2>Upload Book Review</h2>
+      {backLink}
+      <h2>{heading}</h2>
       <p className="admin-form-hint">Step {step} of 2: {step === 1 ? 'Define & weight facets' : 'Rate facets & add commentary'}</p>
 
       {error && <p className="error">{error}</p>}
-      {success && <p className="admin-success">{success}</p>}
 
       {step === 1 && (
         <form className="admin-form" onSubmit={handleNext}>
           <div className="admin-form-row">
             <label>
               Title
-              <input type="text" value={title} onChange={e => setTitle(e.target.value)} required />
+              <input type="text" value={title} onChange={e => setTitle(e.target.value)} disabled={isEditing} required />
             </label>
             <label>
               Author
@@ -226,6 +311,15 @@ function BookReviewForm() {
               <input type="date" value={dateReviewed} onChange={e => setDateReviewed(e.target.value)} required />
             </label>
           </div>
+
+          <CoverPicker
+            isEditing={isEditing}
+            coverImage={coverImage}
+            liveCoverKey={liveCoverKey}
+            newCover={newCover}
+            onNewCover={replaceNewCover}
+            onUseLookedUpCover={() => setCoverImage(null)}
+          />
 
           <section className="admin-form-section">
             <h3>Facets</h3>
@@ -333,10 +427,24 @@ function BookReviewForm() {
             </label>
           </section>
 
+          {isEditing && (
+            <section className="admin-form-section">
+              <label className="admin-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={refreshBookDetails}
+                  onChange={e => setRefreshBookDetails(e.target.checked)}
+                />
+                Regenerate cover, genres &amp; synopsis
+              </label>
+              <p className="admin-form-hint">Looks the book up on Google Books and rewrites the synopsis with Gemini again. Leave unchecked to keep the current ones. A custom cover is kept either way.</p>
+            </section>
+          )}
+
           <div className="admin-form-actions">
             <button type="button" className="admin-back-button" onClick={() => setStep(1)}>← Back</button>
             <button type="submit" className="admin-submit-button" disabled={submitting}>
-              {submitting ? 'Submitting...' : 'Submit Review'}
+              {submitting ? (isEditing ? 'Saving...' : 'Publishing...') : (isEditing ? 'Save Changes' : 'Publish Review')}
             </button>
           </div>
         </form>

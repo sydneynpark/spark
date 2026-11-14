@@ -7,9 +7,16 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_ROOT_USER_ACTION=ignore
-COPY backend/src/requirements.txt /tmp/requirements/backend.txt
+# The backend's dependencies are locked in uv.lock, exported to the same
+# hashed requirements file scripts/build_lambda.py packages it from. The same
+# uv as CI (.github/workflows/deploy.yml).
+COPY --from=ghcr.io/astral-sh/uv:0.12.23 /uv /usr/local/bin/uv
+COPY backend/pyproject.toml backend/uv.lock /tmp/backend/
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --require-hashes -r /tmp/requirements/backend.txt
+    mkdir -p /tmp/requirements \
+    && uv export --project /tmp/backend --frozen --no-dev --no-header --no-emit-project \
+        --format requirements-txt --output-file /tmp/requirements/backend.txt \
+    && pip install --require-hashes -r /tmp/requirements/backend.txt
 
 # Each content Lambda gets a virtualenv with just its own requirements, as
 # its own deployment package has. The trigger that runs them

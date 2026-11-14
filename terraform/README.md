@@ -33,9 +33,10 @@ build lambdas  ┴→ plan → (waits for your approval) → apply
 ```
 
 - **Build**: [scripts/build_lambda.py](../scripts/build_lambda.py) packages
-  each Lambda project as `.build/lambda.zip` -- its `src/` plus the locked
-  `src/requirements.txt`, installed for the project's `.python-version` on
-  Lambda's platform -- and `npm run build` builds the frontend. Both are
+  each Lambda project as `.build/lambda.zip` -- its `src/` plus its locked
+  dependencies (`uv.lock`, or `src/requirements.txt`), installed for the
+  project's `.python-version` on Lambda's platform -- and `npm run build`
+  builds the frontend. Both are
   reproducible, so unchanged code is never redeployed.
 - **Plan**: `terraform plan` with a read-only role, against the build -- what
   deploying this push would change. Read it in the job's log.

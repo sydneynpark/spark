@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
 Packages one of this repo's Lambda projects as <project>/.build/lambda.zip:
-the project's src/ plus its locked dependencies (src/requirements.txt),
-installed for the Python version in <project>/.python-version. Terraform
+the project's src/ plus its locked dependencies (uv.lock, or for projects
+not yet moved to one, src/requirements.txt), installed for the Python
+version in <project>/.python-version. Terraform
 (terraform/modules/python_lambda) deploys the zip, with a runtime read from
 that same file.
 
@@ -65,6 +66,25 @@ def main():
 
     # `uv run` exposes its own executable as $UV to the scripts it runs.
     uv = os.environ.get("UV", "uv")
+
+    if (project_dir / "uv.lock").exists():
+        # The lock as a hashed requirements file, for the same hash-checked
+        # install below. --frozen: fail rather than re-lock if pyproject.toml
+        # and uv.lock disagree.
+        requirements = build_dir / "requirements.txt"
+        subprocess.run(
+            [
+                uv, "export",
+                "--project", str(project_dir),
+                "--frozen", "--no-dev", "--no-header", "--no-emit-project",
+                "--format", "requirements-txt",
+                "--output-file", str(requirements),
+            ],
+            check=True,
+        )
+    else:
+        requirements = src_dir / "requirements.txt"
+
     subprocess.run(
         [
             uv, "pip", "install",
@@ -73,7 +93,7 @@ def main():
             "--python-version", python_version,
             "--only-binary", ":all:",
             "--require-hashes",
-            "-r", str(src_dir / "requirements.txt"),
+            "-r", str(requirements),
         ],
         check=True,
     )
