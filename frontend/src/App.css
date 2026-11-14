@@ -881,7 +881,7 @@ footer {
    (by amounts PostContent.js seeds from its key), which straightens up and
    lifts while hovered and opens the photo full size. A paragraph of only
    embeds is a row of them, about three across, sized by height so photos of
-   any shape line up, and overlapping a little; neighbors lean opposite ways.
+   any shape line up, and overlapping a little.
    One in a paragraph of text is on a line of its own. */
 .blog-photo-row {
   container-type: inline-size;
@@ -898,7 +898,6 @@ footer {
 }
 
 .blog-photo-embed {
-  --tilt-sign: 1;
   position: relative;
   display: block;
   width: 30%;
@@ -908,7 +907,7 @@ footer {
   border-radius: 2px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
   cursor: pointer;
-  transform: rotate(calc(var(--tilt-sign) * var(--tilt, 0deg)));
+  transform: rotate(var(--tilt, 0deg));
   transition: transform 0.15s, box-shadow 0.15s;
 }
 
@@ -917,11 +916,7 @@ footer {
   margin: 0 -1.2cqi;
   transform:
     translateY(calc(var(--nudge, 0) * 1.5 * var(--row-percent)))
-    rotate(calc(var(--tilt-sign) * var(--tilt, 0deg)));
-}
-
-.blog-photo-row .blog-photo-embed:nth-child(even) {
-  --tilt-sign: -1;
+    rotate(var(--tilt, 0deg));
 }
 
 .blog-photo-embed:hover,

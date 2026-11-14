@@ -33,10 +33,10 @@ export function PostDates({ date, written }) {
 
 const SWIPE_THRESHOLD = 50;
 
-// Embeds are laid out like a scrapbook: each photo tilts a little (leaning
-// the other way from its neighbor in a row), is drawn a little bigger or
-// smaller, and sits a little higher or lower -- by amounts seeded from its
-// key, so it lands the same way on every load.
+// Embeds are laid out like a scrapbook: each photo tilts a little one way or
+// the other, is drawn a little bigger or smaller, and sits a little higher or
+// lower -- by amounts seeded from its key, so it lands the same way on every
+// load, in whatever post it's in.
 const MIN_TILT = 1.5; // degrees
 const MAX_TILT = 4;
 const MIN_SCALE = 0.88;
@@ -44,10 +44,14 @@ const MAX_SCALE = 1.08;
 
 function scrapbookStyle(key) {
   const random = seededRandom(key);
+  const tilt = MIN_TILT + random() * (MAX_TILT - MIN_TILT);
+  const scale = MIN_SCALE + random() * (MAX_SCALE - MIN_SCALE);
+  const nudge = random() * 2 - 1;
+  const direction = random() < 0.5 ? -1 : 1;
   return {
-    '--tilt': `${MIN_TILT + random() * (MAX_TILT - MIN_TILT)}deg`,
-    '--photo-scale': MIN_SCALE + random() * (MAX_SCALE - MIN_SCALE),
-    '--nudge': random() * 2 - 1,
+    '--tilt': `${direction * tilt}deg`,
+    '--photo-scale': scale,
+    '--nudge': nudge,
   };
 }
 
