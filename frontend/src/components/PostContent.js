@@ -55,6 +55,52 @@ function scrapbookStyle(key) {
   };
 }
 
+// Photos of every shape are drawn about the same area, so a portrait doesn't
+// look smaller than a landscape beside it: the size a 3:2 landscape is drawn
+// at is scaled by how much taller or shorter the photo is for the same area,
+// within limits for extreme panoramas or verticals. Until a photo has loaded
+// and its shape is known, it's drawn as a 3:2 landscape.
+const BASE_ASPECT = 3 / 2;
+const MIN_SIZE = 0.7;
+const MAX_SIZE = 1.5;
+
+function sizeForAspect(aspect) {
+  return Math.min(MAX_SIZE, Math.max(MIN_SIZE, Math.sqrt(BASE_ASPECT / aspect)));
+}
+
+// Each photo's width / height by its URL, once loaded. Embeds are re-created
+// whenever the post re-renders (e.g. when the lightbox opens); remembering
+// their shapes keeps them from jumping back to the 3:2 size meanwhile.
+const aspectsBySrc = new Map();
+
+// One photo embed: its thumbnail, scrapbook style, which opens it full size.
+function PhotoEmbed({ photoKey, src, fullsize, onOpen }) {
+  const [aspect, setAspect] = useState(() => aspectsBySrc.get(src));
+
+  const handleLoad = (e) => {
+    const { naturalWidth, naturalHeight } = e.currentTarget;
+    if (!naturalWidth || !naturalHeight) return;
+    const loaded = naturalWidth / naturalHeight;
+    aspectsBySrc.set(src, loaded);
+    setAspect(loaded);
+  };
+
+  const style = {
+    ...scrapbookStyle(photoKey),
+    '--photo-size': aspect ? sizeForAspect(aspect) : 1,
+  };
+  return (
+    <span
+      className="blog-photo-embed"
+      style={style}
+      data-fullsize={fullsize}
+      onClick={e => onOpen(e.currentTarget)}
+    >
+      <img src={src} alt="Photo" onLoad={handleLoad} />
+    </span>
+  );
+}
+
 function isPhotoEmbed(node) {
   return node.type === 'element' && node.tagName === 'code' && node.children.length === 1
     && node.children[0].type === 'text' && node.children[0].value.trim().startsWith('photo://');
@@ -142,14 +188,12 @@ function PostContent({ content, photoUrls = {} }) {
         const s3Uri = `s3://${PHOTOS_BUCKET}/${key}`;
         const url = photoUrls[key];
         return (
-          <span
-            className="blog-photo-embed"
-            style={scrapbookStyle(key)}
-            data-fullsize={url || ApiService.getFullsizeUrl(s3Uri)}
-            onClick={e => openLightbox(e.currentTarget)}
-          >
-            <img src={url || ApiService.getThumbnailUrl(s3Uri)} alt="Photo" />
-          </span>
+          <PhotoEmbed
+            photoKey={key}
+            src={url || ApiService.getThumbnailUrl(s3Uri)}
+            fullsize={url || ApiService.getFullsizeUrl(s3Uri)}
+            onOpen={openLightbox}
+          />
         );
       }
       return <code className={className}>{children}</code>;

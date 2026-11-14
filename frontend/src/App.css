@@ -879,10 +879,12 @@ footer {
 /* A photo embed, laid out like a print in a scrapbook: the whole photo in a
    thin white border, tilted a little and drawn a little bigger or smaller
    (by amounts PostContent.js seeds from its key), which straightens up and
-   lifts while hovered and opens the photo full size. A paragraph of only
-   embeds is a row of them, about three across, sized by height so photos of
-   any shape line up, and overlapping a little.
-   One in a paragraph of text is on a line of its own. */
+   lifts while hovered and opens the photo full size. Photos of every shape
+   cover about the same area: --photo-size, which PostContent.js sets once a
+   photo has loaded, scales a portrait up and a panorama down from the size a
+   3:2 landscape is drawn at. A paragraph of only embeds is a row of them,
+   about three across, overlapping a little. One in a paragraph of text is on
+   a line of its own. */
 .blog-photo-row {
   container-type: inline-size;
   display: flex;
@@ -900,7 +902,7 @@ footer {
 .blog-photo-embed {
   position: relative;
   display: block;
-  width: 30%;
+  width: calc(30% / var(--photo-size, 1));
   margin: 1.25rem 0 1.25rem 1rem;
   padding: 4px;
   background: var(--color-white);
@@ -936,19 +938,19 @@ footer {
 
 .post-content .blog-photo-row .blog-photo-embed img {
   width: auto;
-  height: calc(var(--photo-scale, 1) * 20 * var(--row-percent));
+  height: calc(var(--photo-scale, 1) * var(--photo-size, 1) * 20 * var(--row-percent));
   max-width: 90cqi;
 }
 
 /* On a narrow screen, photos are drawn bigger: about two across, not three. */
 @media (max-width: 640px) {
   .blog-photo-embed {
-    width: 45%;
+    width: calc(45% / var(--photo-size, 1));
     padding: 3px;
   }
 
   .post-content .blog-photo-row .blog-photo-embed img {
-    height: calc(var(--photo-scale, 1) * 30 * var(--row-percent));
+    height: calc(var(--photo-scale, 1) * var(--photo-size, 1) * 30 * var(--row-percent));
   }
 }
 
