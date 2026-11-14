@@ -891,6 +891,10 @@ footer {
   align-items: center;
   margin: 1.75rem 0;
   padding: 0 2cqi;
+  /* 1% of the row's width, for calc(): the build's CSS minifier can't parse
+     a cqi length in one, but leaves var() alone. Resolved where it's used,
+     against the row. */
+  --row-percent: 1cqi;
 }
 
 .blog-photo-embed {
@@ -912,7 +916,7 @@ footer {
   width: auto;
   margin: 0 -1.2cqi;
   transform:
-    translateY(calc(var(--nudge, 0) * 1.5cqi))
+    translateY(calc(var(--nudge, 0) * 1.5 * var(--row-percent)))
     rotate(calc(var(--tilt-sign) * var(--tilt, 0deg)));
 }
 
@@ -937,7 +941,7 @@ footer {
 
 .post-content .blog-photo-row .blog-photo-embed img {
   width: auto;
-  height: calc(var(--photo-scale, 1) * 20cqi);
+  height: calc(var(--photo-scale, 1) * 20 * var(--row-percent));
   max-width: 90cqi;
 }
 
@@ -949,7 +953,7 @@ footer {
   }
 
   .post-content .blog-photo-row .blog-photo-embed img {
-    height: calc(var(--photo-scale, 1) * 30cqi);
+    height: calc(var(--photo-scale, 1) * 30 * var(--row-percent));
   }
 }
 
