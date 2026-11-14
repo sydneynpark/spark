@@ -1,6 +1,7 @@
 from PIL import Image, ExifTags, ImageOps
 from datetime import datetime
 import io
+import math
 
 EXIF_DATE_FORMAT = '%Y:%m:%d %H:%M:%S'
 
@@ -31,6 +32,15 @@ class ImageUtil:
 
     def create_thumbnail(self, jpg_stream, min_dimension=300):
         with Image.open(jpg_stream) as img:
+            # Decoded at full size, a large photo takes more memory than the
+            # Lambda has (a 45 MP one is 135 MB, twice that once turned
+            # upright). So the JPEG decoder is asked to shrink it as it
+            # decodes, by up to 1/8, to no smaller than the thumbnail. The
+            # shorter side is the same whichever way up it's stored.
+            w, h = img.size
+            scale = min_dimension / min(w, h)
+            if scale < 1:
+                img.draft(None, (math.ceil(w * scale), math.ceil(h * scale)))
             # Phone photos are often stored sideways, with an EXIF Orientation
             # tag saying how to turn them upright, as browsers do. The
             # thumbnail doesn't keep the tag, so it's turned upright here.
